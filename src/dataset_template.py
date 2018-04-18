@@ -1,9 +1,33 @@
-class DataSet():
-    def __init__(self):
+class DataSetIndex():
+    def __init__(self, path):
         pass
+
+class DataSet():
+    def __init__(self, ds_index, mode='train'):
+        self.ds_index = ds_index
     
     def __len__(self):
-        pass
-    
+        if self.mode == 'test':
+            pass
+        
+        elif self.mode == 'valid':
+            pass
+        
+        else:
+            pass
+        
+        
     def __getitem__(self, index):
-        pass
+        img = None
+        target = None
+        
+        if self.mode == 'test':
+            pass
+        
+        elif self.mode == 'valid':
+            pass
+        
+        else:
+            pass
+        
+        return img, target
