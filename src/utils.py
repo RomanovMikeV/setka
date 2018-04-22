@@ -1,4 +1,17 @@
 import numpy
+
+def torch_image_to_numpy(image):
+    res = image.clone()
+    res = res.swapaxes(0, 1).swapaxes(1, 2)
+    return res
+
+
+def numpy_image_to_torch(image):
+    res = image.clone()
+    res = res.swapaxes(2, 1).swapaxes(1, 0)
+    return res
+
+
 class RLECoder():
     '''
     Class implements Run-Length encoder/decoder.
