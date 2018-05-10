@@ -1,3 +1,7 @@
+import torch
+import torchvision
+import sklearn.metrics
+
 class Network:
     def __init__(self):
         super(Network, self).__init__()

@@ -26,17 +26,24 @@ class Trainer():
     def __init__(self,
                  socket,
                  optimizer,
+                 train_modules,
                  verbose=-1,
-                 try_overfit=False,
-                 metric_mode='max'):
+                 max_train_iterations=-1,
+                 max_valid_iterations=-1,
+                 metric_mode='max',
+                 use_cuda=True):
+        
         self.socket = socket
         self.epoch = 0
         self.optimizer = optimizer
         self.verbose = verbose
+        self.train_modules = train_modules
+        self.max_train_iterations = max_train_iterations
+        self.max_valid_iterations = max_valid_iterations
+        self.use_cuda = use_cuda
         
     def train(self, 
-              train_loader,
-              output=10):
+              train_loader):
         
         self.epoch += 1
         
@@ -51,20 +58,25 @@ class Trainer():
     
         for i, (input, target) in enumerate(train_loader):
             
-            for index in range(len(input)):
-                input[index] = torch.autograd.Variable(input[index].float().cuda())
-                
-            for index in range(len(target)):
-                target[index] = torch.autograd.Variable(target[index].cuda())
+            if self.use_cuda:
+                for index in range(len(input)):
+                    input[index] = torch.autograd.Variable(input[index].cuda())
+                    
+            if self.use_cuda:
+                for index in range(len(target)):
+                    target[index] = torch.autograd.Variable(target[index].cuda())
             
+            self.train_modules.train()
             output = self.socket.model.forward(input)
+            self.train_modules.eval()
+            
             loss = self.socket.criterion(output, target)
             
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
             
-            losses.update(loss.data.item())
+            losses.update(loss.data[0])
             
             batch_time.update(time.time() - end)
             end = time.time()
@@ -72,6 +84,7 @@ class Trainer():
             del input, target
             del loss, output
             
+            # Print status
             if self.verbose >= 1:
                 if i % self.verbose == 0:
                     print("Ep {0}[{1}/{2}]\t"
@@ -85,6 +98,11 @@ class Trainer():
                               loss=losses,
                               lr=self.optimizer.param_groups[-1]['lr']))
             
+            # Stop epoch if needed
+            if self.max_train_iterations > 0:
+                if i % self.max_train_iterations == 0 and i != 0:
+                    break
+                    
         return losses.avg
             
     
@@ -97,23 +115,43 @@ class Trainer():
         
         for i, (input, target) in enumerate(valid_loader):
             
-            for index in range(len(input)):
-                input[index] = torch.autograd.Variable(input[index].float().cuda())
-                
-            for index in range(len(target)):
-                target[index] = torch.autograd.Variable(target[index].cuda())
+            if self.use_cuda:
+                for index in range(len(input)):
+                    input[index] = torch.autograd.Variable(input[index].cuda())
+            
+            if self.use_cuda:
+                for index in range(len(target)):
+                    target[index] = torch.autograd.Variable(target[index].cuda())
             
             output = self.socket.model.forward(input)
             loss = self.socket.criterion(output, target)
             
+            if self.use_cuda:
+                for index in range(len(output)):
+                    output[index] = output[index].cpu()
+                    
+            if self.use_cuda:
+                for index in range(len(target)):
+                    target[index] = target[index].cpu()
+            
+            
             for index in range(len(output)):
-                output[index] = output[index].data.cpu()
+                output[index] = output[index].data
                 
             for index in range(len(target)):
-                target[index] = target[index].data.cpu()
+                target[index] = target[index].data
             
             outputs.append(output)
             targets.append(target)
+            
+            if self.max_valid_iterations > 0:
+                if i % self.max_valid_iterations == 0 and i != 0:
+                    break
+                    
+            del loss, input
+            
+        if self.verbose >= 0:
+            print("Validation results computed, making metrics")
             
         outputs = list(zip(*outputs))
         targets = list(zip(*targets))
