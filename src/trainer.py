@@ -102,7 +102,8 @@ class Trainer():
             if self.max_train_iterations > 0:
                 if i % self.max_train_iterations == 0 and i != 0:
                     break
-                    
+        
+        time.sleep(1)
         return losses.avg
             
     
@@ -165,7 +166,8 @@ class Trainer():
         metrics = self.socket.metrics(outputs, targets)
         if self.verbose >= 0:
             print("Metrics:\t", "\t".join(["{:.2e}".format(x) for x in metrics]) )
-            
+        
+        time.sleep(1)
         return metrics
     
     def make_checkpoint(self, prefix='./', is_best=False, info=""):
