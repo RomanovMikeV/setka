@@ -27,7 +27,7 @@ class Trainer():
                  socket,
                  optimizer,
                  train_modules,
-                 verbose=-1,
+                 verbosity=-1,
                  max_train_iterations=-1,
                  max_valid_iterations=-1,
                  metric_mode='max',
@@ -36,7 +36,7 @@ class Trainer():
         self.socket = socket
         self.epoch = 0
         self.optimizer = optimizer
-        self.verbose = verbose
+        self.verbosity = verbosity
         self.train_modules = train_modules
         self.max_train_iterations = max_train_iterations
         self.max_valid_iterations = max_valid_iterations
@@ -53,7 +53,7 @@ class Trainer():
 
         end = time.time()
         
-        if self.verbose >= 0:
+        if self.verbosity >= 0:
             print("Training epoch ", self.epoch)
     
         for i, (input, target) in enumerate(train_loader):
@@ -85,8 +85,8 @@ class Trainer():
             del loss, output
             
             # Print status
-            if self.verbose >= 1:
-                if i % self.verbose == 0:
+            if self.verbosity >= 1:
+                if i % self.verbosity == 0:
                     print("Ep {0}[{1}/{2}]\t"
                           "Time  {time.avg:.2f}({time.val:.2f})\t"
                           "Data  {data.avg:.2f}({data.val:.2f})\t"
@@ -111,7 +111,7 @@ class Trainer():
         outputs = []
         targets = []
         
-        if self.verbose >= 0:
+        if self.verbosity >= 0:
             print("Validating epoch", self.epoch)
         
         for i, (input, target) in enumerate(valid_loader):
@@ -151,7 +151,7 @@ class Trainer():
                     
             del loss, input
             
-        if self.verbose >= 0:
+        if self.verbosity >= 0:
             print("Validation results computed, making metrics")
             
         outputs = list(zip(*outputs))
@@ -164,7 +164,7 @@ class Trainer():
             targets[index] = torch.cat(targets[index], dim=0)
         
         metrics = self.socket.metrics(outputs, targets)
-        if self.verbose >= 0:
+        if self.verbosity >= 0:
             print("Metrics:\t", "\t".join(["{:.2e}".format(x) for x in metrics]) )
         
         time.sleep(1)
@@ -174,10 +174,10 @@ class Trainer():
         
         checkpoint = {
             "epoch": self.epoch,
-            "model_state": self.socket.model.state_dict(),
+            "model_state": self.socket.model.module.state_dict(),
             "optimizer": self.optimizer,
             "optimizer_state": self.optimizer.state_dict(),
-            "verbose": self.verbose,
+            "verbosity": self.verbosity,
             "info": info}
         
         torch.save(checkpoint, prefix + 'checkpoint.pth.tar')
@@ -185,14 +185,14 @@ class Trainer():
         if is_best:
             shutil.copy(prefix + 'checkpoint.pth.tar', prefix + 'checkpoint_best.pth.tar')
     
-    def load_checkpoint(self, checkpoint_name, load_model_structure=False):
+    def restore_from_checkpoit(self, checkpoint_name, load_model_structure=False):
         checkpoint = torch.load(checkpoint_name)
         print("Loaded ", checkpoint_name)
         print(checkpoint["info"])
         
         self.epoch = checkpoint['epoch']
         self.optimizer = checkpoint['optimizer']
-        self.verbose = checkpoint['verbose']
+        self.verbosity = checkpoint['verbosity']
         
         if load_model_structure:
             self.socket = checkpoint['socket']
@@ -200,3 +200,38 @@ class Trainer():
         self.socket.model.load_state_dict(checkpoint["model_state"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state"])
     
+    
+def load_from_checkpoint(checkpoint_name, 
+                         socket,
+                         optimizer,
+                         train_modules,
+                         verbosity=-1,
+                         max_train_iterations=-1,
+                         max_valid_iterations=-1,
+                         metric_mode='max',
+                         use_cuda=True):
+    
+    checkpoint = torch.load(checkpoint_name)
+    print(checkpoint['info'])
+    print("Model restored from", checkpoint_name)
+    
+    restored_trainer = Trainer(socket, 
+                               optimizer,
+                               train_modules,
+                               verbosity=verbosity,
+                               max_train_iterations=max_train_iterations,
+                               max_valid_iterations=max_valid_iterations,
+                               metric_mode=metric_mode,
+                               use_cuda=use_cuda)
+    
+    restored_trainer.epoch = checkpoint['epoch']
+    #restored_trainer.optimizer = checkpoint['optimizer']
+    restored_trainer.socket.model.module.load_state_dict(checkpoint["model_state"])
+    try:
+        restored_trainer.optimizer.load_state_dict(checkpoint["optimizer_state"])
+    except:
+        print('Failed to load optimizer state, starting to train from the scratch')
+        
+    restored_trainer.info = 'I am restored!'
+    
+    return restored_trainer

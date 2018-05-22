@@ -19,11 +19,11 @@ import utils
 ## Training parameters
 
 parser = argparse.ArgumentParser(description='Training script.')
-parser.add_argument('-b','--batch-size', help='Batch size in training', default=32)
-parser.add_argument('-w','--workers', help='Number of workers', default=4)
+parser.add_argument('-b','--batch-size', help='Batch size in training', default=32, type=int)
+parser.add_argument('-w','--workers', help='Number of workers', default=4, type=int)
 parser.add_argument('--pretraining', help='Pretraining mode', action='store_true')
-parser.add_argument('-lr', '--learning-rate', help='Learning rate', default=3.0e-4)
-parser.add_argument('-d', '--dump-period', help='Dump period', default=1)
+parser.add_argument('-lr', '--learning-rate', help='Learning rate', default=3.0e-4, type=float)
+parser.add_argument('-d', '--dump-period', help='Dump period', default=1, type=int)
 parser.add_argument('-e', '--epochs', help='Number of epochs to perform', default=1000, type=int)
 parser.add_argument('-c', '--checkpoint', help='Checkpoint to load from', default=None)
 parser.add_argument('--use-cuda', help='Use cuda for training', action='store_true')
@@ -32,6 +32,10 @@ parser.add_argument('--model', help='File with a model specifications', required
 parser.add_argument('--dataset', help='File with a dataset sepcification', required=True)
 parser.add_argument('--max-train-iterations', help='Maximum training iterations', default=-1, type=int)
 parser.add_argument('--max-valid-iterations', help='Maximum validation iterations', default=-1, type=int)
+parser.add_argument('-dp', '--dataset-path', help='Path to the dataset', required=True)
+parser.add_argument('-v', '--verbosity', 
+                    help='-1 for no output, 0 for epoch output, positive number is printout frequency', 
+                    default=-1, type=int)
 args = vars(parser.parse_args())
 
 batch_size = args['batch_size']
@@ -45,6 +49,8 @@ use_cuda = args['use_cuda']
 validate_on_train = args['validate_on_train']
 max_train_iterations = args['max_train_iterations']
 max_valid_iterations = args['max_valid_iterations']
+dataset_path = args['dataset_path']
+verbosity = args['verbosity']
 
 spec = importlib.util.spec_from_file_location("model", args['model'])
 model = importlib.util.module_from_spec(spec)
@@ -74,7 +80,7 @@ if __name__ == '__main__':
          transform.ToTensor(),
          normalize])
 
-    ds_index = dataset.DataSetIndex('../../datasets/MNIST')
+    ds_index = dataset.DataSetIndex(dataset_path)
     train_dataset = dataset.DataSet(
         ds_index, mode='train')
 
@@ -121,12 +127,24 @@ if __name__ == '__main__':
     
         my_pretrainer = trainer.Trainer(socket, 
                                         pretrain_optimizer,
-                                        verbose=1,
-                                        train_modules=pretrain_modules,
+                                        pretrain_modules,
+                                        verbosity=verbosity,
                                         use_cuda=use_cuda,
                                         max_train_iterations=max_train_iterations,
                                         max_valid_iterations=max_valid_iterations)
+        if checkpoint is not None:
+            my_pretrainer = trainer.load_from_checkpoint(checkpoint,
+                                                         socket,
+                                                         pretrain_optimizer,
+                                                         pretrain_modules,
+                                                         verbosity=verbosity,
+                                                         use_cuda=use_cuda,
+                                                         max_train_iterations=max_train_iterations,
+                                                         max_valid_iterations=max_valid_iterations)
+        
+        
         for index in range(epochs):
+            #print(my_pretrainer.info)
             loss = my_pretrainer.train(train_loader)
             metrics = []
             if validate_on_train:
