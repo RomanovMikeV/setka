@@ -4,15 +4,17 @@ import skimage.transform
 import sys
 import argparse
 import time
+import importlib.util
 
 import torchvision.transforms as transform
 
 sys.path.append('../src')
 
 import trainer
-import dataset
-import model
+#import dataset
+#import model
 import utils
+
 
 ## Training parameters
 
@@ -22,10 +24,14 @@ parser.add_argument('-w','--workers', help='Number of workers', default=4)
 parser.add_argument('--pretraining', help='Pretraining mode', action='store_true')
 parser.add_argument('-lr', '--learning-rate', help='Learning rate', default=3.0e-4)
 parser.add_argument('-d', '--dump-period', help='Dump period', default=1)
-parser.add_argument('-e', '--epochs', help='Number of epochs to perform', default=1000)
+parser.add_argument('-e', '--epochs', help='Number of epochs to perform', default=1000, type=int)
 parser.add_argument('-c', '--checkpoint', help='Checkpoint to load from', default=None)
 parser.add_argument('--use-cuda', help='Use cuda for training', action='store_true')
 parser.add_argument('--validate-on-train', help='Validate on train', action='store_true')
+parser.add_argument('--model', help='File with a model specifications', required=True)
+parser.add_argument('--dataset', help='File with a dataset sepcification', required=True)
+parser.add_argument('--max-train-iterations', help='Maximum training iterations', default=-1, type=int)
+parser.add_argument('--max-valid-iterations', help='Maximum validation iterations', default=-1, type=int)
 args = vars(parser.parse_args())
 
 batch_size = args['batch_size']
@@ -37,6 +43,16 @@ epochs = args['epochs']
 checkpoint = args['checkpoint']
 use_cuda = args['use_cuda']
 validate_on_train = args['validate_on_train']
+max_train_iterations = args['max_train_iterations']
+max_valid_iterations = args['max_valid_iterations']
+
+spec = importlib.util.spec_from_file_location("model", args['model'])
+model = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(model)
+
+spec = importlib.util.spec_from_file_location("dataset", args['dataset'])
+dataset = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(dataset)
 
 ## Making datasets
 if __name__ == '__main__':
@@ -107,7 +123,9 @@ if __name__ == '__main__':
                                         pretrain_optimizer,
                                         verbose=1,
                                         train_modules=pretrain_modules,
-                                        use_cuda=use_cuda)
+                                        use_cuda=use_cuda,
+                                        max_train_iterations=max_train_iterations,
+                                        max_valid_iterations=max_valid_iterations)
         for index in range(epochs):
             loss = my_pretrainer.train(train_loader)
             metrics = []
@@ -134,7 +152,9 @@ if __name__ == '__main__':
                                          train_optimizer, 
                                          verbose=1, 
                                          train_modules=train_modules,
-                                         use_cuda=use_cuda)
+                                         use_cuda=use_cuda,
+                                         max_train_iterations=max_train_iterations,
+                                         max_valid_iterations=max_valid_iterations)
         
             my_trainer.load_checkpoint(checkpoint)
 

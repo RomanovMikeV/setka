@@ -174,7 +174,6 @@ class Trainer():
         
         checkpoint = {
             "epoch": self.epoch,
-            "socket": self.socket,
             "model_state": self.socket.model.state_dict(),
             "optimizer": self.optimizer,
             "optimizer_state": self.optimizer.state_dict(),
