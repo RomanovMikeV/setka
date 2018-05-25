@@ -20,13 +20,13 @@ will need Jupyter Notebook or JupyterLab installed.
 Here is the minimal command to run to train the model specified in MODEL_FILE with a
 dataset specified in DATASET_FILE, the data is located in the DATASET_PATH.
 
-'''
+```
 python train.py --model MODEL_FILE --dataset DATASET_FILE --dataset-path DATASET_PATH
-'''
+```
 
 Here is a list of parameters of the script (it will be soon updated):
 
-'''
+```
   -b BATCH_SIZE, --batch-size BATCH_SIZE
                         Batch size to train or validate your model
   -w WORKERS, --workers WORKERS
@@ -58,7 +58,7 @@ Here is a list of parameters of the script (it will be soon updated):
   -cp CHECKPOINT_PREFIX, --checkpoint-prefix CHECKPOINT_PREFIX
                         Prefix to the checkpoint name
 
-'''
+```
 
 ## Model module syntax
 
