@@ -60,11 +60,11 @@ class Trainer():
             
             if self.use_cuda:
                 for index in range(len(input)):
-                    input[index] = torch.autograd.Variable(input[index].cuda())
+                    input[index] = input[index].cuda()
                     
             if self.use_cuda:
                 for index in range(len(target)):
-                    target[index] = torch.autograd.Variable(target[index].cuda())
+                    target[index] = target[index].cuda()
             
             self.train_modules.train()
             output = self.socket.model.forward(input)
@@ -76,7 +76,7 @@ class Trainer():
             loss.backward()
             self.optimizer.step()
             
-            losses.update(loss.data[0])
+            losses.update(loss.data.item())
             
             batch_time.update(time.time() - end)
             end = time.time()
@@ -118,11 +118,11 @@ class Trainer():
             
             if self.use_cuda:
                 for index in range(len(input)):
-                    input[index] = torch.autograd.Variable(input[index].cuda())
+                    input[index] = input[index].cuda()
             
             if self.use_cuda:
                 for index in range(len(target)):
-                    target[index] = torch.autograd.Variable(target[index].cuda())
+                    target[index] = target[index].cuda()
             
             output = self.socket.model.forward(input)
             loss = self.socket.criterion(output, target)
@@ -231,7 +231,5 @@ def load_from_checkpoint(checkpoint_name,
         restored_trainer.optimizer.load_state_dict(checkpoint["optimizer_state"])
     except:
         print('Failed to load optimizer state, starting to train from the scratch')
-        
-    restored_trainer.info = 'I am restored!'
     
     return restored_trainer
