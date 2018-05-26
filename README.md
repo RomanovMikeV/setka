@@ -139,7 +139,7 @@ class DataSet():
         else:
             pass
         
-        return img, target
+        return [img1, img2], [target1, target2]
 ```
 
 The dataset script should have at least the class DataSet which should have the following specified:
