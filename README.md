@@ -67,7 +67,7 @@ Here is a list of parameters of the script (it will be soon updated):
 
 The syntax for the model file is the following:
 
-```
+```python
 class Network(torch.nn.Module):
     def __init__(self):
         super(Network, self).__init__()
@@ -106,7 +106,7 @@ The reason there are lists everywhere is the following: the network may have mor
 
 Here is a syntax for the Dataset module:
 
-```
+```python
 class DataSetIndex():
     def __init__(self, path):
         pass
