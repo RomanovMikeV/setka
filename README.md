@@ -1,5 +1,5 @@
 
-# Utilities for network training with PyTorch
+# Scorch: utilities for network training with PyTorch
 
 This package is a set of codes that may be reused quite often
 for different networks trainings.
