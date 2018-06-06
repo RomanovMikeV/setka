@@ -2,6 +2,7 @@ import numpy
 import torch
 from torch._six import string_classes, int_classes
 import collections
+import re
 
 _use_shared_memory = False
 r"""Whether to use shared memory in default_collate"""
