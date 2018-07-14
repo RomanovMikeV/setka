@@ -41,6 +41,7 @@ class Trainer():
         self.max_train_iterations = max_train_iterations
         self.max_valid_iterations = max_valid_iterations
         self.use_cuda = use_cuda
+        self.metrics = None
         
     def train(self, 
               train_loader):
@@ -168,6 +169,8 @@ class Trainer():
             print("Metrics:\t", "\t".join(["{:.2e}".format(x) for x in metrics]) )
         
         time.sleep(1)
+
+        self.metrics = metrics
         return metrics
     
     def make_checkpoint(self, prefix='./', is_best=False, info=""):
@@ -178,7 +181,8 @@ class Trainer():
             "optimizer": self.optimizer,
             "optimizer_state": self.optimizer.state_dict(),
             "verbosity": self.verbosity,
-            "info": info}
+            "info": info,
+            "metrics": self.metrics}
         
         torch.save(checkpoint, prefix + 'checkpoint.pth.tar')
         
@@ -193,12 +197,14 @@ class Trainer():
         self.epoch = checkpoint['epoch']
         self.optimizer = checkpoint['optimizer']
         self.verbosity = checkpoint['verbosity']
+        self.metrics = checkpoint['metrics']
         
         if load_model_structure:
             self.socket = checkpoint['socket']
         
         self.socket.model.load_state_dict(checkpoint["model_state"])
         self.optimizer.load_state_dict(checkpoint["optimizer_state"])
+        
     
     
 def load_from_checkpoint(checkpoint_name, 

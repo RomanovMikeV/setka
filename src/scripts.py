@@ -92,6 +92,7 @@ def train(model_source_path,
                                  use_cuda=use_cuda,
                                  max_train_iterations=max_train_iterations,
                                  max_valid_iterations=max_valid_iterations)
+    best_metrics = None
 
     if checkpoint is not None:
         my_trainer = trainer.load_from_checkpoint(checkpoint,
@@ -102,6 +103,7 @@ def train(model_source_path,
                                                   use_cuda=use_cuda,
                                                   max_train_iterations=max_train_iterations,
                                                   max_valid_iterations=max_valid_iterations)
+        best_metrics = my_trainer.metrics
         
         
     for index in range(epochs):
@@ -115,4 +117,13 @@ def train(model_source_path,
             metrics.append(metric)
             
         if index % dump_period == 0:
-            my_trainer.make_checkpoint(checkpoint_prefix, info=metrics)
+            is_best = False
+            if best_metrics == None:
+                is_best = True
+            else:
+                if best_metrics[0] < my_trainer.metrics[0]:
+                    is_best = True
+            if is_best:
+                best_metrics = my_trainer.metrics
+
+            my_trainer.make_checkpoint(checkpoint_prefix, info=metrics, is_best=is_best)
