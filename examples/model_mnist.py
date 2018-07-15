@@ -13,13 +13,6 @@ class Network(torch.nn.Module):
         self.pool2 = torch.nn.MaxPool2d(2, 2)
         
         self.classifier = torch.nn.Linear(256, 10)
-        
-        self.pretrain_modules = torch.nn.ModuleList([self.classifier])
-        
-        self.train_modules = torch.nn.ModuleList([self.conv1,
-                                                   self.conv2,
-                                                   self.classifier])
-        self.pretrain_modules = self.train_modules
     
     def forward(self, input):
         res1 = self.pool1(torch.nn.functional.tanh(self.conv1(input[0])))
@@ -41,6 +34,15 @@ class Network(torch.nn.Module):
 class Socket:
     def __init__(self, model):
         self.model = model
+
+        self.train_modules = torch.nn.ModuleList([
+            self.model.module.conv1,
+            self.model.module.conv2,
+            self.model.module.classifier])
+
+        self.optimizer = torch.optim.Adam(
+            self.train_modules.parameters(), 
+            lr=3.0e-4)
     
     def criterion(self, pred, target):
         loss_f = torch.nn.CrossEntropyLoss()

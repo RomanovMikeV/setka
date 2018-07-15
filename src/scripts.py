@@ -46,16 +46,6 @@ def train(model_source_path,
     
     socket = model.Socket(net)
 
-    train_modules = socket.model.module.train_modules
-    
-    train_optimizer = torch.optim.Adam(
-            train_modules.parameters(), 
-            lr=learning_rate)
-    
-    if pretraining:
-        train_modules = socket.model.module.pretrain_modules
-        checkpoint_prefix = 'pretraining' + checkpoint_prefix
-
    
     # Creating the datasets
  
@@ -83,11 +73,10 @@ def train(model_source_path,
                                                drop_last=False,
                                                pin_memory=False,
                                                collate_fn=utils.default_collate)
+   
 
-    
-    my_trainer = trainer.Trainer(socket, 
-                                 train_optimizer,
-                                 train_modules,
+
+    my_trainer = trainer.Trainer(socket,
                                  verbosity=verbosity,
                                  use_cuda=use_cuda,
                                  max_train_iterations=max_train_iterations,
@@ -97,8 +86,6 @@ def train(model_source_path,
     if checkpoint is not None:
         my_trainer = trainer.load_from_checkpoint(checkpoint,
                                                   socket,
-                                                  train_optimizer,
-                                                  train_modules,
                                                   verbosity=verbosity,
                                                   use_cuda=use_cuda,
                                                   max_train_iterations=max_train_iterations,

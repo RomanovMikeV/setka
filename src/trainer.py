@@ -25,8 +25,6 @@ class AverageMeter(object):
 class Trainer():
     def __init__(self,
                  socket,
-                 optimizer,
-                 train_modules,
                  verbosity=-1,
                  max_train_iterations=-1,
                  max_valid_iterations=-1,
@@ -35,9 +33,7 @@ class Trainer():
         
         self.socket = socket
         self.epoch = 0
-        self.optimizer = optimizer
         self.verbosity = verbosity
-        self.train_modules = train_modules
         self.max_train_iterations = max_train_iterations
         self.max_valid_iterations = max_valid_iterations
         self.use_cuda = use_cuda
@@ -67,15 +63,16 @@ class Trainer():
                 for index in range(len(target)):
                     target[index] = target[index].cuda()
             
-            self.train_modules.train()
+            self.socket.train_modules.train()
             output = self.socket.model.forward(input)
-            self.train_modules.eval()
+            
             
             loss = self.socket.criterion(output, target)
             
-            self.optimizer.zero_grad()
+            self.socket.optimizer.zero_grad()
             loss.backward()
-            self.optimizer.step()
+            self.socket.optimizer.step()
+            self.socket.train_modules.eval()
             
             losses.update(loss.data.item())
             
@@ -97,7 +94,7 @@ class Trainer():
                               time=batch_time,
                               data=data_time,
                               loss=losses,
-                              lr=self.optimizer.param_groups[-1]['lr']))
+                              lr=self.socket.optimizer.param_groups[-1]['lr']))
             
             # Stop epoch if needed
             if self.max_train_iterations > 0:
@@ -178,8 +175,8 @@ class Trainer():
         checkpoint = {
             "epoch": self.epoch,
             "model_state": self.socket.model.module.state_dict(),
-            "optimizer": self.optimizer,
-            "optimizer_state": self.optimizer.state_dict(),
+            "optimizer": self.socket.optimizer,
+            "optimizer_state": self.socket.optimizer.state_dict(),
             "verbosity": self.verbosity,
             "info": info,
             "metrics": self.metrics}
@@ -209,8 +206,6 @@ class Trainer():
     
 def load_from_checkpoint(checkpoint_name, 
                          socket,
-                         optimizer,
-                         train_modules,
                          verbosity=-1,
                          max_train_iterations=-1,
                          max_valid_iterations=-1,
@@ -222,8 +217,6 @@ def load_from_checkpoint(checkpoint_name,
     print("Model restored from", checkpoint_name)
     
     restored_trainer = Trainer(socket, 
-                               optimizer,
-                               train_modules,
                                verbosity=verbosity,
                                max_train_iterations=max_train_iterations,
                                max_valid_iterations=max_valid_iterations,
@@ -234,7 +227,7 @@ def load_from_checkpoint(checkpoint_name,
     #restored_trainer.optimizer = checkpoint['optimizer']
     restored_trainer.socket.model.module.load_state_dict(checkpoint["model_state"])
     try:
-        restored_trainer.optimizer.load_state_dict(checkpoint["optimizer_state"])
+        restored_trainer.socket.optimizer.load_state_dict(checkpoint["optimizer_state"])
     except:
         print('Failed to load optimizer state, starting to train from the scratch')
     
