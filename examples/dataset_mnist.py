@@ -3,7 +3,6 @@ import torch
 import skimage.io
 import skimage.transform
 import skimage.color
-import utils
 import os
 import torchvision.datasets
 import torchvision.transforms as transforms
