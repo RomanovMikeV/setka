@@ -119,7 +119,7 @@ def train(model_source_path,
             my_trainer.make_checkpoint(checkpoint_prefix, info=metrics, is_best=is_best)
 
 
-if __name__ == '__main__':
+def train():
 
     ## Training parameters
 
@@ -161,3 +161,6 @@ if __name__ == '__main__':
               max_valid_iterations = args['max_valid_iterations'],
               verbosity = args['verbosity'],
               checkpoint_prefix = args['checkpoint_prefix'])
+
+if __name__ == '__main__':
+    train()
