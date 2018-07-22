@@ -8,9 +8,8 @@ import importlib.util
 
 import torchvision.transforms as transform
 
-#sys.path.append('../src')
-import src.trainer
-import src.utils
+import trainer
+import utils
 
 
 def train(model_source_path,
@@ -66,7 +65,7 @@ def train(model_source_path,
                                                num_workers=num_workers,
                                                drop_last=True,
                                                pin_memory=False,
-                                               collate_fn=src.utils.default_collate)
+                                               collate_fn=utils.default_collate)
 
     valid_loader = torch.utils.data.DataLoader(valid_dataset,
                                                batch_size=batch_size,
@@ -74,11 +73,11 @@ def train(model_source_path,
                                                num_workers=num_workers,
                                                drop_last=False,
                                                pin_memory=False,
-                                               collate_fn=src.utils.default_collate)
+                                               collate_fn=utils.default_collate)
 
 
 
-    my_trainer = src.trainer.Trainer(socket,
+    my_trainer = trainer.Trainer(socket,
                                  verbosity=verbosity,
                                  use_cuda=use_cuda,
                                  max_train_iterations=max_train_iterations,

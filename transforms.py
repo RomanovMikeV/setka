@@ -1,9 +1,10 @@
+from __future__ import division
+
 import numpy
 import skimage.transform
 import torch
 import random
 
-from __future__ import division
 import torch
 import math
 import random
@@ -494,13 +495,13 @@ class Compose(object):
 
     def __init__(self, transforms):
         self.transforms = transforms
-        
+
     def seed(self):
         for transform in self.transforms:
             transform.seed()
 
     def __call__(self, img):
-        
+
         for t in self.transforms:
             img = t(img)
         return img
@@ -514,7 +515,7 @@ class ToTensor(object):
 
     def seed(self):
         pass
-    
+
     def __call__(self, pic):
         """
         Args:
@@ -540,7 +541,7 @@ class ToPILImage(object):
     """
     def __init__(self, mode=None):
         self.mode = mode
-        
+
     def seed(self):
         pass
 
@@ -570,7 +571,7 @@ class Normalize(object):
 
     def seed(self):
         pass
-        
+
     def __call__(self, tensor):
         """
         Args:
@@ -597,7 +598,7 @@ class Resize(object):
         assert isinstance(size, int) or (isinstance(size, collections.Iterable) and len(size) == 2)
         self.size = size
         self.interpolation = interpolation
-        
+
     def seed(self):
         pass
 
@@ -649,7 +650,7 @@ class CenterCrop(object):
         i = int(round((h - th) / 2.))
         j = int(round((w - tw) / 2.))
         return i, j, th, tw
-    
+
     def seed(self):
         pass
 
@@ -685,7 +686,7 @@ class Pad(object):
 
         self.padding = padding
         self.fill = fill
-        
+
     def seed(self):
         pass
 
@@ -708,7 +709,7 @@ class Lambda(object):
     def __init__(self, lambd):
         assert isinstance(lambd, types.LambdaType)
         self.lambd = lambd
-        
+
     def seed(self):
         pass
 
@@ -718,14 +719,14 @@ class Lambda(object):
 
 class RandomHorizontalFlip(object):
     """Horizontally flip the given PIL Image randomly with a probability of 0.5."""
-    
+
     def __init__(self):
         self.flip_flag = False
-    
+
     def seed(self):
         if random.random() < 0.5:
             self.flip_flag = True
-    
+
     def __call__(self, img):
         """
         Args:
@@ -742,11 +743,11 @@ class RandomVerticalFlip(object):
     """Vertically flip the given PIL Image randomly with a probability of 0.5."""
     def __init__(self):
         self.flip_flag = False
-    
+
     def seed(self):
         if random.random() < 0.5:
             self.flip_flag = True
-            
+
     def __call__(self, img):
         """
         Args:
@@ -778,7 +779,7 @@ class ColorJitter(object):
         self.hue = hue
         self.transform = self.get_params(self.brightness, self.contrast,
                                     self.saturation, self.hue)
-        
+
     def seed(self):
         self.transform = self.get_params(self.brightness, self.contrast,
                                     self.saturation, self.hue)
@@ -828,80 +829,80 @@ class Jitter(object):
         self.x_pad = x_pad
         self.y_pad = y_pad
         self.l, self.r, self.t, self.b = self.get_params(self.x_pad, self.y_pad)
-        
+
     def seed(self):
         self.l, self.r, self.t, self.b = self.get_params(self.x_pad, self.y_pad)
-    
+
     @staticmethod
     def get_params(x_pad, y_pad):
         left   = random.random() * x_pad
         right  = random.random() * x_pad
-        top    = random.random() * y_pad 
+        top    = random.random() * y_pad
         bottom = random.random() * y_pad
-        
+
         return left, right, top, bottom
-        
+
     def __call__(self, image):
         w, h = image.size
-        
+
         left = math.floor(self.l * w)
         right = math.ceil(w - self.r * w)
         top = math.floor(self.t * h)
         bottom = math.ceil(h - self.b * h)
-        
+
         image = image.crop(box=(left, top, right, bottom))
-        
+
         return image
-    
+
 class Rotate(object):
     def __init__(self, angle=0.1):
         self.angle = angle
         self.rotation = self.get_params(self.angle)
-        
+
     def seed(self):
         self.rotation = self.get_params(self.angle)
-    
+
     @staticmethod
     def get_params(angle):
         return (random.random() - 0.5) * 2.0 * angle
-        
+
     def __call__(self, image):
         np.random.seed()
         array = np.array(image)
-        
+
         image = image.rotate(self.rotation)
-        
+
         return image
 '''
 class Noise(object):
     def __init__(self, level=0.05):
         self.level = level
-        
+
     def __call__(self, image):
         np.random.seed()
         array = np.float32(np.array(image))
         noise = np.random.randn(*array.shape).astype(np.float32)
-        
+
         level = np.random.random() * self.level
-        
-        noise = noise / np.linalg.norm(noise) * np.linalg.norm(array) * level 
-        
-        
-        
+
+        noise = noise / np.linalg.norm(noise) * np.linalg.norm(array) * level
+
+
+
         #print(np.linalg.norm(array), np.linalg.norm(noise))
         #print(array.shape, noise.shape)
         #print(array.sum(), noise.sum())
         #print(array.dtype, noise.dtype)
         array += noise
         #print(array.shape)
-        
+
         array = array.clip(min=0.0, max=255.0)
-        
+
         #print(array.max(), array.min())
         image = Image.fromarray(np.uint8(array))
-        
+
         return image
-''' 
+'''
 def get_box_area(left, upper, right, lower):
     return (right - left) * (lower - upper)
 
@@ -936,69 +937,69 @@ class DummyDim(object):
         """
 
         return tensor.unsqueeze(self.dim)
-    
+
 #== MY TRANSFORMS START HERE
 
 class Compose():
     def __init__(self, transforms):
         self.transforms = transforms
-    
+
     def reset(self):
         for index in range(len(self.transforms)):
             self.transforms[index].reset()
-            
+
     def __call__(self, tensor):
         result = tensor
-        
+
         for index in range(len(self.transforms)):
             result = self.transforms[index](result)
-            
+
         return result
-    
-    
+
+
 class ToTensor():
     def __init__():
         pass
-    
+
     def reset():
         pass
-    
+
     def __call__():
         pass
-    
-            
+
+
 class HFlip():
     def __init__(self, p=0.5):
         self.p = p
         self.flip = self.get_params(self.p)
-    
+
     @staticmethod
     def get_params(p):
         return random.random() > p
-           
+
     def reset(self):
         self.flip = self.get_params(self.p)
-        
+
     def __call__(self, tensor):
         if self.flip:
             img = tensor.numpy()[:, :, ::-1]
         else:
             img = tensor.numpy()
         return torch.FloatTensor(numpy.array(img))
-    
-    
+
+
 class VFlip():
     def __init__(self, p=0.5):
         self.p = p
         self.flip = self.get_params(self.p)
-    
+
     @staticmethod
     def get_params(p):
         return random.random() > p
-           
+
     def reset(self):
         self.flip = self.get_params(self.p)
-        
+
     def __call__(self, tensor):
         if self.flip:
             img = tensor.numpy()[:, ::-1, :]
@@ -1010,135 +1011,135 @@ class VFlip():
 class Scale():
     def __init__(self, shape=[224, 224]):
         self.shape=shape
-        
+
     def reset(self):
         pass
-        
+
     def __call__(self, tensor):
         img = tensor.numpy().swapaxes(0, 1).swapaxes(1, 2)
         img_max = img.max()
         img_min = img.min()
-        
+
         res = (img - img_min) / (img_max - img_min)
-        
+
         res = skimage.transform.resize(res, self.shape,
                                        mode='reflect').swapaxes(1, 2).swapaxes(0, 1)
-        
+
         res = res * (img_max - img_min) + img_min
         return torch.FloatTensor(res)
 
-    
+
 class FixedCrop():
     def __init__(self, max_size=1.0, min_size=0.5):
         self.max_size = max_size
         self.min_size = min_size
-        
+
         self.size, self.x_pad, self.y_pad = self.get_params(self.min_size, self.max_size)
-        
-        
+
+
     @staticmethod
     def get_params(min_size, max_size):
         size = random.random() * (min_size - max_size) + min_size
         pad_limit = 1.0 - size
         x_pad = random.random() * pad_limit
         y_pad = random.random() * pad_limit
-        
+
         return size, x_pad, y_pad
-        
-    
+
+
     def reset(self):
         self.size, self.x_pad, self.y_pad = self.get_params(self.min_size, self.max_size)
-    
-    
+
+
     def __call__(self, tensor):
         x_start = int(self.x_pad * tensor.size(1))
         y_start = int(self.y_pad * tensor.size(2))
-        
+
         x_size = int(self.size * tensor.size(1))
         y_size = int(self.size * tensor.size(2))
-        
+
         return tensor[:, x_start:x_start+x_size, y_start:y_start+y_size]
-    
-    
+
+
 class Jitter():
     def __init__(self, x_pad_limit=0.05, y_pad_limit=0.05):
         self.x_pad = x_pad_limit
         self.y_pad = y_pad_limit
         self.left, self.right, self.top, self.bottom = self.get_params(x_pad_limit, y_pad_limit)
-        
+
     @staticmethod
     def get_params(x_pad, y_pad):
         left_pad = random.random() * x_pad
         right_pad = random.random() * x_pad
         top_pad = random.random() * y_pad
         bottom_pad = random.random() * y_pad
-        
+
         return left_pad, right_pad, top_pad, bottom_pad
-    
-    
+
+
     def reset(self):
         self.left, self.right, self.top, self.bottom = self.get_params(x_pad_limit, y_pad_limit)
-        
-        
+
+
     def __call__(self, tensor):
         top_pad = int(tensor.size(1) * self.top)
         bottom_pad = tensor.size(1) - int(tensor.size(1) * self.bottom)
         left_pad = int(tensor.size(2) * self.left)
         right_pad = tensor.size(2) - int(tensor.size(2) * self.right)
-        
+
         return tensor[:, top_pad:bottom_pad, left_pad:right_pad]
-        
-        
+
+
 class Rotate(object):
     def __init__(self, min_angle=-10, max_angle=10):
         self.min_angle = min_angle
         self.max_angle = max_angle
-        
+
         self.angle = self.get_params(self.min_angle, self.max_angle)
-        
+
     @staticmethod
     def get_params(min_angle, max_angle):
         angle = random.random() * (max_angle - min_angle) + min_angle
         return angle
-    
+
     def reset(self):
         self.angle = self.get_params(self.min_angle, self.max_angle)
-        
+
     def __call__(self, image):
         numpy.random.seed()
         res = image.numpy()
-        
+
         image_max = res.max()
         image_min = res.min()
-        
+
         res = (res - image_min) / (image_max - image_min)
-        
+
         res = res.swapaxes(0, 1).swapaxes(1, 2)
-        
+
         res = skimage.transform.rotate(res, self.angle)
         res = res.swapaxes(1, 2).swapaxes(0, 1)
         res = res * (image_max - image_min) + image_min
         res = torch.FloatTensor(res)
-        
+
         return res
-    
+
 class XYFlip:
     def __init__(self, p=0.5):
         self.p = 0.5
         self.flag = get_params(self.p)
-        
+
     def reset(self):
         self.flag = get_params(self.p)
-    
+
     @staticmethod
     def get_params(p):
         return random.random() > p
-    
+
     def __call__(self, tensor):
         if self.flip:
             return tensor.transpose(1, 2)
         return tensor
-            
+
 #def g_noise():
 #    pass
 
