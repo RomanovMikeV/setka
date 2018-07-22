@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="scorch",
+    name="pytorch-scorch",
     version="0.0.1",
     author="Mikhail Romanov",
     author_email="romanov.michael.v@gmail.com",

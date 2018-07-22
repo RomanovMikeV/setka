@@ -4,4 +4,6 @@
 *.csv
 *.txt
 *.tar.gz
-
+*.pth.tar
+*__pycache__*
+dist/*
