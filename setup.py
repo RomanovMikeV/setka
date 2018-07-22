@@ -18,4 +18,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ),
+    scripts = ['scorch-train.py'],
 )
