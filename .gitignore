@@ -7,3 +7,4 @@
 *.pth.tar
 *__pycache__*
 dist/*
+build/*

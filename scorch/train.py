@@ -10,8 +10,8 @@ import importlib.util
 
 import torchvision.transforms as transform
 
-import trainer
-import utils
+from scorch import trainer
+from scorch import utils
 
 
 def train(model_source_path,
@@ -119,7 +119,7 @@ def train(model_source_path,
             my_trainer.make_checkpoint(checkpoint_prefix, info=metrics, is_best=is_best)
 
 
-def train():
+def training():
 
     ## Training parameters
 
@@ -163,4 +163,4 @@ def train():
               checkpoint_prefix = args['checkpoint_prefix'])
 
 if __name__ == '__main__':
-    train()
+    training()

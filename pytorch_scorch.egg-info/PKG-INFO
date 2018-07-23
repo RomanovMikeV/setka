@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: pytorch-scorch
-Version: 0.0.1
+Version: 0.0.7
 Summary: A set of scripts to make the Neural Network training with pytorch faster
 Home-page: https://github.com/RomanovMikeV/scorch
 Author: Mikhail Romanov

@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pytorch-scorch",
-    version="0.0.1",
+    version="0.0.7",
     author="Mikhail Romanov",
     author_email="romanov.michael.v@gmail.com",
     description="A set of scripts to make the Neural Network training with pytorch faster",
@@ -20,6 +20,6 @@ setuptools.setup(
     ),
     scripts = [],
     entry_points = {
-        "scorch-train = scorch.train:train"
+        'console_scripts': ['scorch-train = scorch.train:training']
     }
 )
