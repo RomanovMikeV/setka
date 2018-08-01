@@ -106,6 +106,8 @@ def train(model_source_path,
         for metric in my_trainer.validate(valid_loader):
             metrics.append(metric)
 
+        socket.scheduler.step(metrics[0])
+
         if index % dump_period == 0:
             is_best = False
             if best_metrics == None:
