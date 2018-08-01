@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import torch
+import torch.utils.data.distributed
 import torchvision
 import skimage.transform
 import sys
@@ -32,6 +33,7 @@ def train(model_source_path,
           verbosity=-1,
           checkpoint_prefix=''):
 
+    print("Initializing XOROVOD!!!")
     # Initializing Horovod
     hvd.init()
 
@@ -47,7 +49,7 @@ def train(model_source_path,
     ## Creating neural network and a socket for it
 
     net = model.Network()
-    net = torch.nn.parallel.DataParallel(net).eval()
+    #net = torch.nn.parallel.DataParallel(net).eval()
 
     if use_cuda:
         torch.cuda.set_device(hvd.local_rank())
@@ -79,7 +81,7 @@ def train(model_source_path,
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=batch_size,
-                                               shuffle=True,
+                                               shuffle=False,
                                                num_workers=num_workers,
                                                drop_last=True,
                                                pin_memory=False,
