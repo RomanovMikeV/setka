@@ -7,6 +7,7 @@ import sys
 import argparse
 import time
 import importlib.util
+import horovod.torch as hvd
 
 import torchvision.transforms as transform
 
@@ -31,6 +32,10 @@ def train(model_source_path,
           verbosity=-1,
           checkpoint_prefix=''):
 
+    # Initializing Horovod
+    hvd.init()
+
+
     spec = importlib.util.spec_from_file_location("model", model_source_path)
     model = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model)
@@ -45,29 +50,41 @@ def train(model_source_path,
     net = torch.nn.parallel.DataParallel(net).eval()
 
     if use_cuda:
+        torch.cuda.set_device(hvd.local_rank())
         net = net.cuda()
 
     socket = model.Socket(net)
+    socket.optimizer = hvd.DistributedOptimizer(
+        socket.optimizer,
+        named_parameters=socket.model.named_parameters())
 
 
     # Creating the datasets
 
     ds_index = dataset.DataSetIndex(dataset_path)
+
     train_dataset = dataset.DataSet(
         ds_index, mode='train')
 
     valid_dataset = dataset.DataSet(
         ds_index, mode='valid')
 
+    train_sampler = torch.utils.data.distributed.DistributedSampler(
+        train_dataset, num_replicas=hvd.size(), rank=hvd.rank())
+
+    valid_sampler = torch.utils.data.distributed.DistributedSampler(
+        valid_dataset, num_replicas=hvd.size(), rank=hvd.rank())
+
     ## Creating dataloaders from the datasets
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
                                                batch_size=batch_size,
-                                               shuffle=False,
+                                               shuffle=True,
                                                num_workers=num_workers,
                                                drop_last=True,
                                                pin_memory=False,
-                                               collate_fn=utils.default_collate)
+                                               collate_fn=utils.default_collate,
+                                               sampler=train_sampler)
 
     valid_loader = torch.utils.data.DataLoader(valid_dataset,
                                                batch_size=batch_size,
@@ -75,7 +92,8 @@ def train(model_source_path,
                                                num_workers=num_workers,
                                                drop_last=False,
                                                pin_memory=False,
-                                               collate_fn=utils.default_collate)
+                                               collate_fn=utils.default_collate,
+                                               sampler=valid_sampler)
 
 
 
@@ -145,6 +163,7 @@ def training():
                         help='-1 for no output, 0 for epoch output, positive number is printout frequency',
                         default=-1, type=int)
     parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
+    #parser.add_argument('--xorovod')
     args = vars(parser.parse_args())
 
     ## Calling training function
