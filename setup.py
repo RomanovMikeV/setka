@@ -18,8 +18,9 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ),
-    scripts = [],
     entry_points = {
-        'console_scripts': ['scorch-train = scorch.train:training']
+        'console_scripts': [
+            'scorch-train = scorch.train:training'
+        ]
     }
 )

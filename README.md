@@ -6,16 +6,30 @@ for different networks trainings.
 
 ## Prerequisites
 
-You will need Python 3 to use this package.
+You will need openmpi installed before running or installing this package.
+The easiest way to get the openmpi on linux machine without root is to use 
+[LinuxBrew](http://linuxbrew.sh/).
 
-You will need the following packages installed:
+After the LinuxBrew is installed, run this:
+```
+brew install openmpi
+```
 
-* pytorch
-* numpy
-* scikit-image
-* scikit-learn
+After the success you are ready to install this package.
 
-To use the notebooks for testing the model and the dataset you
+It is also recommended that you install [PyTorch](https://pytorch.org/) for your
+system before you install scorch.
+
+Also you will need to install tensorflow in order to be able to use tensorboardX.
+
+Both are easy to install using Conda.
+
+## Installation
+To install this package, use 
+```
+pip install git+http://github.com/RomanovMikeV/scorch
+```
+To use notebooks for testing the model and the dataset you
 will need Jupyter Notebook or JupyterLab installed.
 
 ## Usage
@@ -24,43 +38,37 @@ Here is the minimal command to run to train the model specified in MODEL_FILE wi
 dataset specified in DATASET_FILE, the data is located in the DATASET_PATH.
 
 ```
-python train.py --model MODEL_FILE --dataset DATASET_FILE --dataset-path DATASET_PATH
+scorch-train --model MODEL_FILE --dataset DATASET_FILE --dataset-path DATASET_PATH
 ```
 
 Here is a list of parameters of the script (it will be soon updated):
 
+To see the full list of parameters, please use
 ```
-  -b BATCH_SIZE, --batch-size BATCH_SIZE
-                        Batch size to train or validate your model
-  -w WORKERS, --workers WORKERS
-                        Number of workers in a dataloader
-  --pretraining         Pretraining mode
-  -lr LEARNING_RATE, --learning-rate LEARNING_RATE
-                        Learning rate
-  -d DUMP_PERIOD, --dump-period DUMP_PERIOD
-                        Dump period
-  -e EPOCHS, --epochs EPOCHS
-                        Number of epochs to perform
-  -c CHECKPOINT, --checkpoint CHECKPOINT
-                        Checkpoint to load from
-  --use-cuda            Use cuda for training
-  --validate-on-train   Flag showing that you want to perform validation on training dataset 
-                        along with the validation on the validation set
-                        
-  --model MODEL         File with a model specification
-  --dataset DATASET     File with a dataset sepcification
-  --max-train-iterations MAX_TRAIN_ITERATIONS
-                        Maximum training iterations
-  --max-valid-iterations MAX_VALID_ITERATIONS
-                        Maximum validation iterations
-  -dp DATASET_PATH, --dataset-path DATASET_PATH
-                        Path to the dataset
-  -v VERBOSITY, --verbosity VERBOSITY
-                        -1 for no output, 0 for epoch output, positive number
-                        is printout frequency during the training
-  -cp CHECKPOINT_PREFIX, --checkpoint-prefix CHECKPOINT_PREFIX
-                        Prefix to the checkpoint name
+scorch-train --help
+```
 
+This scripy relies on the Hororvod to parallelize the model training for several devices.
+You can use mpi calls as follows (to run the script on 4 devices of the localhost in 
+parallel):
+```
+mpirun -np 4 \
+    -H localhost:4 \
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl ^openib \
+    scorch-train SCORCH_TRAIN_PARAMETERS
+```
+
+To run on several workstations, do as follows (16 processes in total,
+4 on server1, 4 on server2, 4 on server3, 4 on server4):
+```
+mpirun -np 16 \
+    -H server1:4,server2:4,server3:4,server4:4 \
+    -bind-to none -map-by slot \
+    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
+    -mca pml ob1 -mca btl ^openib \
+    scorch-train SCORCH_TRAIN_PARAMETERS
 ```
 
 ## Model module syntax
@@ -99,6 +107,7 @@ The requirements are as follows:
 * There should be a ```Socket``` class defined in order to specify how to handle the model, it should contain:
   * ```criterion``` method that takes as inputs a **list** of tensors with predictions and a **list** of tensors with targets. The output should be a number.
   * ```metrics``` method that specifies the metrics which are of the interest for your experiment. It should take as inputs a list of tensors with predictions and a list of tensors with targets and return a list of metrics which.
+  * ```torch.nn.ModuleList``` of ```trainable_modules```. Only the modules that were specified here will be trained.
 
 The reason there are lists everywhere is the following: the network may have more than one input and more than one output. We have to deal with this fact smart enough to reuse the code. Thus, the best way to do things is to pass the values of interests in lists.
 
@@ -148,4 +157,4 @@ The dataset script should have at least the class DataSet which should have the 
 * ```__len__``` function that returns the length of the dataset
 * ```__getitem__``` function that returns a list of input tensors and a list of target tensors
 
-Although it is enough to have only the DataSet specified, it is recommended to specify also the DataSetIndex class that contains the information about the dataset's data. It is recommended to share one instance of the DataSetIndex between all the instances of the DataSet with different modes to avoid doubling or tripling the memory used to store this index and also to avoid collecting the dataset index several times.
+Although it is enough to have only the DataSet specified, it is recommended to specify also the DataSetIndex class that contains the information about the whole dataset. It is recommended to share one instance of the DataSetIndex between all the instances of the DataSet with different modes to avoid doubling or tripling the memory used to store this index and also to avoid collecting the dataset index several times.

@@ -958,17 +958,17 @@ class Compose():
 
 
 class ToTensor():
-    def __init__():
+    def __init__(self):
         pass
 
-    def reset():
+    def reset(self):
         pass
 
-    def __call__():
-        pass
+    def __call__(self, input):
+        return torch.FloatTensor(input)
 
 
-class HFlip():
+class RandomHFlip():
     def __init__(self, p=0.5):
         self.p = p
         self.flip = self.get_params(self.p)
@@ -988,7 +988,7 @@ class HFlip():
         return torch.FloatTensor(numpy.array(img))
 
 
-class VFlip():
+class RandomVFlip():
     def __init__(self, p=0.5):
         self.p = p
         self.flip = self.get_params(self.p)
@@ -1028,8 +1028,53 @@ class Scale():
         res = res * (img_max - img_min) + img_min
         return torch.FloatTensor(res)
 
+class CenterCrop():
+    def __init__(self, size=[224, 224]):
+        self.size = size
+        
+    def reset(self):
+        pass
+    
+    def __call__(self, tensor):
+        res = tensor.clone()
+        
+        for index in range(len(self.size)):
+            start = int((tensor.shape[index + 1] - self.size[index]) * 0.5)
+            res = res.transpose(index + 1, 0)[start:start + self.size[index]].transpose(0, index + 1)
+        
+        return res
+    
+class RandomCrop():
+    def __init__(self, size=[224, 224]):
+        self.size=size
 
-class FixedCrop():
+        self.pad = self.get_params(self.size)
+
+
+    @staticmethod
+    def get_params(size):
+        pad = []
+        for index in range(len(size)):
+            pad.append(int(random.random()))
+        
+        return pad
+
+
+    def reset(self):
+        self.pad = self.get_params(self.size)
+
+
+    def __call__(self, tensor):
+        res = tensor.clone()
+        
+        for index in range(len(self.size)):
+            start = int((tensor.shape[index + 1] - self.size[index]) * self.pad[index])
+            res = res.transpose(index + 1, 0)[start:start + self.size[index]].transpose(0, index + 1)
+            
+        return res
+
+
+class RandomFixedCrop():
     def __init__(self, max_size=1.0, min_size=0.5):
         self.max_size = max_size
         self.min_size = min_size
@@ -1061,7 +1106,7 @@ class FixedCrop():
         return tensor[:, x_start:x_start+x_size, y_start:y_start+y_size]
 
 
-class Jitter():
+class RandomJitter():
     def __init__(self, x_pad_limit=0.05, y_pad_limit=0.05):
         self.x_pad = x_pad_limit
         self.y_pad = y_pad_limit
@@ -1090,12 +1135,11 @@ class Jitter():
         return tensor[:, top_pad:bottom_pad, left_pad:right_pad]
 
 
-class Rotate(object):
-    def __init__(self, min_angle=-10, max_angle=10):
-        self.min_angle = min_angle
-        self.max_angle = max_angle
+class RandomRotation(object):
+    def __init__(self, angles=[-180.0, 180.0]):
+        self.angles = angles
 
-        self.angle = self.get_params(self.min_angle, self.max_angle)
+        self.angle = self.get_params(self.angles[0], self.angles[1])
 
     @staticmethod
     def get_params(min_angle, max_angle):
@@ -1103,7 +1147,7 @@ class Rotate(object):
         return angle
 
     def reset(self):
-        self.angle = self.get_params(self.min_angle, self.max_angle)
+        self.angle = self.get_params(self.angles[0], self.angles[1])
 
     def __call__(self, image):
         numpy.random.seed()
@@ -1123,7 +1167,7 @@ class Rotate(object):
 
         return res
 
-class XYFlip:
+class RandomXYFlip:
     def __init__(self, p=0.5):
         self.p = 0.5
         self.flag = get_params(self.p)
@@ -1139,7 +1183,18 @@ class XYFlip:
         if self.flip:
             return tensor.transpose(1, 2)
         return tensor
+    
 
+class Normalize(object):
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def reset(self):
+        pass
+
+    def __call__(self, tensor):
+        return normalize(tensor, self.mean, self.std)
 #def g_noise():
 #    pass
 

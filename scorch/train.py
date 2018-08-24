@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import torch
 import torch.utils.data.distributed
 import torchvision
@@ -9,20 +7,20 @@ import argparse
 import time
 import importlib.util
 import horovod.torch as hvd
+import gc
+from tensorboardX import SummaryWriter
 
 import torchvision.transforms as transform
 
-from scorch import trainer
-from scorch import utils
+from . import trainer
+from . import utils
 
 
 def train(model_source_path,
           dataset_source_path,
           dataset_path,
-          batch_size=32,
-          num_workers=4,
-          pretraining=False,
-          learning_rate=3.0e-4,
+          batch_size=4,
+          num_workers=0,
           dump_period=1,
           epochs=1000,
           checkpoint=None,
@@ -31,12 +29,19 @@ def train(model_source_path,
           max_train_iterations=-1,
           max_valid_iterations=-1,
           verbosity=-1,
-          checkpoint_prefix=''):
+          checkpoint_prefix='',
+          dataset_kwargs={},
+          model_kwargs={}):
 
-    print("Initializing XOROVOD!!!")
     # Initializing Horovod
     hvd.init()
 
+    # Enabling garbage collector
+    gc.enable()
+
+    # Creating tensorboard writer
+    if hvd.rank() == 0:
+        tb_writer = SummaryWriter()
 
     spec = importlib.util.spec_from_file_location("model", model_source_path)
     model = importlib.util.module_from_spec(spec)
@@ -48,7 +53,7 @@ def train(model_source_path,
 
     ## Creating neural network and a socket for it
 
-    net = model.Network()
+    net = model.Network(**model_kwargs)
     #net = torch.nn.parallel.DataParallel(net).eval()
 
     if use_cuda:
@@ -60,10 +65,11 @@ def train(model_source_path,
         socket.optimizer,
         named_parameters=socket.model.named_parameters())
 
+    hvd.broadcast_parameters(socket.model.state_dict(), root_rank=0)
 
     # Creating the datasets
 
-    ds_index = dataset.DataSetIndex(dataset_path)
+    ds_index = dataset.DataSetIndex(dataset_path, **dataset_kwargs)
 
     train_dataset = dataset.DataSet(
         ds_index, mode='train')
@@ -97,7 +103,8 @@ def train(model_source_path,
                                                collate_fn=utils.default_collate,
                                                sampler=valid_sampler)
 
-
+    if hvd.rank() != 0:
+        verbosity = -1
 
     my_trainer = trainer.Trainer(socket,
                                  verbosity=verbosity,
@@ -116,29 +123,51 @@ def train(model_source_path,
         best_metrics = my_trainer.metrics
 
 
-    for index in range(epochs):
+    for epoch_index in range(epochs):
+        #try:
         loss = my_trainer.train(train_loader)
-        metrics = []
+        gc.collect()
+        #print("Problem in train")
+
+        train_metrics = {}
+
         if validate_on_train:
-            for metric in my_trainer.validate(train_loader):
-                metrics.append(metric)
+            train_metrics = my_trainer.validate(train_loader)
+            gc.collect()
 
-        for metric in my_trainer.validate(valid_loader):
-            metrics.append(metric)
+        valid_metrics = my_trainer.validate(valid_loader)
+        for metric_name in valid_metrics:
+            metric_data = {'valid': valid_metrics[metric_name]}
 
-        socket.scheduler.step(metrics[0])
+            if metric_name in train_metrics:
+                metric_data['train'] = train_metrics[metric_name]
 
-        if index % dump_period == 0:
+            if hvd.rank() == 0:
+                tb_writer.add_scalars('metrics/' + metric_name + '/' + checkpoint_prefix, metric_data, my_trainer.epoch)
+        #print(epoch_index, '<- epoch index')
+
+        gc.collect()
+        #except:
+        #    print("Problem in validation")
+        #    metrics = my_trainer.metrics
+
+        socket.scheduler.step(valid_metrics['main'])
+        gc.collect()
+
+        if epoch_index % dump_period == 0 and hvd.rank() == 0:
             is_best = False
             if best_metrics == None:
                 is_best = True
             else:
-                if best_metrics[0] < my_trainer.metrics[0]:
+                if best_metrics['main'] < my_trainer.metrics['main']:
                     is_best = True
             if is_best:
                 best_metrics = my_trainer.metrics
 
-            my_trainer.make_checkpoint(checkpoint_prefix, info=metrics, is_best=is_best)
+            my_trainer.make_checkpoint(checkpoint_prefix,
+                                       info=valid_metrics,
+                                       is_best=is_best)
+        gc.collect()
 
 
 def training():
@@ -147,10 +176,8 @@ def training():
 
     parser = argparse.ArgumentParser(
         description='Script to train a specified model with a specified dataset.')
-    parser.add_argument('-b','--batch-size', help='Batch size', default=32, type=int)
-    parser.add_argument('-w','--workers', help='Number of workers in a dataloader', default=4, type=int)
-    parser.add_argument('--pretraining', help='Pretraining mode', action='store_true')
-    parser.add_argument('-lr', '--learning-rate', help='Learning rate', default=3.0e-4, type=float)
+    parser.add_argument('-b','--batch-size', help='Batch size', default=8, type=int)
+    parser.add_argument('-w','--workers', help='Number of workers in a dataloader', default=0, type=int)
     parser.add_argument('-d', '--dump-period', help='Dump period', default=1, type=int)
     parser.add_argument('-e', '--epochs', help='Number of epochs to perform', default=1000, type=int)
     parser.add_argument('-c', '--checkpoint', help='Checkpoint to load from', default=None)
@@ -165,6 +192,8 @@ def training():
                         help='-1 for no output, 0 for epoch output, positive number is printout frequency',
                         default=-1, type=int)
     parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
+    parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
+    parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
     #parser.add_argument('--xorovod')
     args = vars(parser.parse_args())
 
@@ -173,17 +202,17 @@ def training():
     train(args['model'], args['dataset'], args['dataset_path'],
               batch_size=args['batch_size'],
               num_workers=args['workers'],
-              pretraining=args['pretraining'],
-              learning_rate=args['learning_rate'],
               dump_period=args['dump_period'],
               epochs=args['epochs'],
               checkpoint=args['checkpoint'],
               use_cuda=args['use_cuda'],
               validate_on_train=args['validate_on_train'],
               max_train_iterations=args['max_train_iterations'],
-              max_valid_iterations = args['max_valid_iterations'],
-              verbosity = args['verbosity'],
-              checkpoint_prefix = args['checkpoint_prefix'])
+              max_valid_iterations=args['max_valid_iterations'],
+              verbosity=args['verbosity'],
+              checkpoint_prefix=args['checkpoint_prefix'],
+              dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
+              model_kwargs=eval('{' + args['model_args'] + '}'))
 
 if __name__ == '__main__':
     training()
