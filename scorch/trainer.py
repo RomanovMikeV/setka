@@ -4,6 +4,8 @@ import torch
 import shutil
 import gc
 import collections
+import os
+from tqdm import tqdm
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -29,6 +31,7 @@ class Trainer():
                  verbosity=-1,
                  max_train_iterations=-1,
                  max_valid_iterations=-1,
+                 max_test_iterations=-1,
                  metric_mode='max',
                  use_cuda=True,
                  name='Trainer'):
@@ -38,30 +41,44 @@ class Trainer():
         self.verbosity = verbosity
         self.max_train_iterations = max_train_iterations
         self.max_valid_iterations = max_valid_iterations
+        self.max_test_iterations = max_test_iterations
         self.use_cuda = use_cuda
         self.metrics = None
 
     def train(self,
               train_loader):
 
+        gc.enable()
         self.epoch += 1
 
         batch_time = AverageMeter()
         data_time = AverageMeter()
         losses = AverageMeter()
 
-        end = time.time()
 
-        if self.verbosity >= 0:
-            print("Training epoch ", self.epoch)
 
         iterator = iter(train_loader)
         n_iterations = len(train_loader)
-        if self.max_train_iterations > 0:
+        if self.max_train_iterations >= 0:
             n_iterations = min(len(train_loader), self.max_train_iterations)
 
-        for i in range(n_iterations):
+        self.socket.model.eval()
+
+        gc.collect()
+
+        pbar = tqdm(range(n_iterations), ascii=True)
+        pbar.set_description("Ep: - "
+                "Time: ----(----)  "
+                "Data: ----(----)  "
+                "Loss:  --------(--------)  "
+                "LR: --------")
+
+        end = time.time()
+
+        for i in pbar:
+            start = time.time()
             input, target = next(iterator)
+            data_time.update(time.time() - start)
 
             if self.use_cuda:
                 for index in range(len(input)):
@@ -72,14 +89,13 @@ class Trainer():
                     target[index] = target[index].cuda()
 
             self.socket.train_modules.train()
+
             output = self.socket.model.forward(input)
-
-
             loss = self.socket.criterion(output, target)
-
             self.socket.optimizer.zero_grad()
             loss.backward()
             self.socket.optimizer.step()
+
             self.socket.train_modules.eval()
 
             losses.update(loss.data.item())
@@ -91,24 +107,18 @@ class Trainer():
             del loss, output
 
             # Print status
-            if self.verbosity >= 1:
-                if i % self.verbosity == 0:
-                    print("Ep {0}[{1}/{2}]\t"
-                          "Time  {time.avg:.2f}({time.val:.2f})\t"
-                          "Data  {data.avg:.2f}({data.val:.2f})\t"
-                          "Loss  {loss.avg:.2e}({loss.val:.2e})\t"
-                          "LR {lr:.2e}".format(
-                              self.epoch,
-                              i + 1,
-                              n_iterations,
-                              time=batch_time,
-                              data=data_time,
-                              loss=losses,
-                              lr=self.socket.optimizer.param_groups[-1]['lr']))
+            line = ("Train: {0} "
+                    "Time: {time.avg:.2f}({time.val:.2f})  "
+                    "Data: {data.avg:.2f}({data.val:.2f})  "
+                    "Loss:  {loss.avg:.2e}({loss.val:.2e})  "
+                    "LR: {lr:.2e}".format(
+                        self.epoch,
+                        time=batch_time,
+                        data=data_time,
+                        loss=losses,
+                        lr=self.socket.optimizer.param_groups[-1]['lr']))
 
-            # Stop epoch if needed
-            if i + 1 >= n_iterations:
-                break
+            pbar.set_description(line)
 
         train_loader.dataset.ds_index.shuffle()
 
@@ -118,25 +128,38 @@ class Trainer():
 
 
     def validate(self, valid_loader):
+
         gc.enable()
+
+        batch_time = AverageMeter()
+        data_time = AverageMeter()
+        losses = AverageMeter()
 
         outputs = []
         targets = []
 
-        losses = []
-
-        if self.verbosity >= 0:
-            print("Validating epoch", self.epoch)
-
-
         iterator = iter(valid_loader)
         n_iterations = len(valid_loader)
-        if self.max_valid_iterations > 0:
+        if self.max_valid_iterations >= 0:
             n_iterations = min(len(valid_loader), self.max_valid_iterations)
 
+        self.socket.model.eval()
 
-        for i in range(n_iterations):
+        pbar = tqdm(range(n_iterations), ascii=True)
+
+        end = time.time()
+        pbar.set_description("Valid: - "
+                "Time: ----(----)  "
+                "Data: ----(----)  "
+                "Loss:  --------(--------)  "
+                "LR: --------")
+
+        for i in pbar:
+
+            start = time.time()
             input, target = next(iterator)
+            data_time.update(time.time() - start)
+
             if self.use_cuda:
                 for index in range(len(input)):
                     input[index] = input[index].cuda()
@@ -148,7 +171,7 @@ class Trainer():
             output = self.socket.model.forward(input)
             loss = self.socket.criterion(output, target)
 
-            losses.append(loss.data.item())
+            losses.update(loss.data.item())
 
 
             for index in range(len(output)):
@@ -176,8 +199,21 @@ class Trainer():
             outputs.append(output)
             targets.append(target)
 
-            if i + 1 >= n_iterations:
-                break
+            batch_time.update(time.time() - end)
+            end = time.time()
+
+            line = ("Valid: {0} "
+                    "Time: {time.avg:.2f}({time.val:.2f})  "
+                    "Data: {data.avg:.2f}({data.val:.2f})  "
+                    "Loss:  {loss.avg:.2e}({loss.val:.2e})  "
+                    "LR: {lr:.2e}".format(
+                        self.epoch,
+                        time=batch_time,
+                        data=data_time,
+                        loss=losses,
+                        lr=self.socket.optimizer.param_groups[-1]['lr']))
+
+            pbar.set_description(line)
 
             del input
             del output, target
@@ -196,8 +232,7 @@ class Trainer():
         del outputs, targets
         gc.collect()
 
-        if self.verbosity >= 0:
-            print("Metrics:\t", "\t\t".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]) )
+        print("Metrics: | ", " | ".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]), " |" )
 
         time.sleep(1)
 
@@ -205,6 +240,51 @@ class Trainer():
         gc.collect()
 
         return metrics
+
+
+    def test(self, test_dataloader):
+        gc.enable()
+
+        iterator = iter(test_dataloader)
+        n_iterations = len(test_dataloader)
+
+        if self.max_test_iterations >= 0:
+            n_iterations = min(self.max_test_iterations, n_iterations)
+
+        self.socket.model.eval()
+
+        inputs = []
+        outputs = []
+
+        gc.collect()
+
+        pbar = tqdm(range(n_iterations), ascii=True)
+        pbar.set_description("Testing: ")
+
+        for i in pbar:
+
+            input, target = next(iterator)
+
+            if self.use_cuda:
+                for index in range(len(input)):
+                    input[index] = input[index].cuda()
+
+            output = self.socket.model(input)
+
+            for index in range(len(output)):
+                output[index] = output[index].detach()
+
+            if self.use_cuda:
+                for index in range(len(output)):
+                    output[index] = output[index].cpu()
+
+            gc.collect()
+
+            inputs.append(input)
+            outputs.append(output)
+
+        return inputs, outputs
+
 
 
     def make_checkpoint(self, prefix='./', is_best=False, info=""):
@@ -217,26 +297,15 @@ class Trainer():
             "info": info,
             "metrics": self.metrics}
 
-        torch.save(checkpoint, prefix + 'checkpoint.pth.tar')
+        if not os.path.exists('checkpoints'):
+            os.mkdir('checkpoints')
+
+        torch.save(checkpoint,
+                   'checkpoints/' + prefix + '.pth.tar')
 
         if is_best:
-            shutil.copy(prefix + 'checkpoint.pth.tar', prefix + 'checkpoint_best.pth.tar')
-
-    def restore_from_checkpoit(self, checkpoint_name, load_model_structure=False):
-        checkpoint = torch.load(checkpoint_name)
-        print("Loaded ", checkpoint_name)
-        print(checkpoint["info"])
-
-        self.epoch = checkpoint['epoch']
-        #self.optimizer = checkpoint['optimizer']
-        self.verbosity = checkpoint['verbosity']
-        self.metrics = checkpoint['metrics']
-
-        if load_model_structure:
-            self.socket = checkpoint['socket']
-
-        self.socket.model.load_state_dict(checkpoint["model_state"])
-        self.optimizer.load_state_dict(checkpoint["optimizer_state"])
+            shutil.copy('checkpoints/' + prefix + '.pth.tar',
+                        'checkpoints/' + prefix + '_best.pth.tar')
 
 
 
@@ -260,7 +329,6 @@ def load_from_checkpoint(checkpoint_name,
                                use_cuda=use_cuda)
 
     restored_trainer.epoch = checkpoint['epoch']
-    #restored_trainer.optimizer = checkpoint['optimizer']
     restored_trainer.socket.model.load_state_dict(checkpoint["model_state"])
     try:
         restored_trainer.socket.optimizer.load_state_dict(checkpoint["optimizer_state"])

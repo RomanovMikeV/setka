@@ -28,6 +28,7 @@ def train(model_source_path,
           validate_on_train=False,
           max_train_iterations=-1,
           max_valid_iterations=-1,
+          max_test_iterations=-1,
           verbosity=-1,
           checkpoint_prefix='',
           dataset_kwargs={},
@@ -77,11 +78,17 @@ def train(model_source_path,
     valid_dataset = dataset.DataSet(
         ds_index, mode='valid')
 
+    test_dataset = dataset.DataSet(
+        ds_index, mode='test')
+
     train_sampler = torch.utils.data.distributed.DistributedSampler(
         train_dataset, num_replicas=hvd.size(), rank=hvd.rank())
 
     valid_sampler = torch.utils.data.distributed.DistributedSampler(
         valid_dataset, num_replicas=hvd.size(), rank=hvd.rank())
+
+    test_sampler = torch.utils.data.distributed.DistributedSampler(
+        test_dataset, num_replicas=hvd.size(), rank=hvd.rank())
 
     ## Creating dataloaders from the datasets
 
@@ -103,6 +110,16 @@ def train(model_source_path,
                                                collate_fn=utils.default_collate,
                                                sampler=valid_sampler)
 
+    test_loader = torch.utils.data.DataLoader(test_dataset,
+                                               batch_size=1,
+                                               shuffle=False,
+                                               num_workers=num_workers,
+                                               drop_last=False,
+                                               pin_memory=False,
+                                               collate_fn=utils.default_collate,
+                                               sampler=test_sampler)
+
+
     if hvd.rank() != 0:
         verbosity = -1
 
@@ -110,7 +127,8 @@ def train(model_source_path,
                                  verbosity=verbosity,
                                  use_cuda=use_cuda,
                                  max_train_iterations=max_train_iterations,
-                                 max_valid_iterations=max_valid_iterations)
+                                 max_valid_iterations=max_valid_iterations,
+                                 max_test_iterations=max_test_iterations)
     best_metrics = None
 
     if checkpoint is not None:
@@ -119,12 +137,15 @@ def train(model_source_path,
                                                   verbosity=verbosity,
                                                   use_cuda=use_cuda,
                                                   max_train_iterations=max_train_iterations,
-                                                  max_valid_iterations=max_valid_iterations)
+                                                  max_valid_iterations=max_valid_iterations,
+                                                  max_test_iterations=max_test_iterations)
         best_metrics = my_trainer.metrics
 
 
     for epoch_index in range(epochs):
         #try:
+        print("\n=== Epoch #" + str(my_trainer.epoch + 1) + " ===")
+        gc.enable()
         loss = my_trainer.train(train_loader)
         gc.collect()
         #print("Problem in train")
@@ -143,8 +164,13 @@ def train(model_source_path,
                 metric_data['train'] = train_metrics[metric_name]
 
             if hvd.rank() == 0:
-                tb_writer.add_scalars('metrics/' + metric_name + '/' + checkpoint_prefix, metric_data, my_trainer.epoch)
-        #print(epoch_index, '<- epoch index')
+                tb_writer.add_scalars(
+                    'metrics/' + metric_name + '/' + checkpoint_prefix,
+                    metric_data, my_trainer.epoch)
+
+        inputs, outputs = my_trainer.test(test_loader)
+
+        to_show = socket.process(inputs, outputs)
 
         gc.collect()
         #except:
@@ -187,6 +213,7 @@ def training():
     parser.add_argument('--dataset', help='File with a dataset sepcification', required=True)
     parser.add_argument('--max-train-iterations', help='Maximum training iterations', default=-1, type=int)
     parser.add_argument('--max-valid-iterations', help='Maximum validation iterations', default=-1, type=int)
+    parser.add_argument('--max-test-iterations', help='Maximum test iterations', default=-1, type=int)
     parser.add_argument('-dp', '--dataset-path', help='Path to the dataset', required=True)
     parser.add_argument('-v', '--verbosity',
                         help='-1 for no output, 0 for epoch output, positive number is printout frequency',
@@ -209,6 +236,7 @@ def training():
               validate_on_train=args['validate_on_train'],
               max_train_iterations=args['max_train_iterations'],
               max_valid_iterations=args['max_valid_iterations'],
+              max_test_iterations=args['max_test_iterations'],
               verbosity=args['verbosity'],
               checkpoint_prefix=args['checkpoint_prefix'],
               dataset_kwargs=eval('{' + args['dataset_args'] + '}'),

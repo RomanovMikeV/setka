@@ -52,10 +52,21 @@ class Socket:
         return loss_f(pred[0], target[0])
 
     def metrics(self, pred, target):
-        accuracy = ((pred[0].numpy().argmax(axis=1) == target[0].numpy()).sum() / pred[0].size(0))
+        accuracy = (
+            (pred[0].numpy().argmax(axis=1) == target[0].numpy()).sum() /
+            pred[0].size(0))
         errors = 1.0 - accuracy
         loss = self.criterion(pred, target)
-        return {'main': accuracy, 'accuracy': accuracy, 'errors': errors, 'loss': loss}
+        return {'main': accuracy,
+                'accuracy': accuracy,
+                'errors': errors,
+                'loss': loss}
 
-    def inference(self, input):
-        result = self.model(input)
+
+    def process(self, inputs, outputs):
+        res = {"images": []}
+        for index in range(len(input[0])):
+            img = input[0][index]
+            res = outputs[0][index]
+
+        return {}
