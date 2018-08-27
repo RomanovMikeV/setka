@@ -53,3 +53,19 @@ class Socket:
         loss = self.criterion(pred, target)
         return {'main': metric_1, 'metric_1': metric_1,
                 'metric_2': metric_2, 'loss': loss}
+
+
+
+    def process(self, inputs, outputs):
+        res = {'images': {}, 'texts': {}}
+
+        for index in range(len(inputs[0])):
+            res['images'][index] = inputs[0][index]
+
+        for index in range(len(outputs[0])):
+            text = ''
+            for number in range(len(outputs[0][index])):
+                text += str(number) + ': ' + str(outputs[0][index][number]) + '\n'
+            res['texts'][index] = (text)
+
+        return res

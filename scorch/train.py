@@ -15,6 +15,21 @@ import torchvision.transforms as transform
 from . import trainer
 from . import utils
 
+def show(tb_writer, to_show, epoch):
+
+    type_writers = {
+        'images': tb_writer.add_image,
+        'texts': tb_writer.add_text,
+        'audios': tb_writer.add_audio,
+        # 'figures': tb_writer.add_figure,
+        'graphs': tb_writer.add_graph,
+        'embeddings': tb_writer.add_embedding}
+
+    for type in type_writers:
+        if type in to_show:
+            for desc in to_show[type]:
+                type_writers[type](desc, to_show[type][desc], str(epoch))
+
 
 def train(model_source_path,
           dataset_source_path,
@@ -169,8 +184,10 @@ def train(model_source_path,
                     metric_data, my_trainer.epoch)
 
         inputs, outputs = my_trainer.test(test_loader)
+        print("Now processing")
+        show(tb_writer, my_trainer.socket.process(inputs, outputs), my_trainer.epoch)
 
-        to_show = socket.process(inputs, outputs)
+
 
         gc.collect()
         #except:

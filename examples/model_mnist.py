@@ -64,9 +64,15 @@ class Socket:
 
 
     def process(self, inputs, outputs):
-        res = {"images": []}
-        for index in range(len(input[0])):
-            img = input[0][index]
-            res = outputs[0][index]
+        res = {'images': {}, 'texts': {}}
 
-        return {}
+        for index in range(len(inputs[0])):
+            res['images'][index] = inputs[0][index]
+
+        for index in range(len(outputs[0])):
+            text = ''
+            for number in range(len(outputs[0][index])):
+                text += str(number) + ': ' + str(outputs[0][index][number]) + '\n'
+            res['texts'][index] = (text)
+
+        return res
