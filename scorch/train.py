@@ -9,6 +9,7 @@ import importlib.util
 import horovod.torch as hvd
 import gc
 from tensorboardX import SummaryWriter
+import scorch.data
 
 import torchvision.transforms as transform
 
@@ -107,7 +108,7 @@ def train(model_source_path,
 
     ## Creating dataloaders from the datasets
 
-    train_loader = torch.utils.data.DataLoader(train_dataset,
+    train_loader = scorch.data.DataLoader(train_dataset,
                                                batch_size=batch_size,
                                                shuffle=False,
                                                num_workers=num_workers,
@@ -116,7 +117,7 @@ def train(model_source_path,
                                                collate_fn=utils.default_collate,
                                                sampler=train_sampler)
 
-    valid_loader = torch.utils.data.DataLoader(valid_dataset,
+    valid_loader = scorch.data.DataLoader(valid_dataset,
                                                batch_size=batch_size,
                                                shuffle=False,
                                                num_workers=num_workers,
@@ -125,7 +126,7 @@ def train(model_source_path,
                                                collate_fn=utils.default_collate,
                                                sampler=valid_sampler)
 
-    test_loader = torch.utils.data.DataLoader(test_dataset,
+    test_loader = scorch.data.DataLoader(test_dataset,
                                                batch_size=1,
                                                shuffle=False,
                                                num_workers=num_workers,
