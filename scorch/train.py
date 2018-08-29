@@ -9,6 +9,7 @@ import importlib.util
 import horovod.torch as hvd
 import gc
 from tensorboardX import SummaryWriter
+import tensorboardX
 import scorch.data
 
 import torchvision.transforms as transform
@@ -22,7 +23,7 @@ def show(tb_writer, to_show, epoch):
         'images': tb_writer.add_image,
         'texts': tb_writer.add_text,
         'audios': tb_writer.add_audio,
-        # 'figures': tb_writer.add_figure,
+        # 'figures': (lambda x, y, z: tb_writer.add_image(x, tensorboardX.utils.figure_to_image(y), z)),
         'graphs': tb_writer.add_graph,
         'embeddings': tb_writer.add_embedding}
 
@@ -45,7 +46,7 @@ def train(model_source_path,
           max_train_iterations=-1,
           max_valid_iterations=-1,
           max_test_iterations=-1,
-          verbosity=-1,
+          silent=False,
           checkpoint_prefix='',
           dataset_kwargs={},
           model_kwargs={}):
@@ -137,10 +138,10 @@ def train(model_source_path,
 
 
     if hvd.rank() != 0:
-        verbosity = -1
+        silent = True
 
     my_trainer = trainer.Trainer(socket,
-                                 verbosity=verbosity,
+                                 silent=silent,
                                  use_cuda=use_cuda,
                                  max_train_iterations=max_train_iterations,
                                  max_valid_iterations=max_valid_iterations,
@@ -150,7 +151,7 @@ def train(model_source_path,
     if checkpoint is not None:
         my_trainer = trainer.load_from_checkpoint(checkpoint,
                                                   socket,
-                                                  verbosity=verbosity,
+                                                  silent=silent,
                                                   use_cuda=use_cuda,
                                                   max_train_iterations=max_train_iterations,
                                                   max_valid_iterations=max_valid_iterations,
@@ -160,7 +161,9 @@ def train(model_source_path,
 
     for epoch_index in range(epochs):
         #try:
-        print("\n=== Epoch #" + str(my_trainer.epoch + 1) + " ===")
+        if not silent and hvd.rank() == 0:
+            print("\n=== Epoch #" + str(my_trainer.epoch + 1) + " ===")
+
         gc.enable()
         loss = my_trainer.train(train_loader)
         gc.collect()
@@ -185,8 +188,9 @@ def train(model_source_path,
                     metric_data, my_trainer.epoch)
 
         inputs, outputs = my_trainer.test(test_loader)
-        print("Now processing")
-        show(tb_writer, my_trainer.socket.process(inputs, outputs), my_trainer.epoch)
+
+        if hvd.rank() == 0:
+            show(tb_writer, my_trainer.socket.process(inputs, outputs), my_trainer.epoch)
 
 
 
@@ -233,9 +237,8 @@ def training():
     parser.add_argument('--max-valid-iterations', help='Maximum validation iterations', default=-1, type=int)
     parser.add_argument('--max-test-iterations', help='Maximum test iterations', default=-1, type=int)
     parser.add_argument('-dp', '--dataset-path', help='Path to the dataset', required=True)
-    parser.add_argument('-v', '--verbosity',
-                        help='-1 for no output, 0 for epoch output, positive number is printout frequency',
-                        default=-1, type=int)
+    parser.add_argument('-s', '--silent', help='do not print the status of learning',
+                        action='store_true')
     parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
     parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
     parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
@@ -255,7 +258,7 @@ def training():
               max_train_iterations=args['max_train_iterations'],
               max_valid_iterations=args['max_valid_iterations'],
               max_test_iterations=args['max_test_iterations'],
-              verbosity=args['verbosity'],
+              silent=args['silent'],
               checkpoint_prefix=args['checkpoint_prefix'],
               dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
               model_kwargs=eval('{' + args['model_args'] + '}'))

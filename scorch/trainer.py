@@ -28,7 +28,7 @@ class AverageMeter(object):
 class Trainer():
     def __init__(self,
                  socket,
-                 verbosity=-1,
+                 silent=False,
                  max_train_iterations=-1,
                  max_valid_iterations=-1,
                  max_test_iterations=-1,
@@ -38,7 +38,7 @@ class Trainer():
 
         self.socket = socket
         self.epoch = 0
-        self.verbosity = verbosity
+        self.silent = silent
         self.max_train_iterations = max_train_iterations
         self.max_valid_iterations = max_valid_iterations
         self.max_test_iterations = max_test_iterations
@@ -66,7 +66,7 @@ class Trainer():
 
         gc.collect()
 
-        pbar = tqdm(range(n_iterations), ascii=True)
+        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent)
         pbar.set_description("Ep: - "
                 "Time: ----(----)  "
                 "Data: ----(----)  "
@@ -145,7 +145,7 @@ class Trainer():
 
         self.socket.model.eval()
 
-        pbar = tqdm(range(n_iterations), ascii=True)
+        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent)
 
         end = time.time()
         pbar.set_description("Valid: - "
@@ -258,7 +258,7 @@ class Trainer():
 
         gc.collect()
 
-        pbar = tqdm(range(n_iterations), ascii=True)
+        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent)
         pbar.set_description("Testing: ")
 
         for i in pbar:
@@ -293,7 +293,6 @@ class Trainer():
             "epoch": self.epoch,
             "model_state": self.socket.model.state_dict(),
             "optimizer_state": self.socket.optimizer.state_dict(),
-            "verbosity": self.verbosity,
             "info": info,
             "metrics": self.metrics}
 
@@ -311,7 +310,7 @@ class Trainer():
 
 def load_from_checkpoint(checkpoint_name,
                          socket,
-                         verbosity=-1,
+                         silent=False,
                          max_train_iterations=-1,
                          max_valid_iterations=-1,
                          metric_mode='max',
@@ -322,7 +321,7 @@ def load_from_checkpoint(checkpoint_name,
     print("Model restored from", checkpoint_name)
 
     restored_trainer = Trainer(socket,
-                               verbosity=verbosity,
+                               silent=silent,
                                max_train_iterations=max_train_iterations,
                                max_valid_iterations=max_valid_iterations,
                                metric_mode=metric_mode,

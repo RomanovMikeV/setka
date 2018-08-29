@@ -385,6 +385,9 @@ class _DataLoaderIter(object):
                     # ImportError can happen when the unpickler loads the
                     # resource from `get`.
                     pass
+                except:
+                    pass
+
                 # done_event should be sufficient to exit worker_manager_thread,
                 # but be safe here and put another None
                 self.worker_result_queue.put(None)
