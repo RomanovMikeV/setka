@@ -232,7 +232,8 @@ class Trainer():
         del outputs, targets
         gc.collect()
 
-        print("Metrics: | ", " | ".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]), " |" )
+        if not self.silent:
+            print("\nMetrics: | ", " | ".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]), " |" )
 
         time.sleep(1)
 
@@ -263,7 +264,7 @@ class Trainer():
 
         for i in pbar:
 
-            input, target = next(iterator)
+            input = next(iterator)
 
             if self.use_cuda:
                 for index in range(len(input)):
