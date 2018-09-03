@@ -244,7 +244,7 @@ def training():
     parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
     parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
     parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
-    parser.add_argument('--new-optimizer', help='Use new optimizer when loading from the checkpoint', action=store_true)
+    parser.add_argument('--new-optimizer', help='Use new optimizer when loading from the checkpoint', action='store_true')
     #parser.add_argument('--xorovod')
     args = vars(parser.parse_args())
 

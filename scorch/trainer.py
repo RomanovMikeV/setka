@@ -332,7 +332,7 @@ def load_from_checkpoint(checkpoint_name,
 
     restored_trainer.epoch = checkpoint['epoch']
     restored_trainer.socket.model.load_state_dict(checkpoint["model_state"])
-    if rnot new_optimizer:
+    if not new_optimizer:
         try:
             restored_trainer.socket.optimizer.load_state_dict(checkpoint["optimizer_state"])
         except:
