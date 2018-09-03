@@ -1020,7 +1020,7 @@ class Scale():
         img_max = img.max()
         img_min = img.min()
 
-        res = (img - img_min) / (img_max - img_min)
+        res = (img - img_min) / (img_max - img_min + 1.0e-8)
 
         res = skimage.transform.resize(res, self.shape,
                                        mode='reflect').swapaxes(1, 2).swapaxes(0, 1)
@@ -1031,19 +1031,19 @@ class Scale():
 class CenterCrop():
     def __init__(self, size=[224, 224]):
         self.size = size
-        
+
     def reset(self):
         pass
-    
+
     def __call__(self, tensor):
         res = tensor.clone()
-        
+
         for index in range(len(self.size)):
             start = int((tensor.shape[index + 1] - self.size[index]) * 0.5)
             res = res.transpose(index + 1, 0)[start:start + self.size[index]].transpose(0, index + 1)
-        
+
         return res
-    
+
 class RandomCrop():
     def __init__(self, size=[224, 224]):
         self.size=size
@@ -1056,7 +1056,7 @@ class RandomCrop():
         pad = []
         for index in range(len(size)):
             pad.append(int(random.random()))
-        
+
         return pad
 
 
@@ -1066,11 +1066,11 @@ class RandomCrop():
 
     def __call__(self, tensor):
         res = tensor.clone()
-        
+
         for index in range(len(self.size)):
             start = int((tensor.shape[index + 1] - self.size[index]) * self.pad[index])
             res = res.transpose(index + 1, 0)[start:start + self.size[index]].transpose(0, index + 1)
-            
+
         return res
 
 
@@ -1156,7 +1156,7 @@ class RandomRotation(object):
         image_max = res.max()
         image_min = res.min()
 
-        res = (res - image_min) / (image_max - image_min)
+        res = (res - image_min) / (image_max - image_min + 1.0e-8)
 
         res = res.swapaxes(0, 1).swapaxes(1, 2)
 
@@ -1183,7 +1183,7 @@ class RandomXYFlip:
         if self.flip:
             return tensor.transpose(1, 2)
         return tensor
-    
+
 
 class Normalize(object):
     def __init__(self, mean, std):

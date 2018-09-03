@@ -232,10 +232,9 @@ class Trainer():
         del outputs, targets
         gc.collect()
 
+        time.sleep(1)
         if not self.silent:
             print("\nMetrics: | ", " | ".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]), " |" )
-
-        time.sleep(1)
 
         self.metrics = metrics
         gc.collect()
@@ -314,8 +313,10 @@ def load_from_checkpoint(checkpoint_name,
                          silent=False,
                          max_train_iterations=-1,
                          max_valid_iterations=-1,
+                         max_test_iterations=-1,
                          metric_mode='max',
-                         use_cuda=True):
+                         use_cuda=True,
+                         new_optimizer=False):
 
     checkpoint = torch.load(checkpoint_name)
     print(checkpoint['info'])
@@ -325,14 +326,16 @@ def load_from_checkpoint(checkpoint_name,
                                silent=silent,
                                max_train_iterations=max_train_iterations,
                                max_valid_iterations=max_valid_iterations,
+                               max_test_iterations=max_test_iterations,
                                metric_mode=metric_mode,
                                use_cuda=use_cuda)
 
     restored_trainer.epoch = checkpoint['epoch']
     restored_trainer.socket.model.load_state_dict(checkpoint["model_state"])
-    try:
-        restored_trainer.socket.optimizer.load_state_dict(checkpoint["optimizer_state"])
-    except:
-        print('Failed to load optimizer state, starting to train from scratch')
+    if rnot new_optimizer:
+        try:
+            restored_trainer.socket.optimizer.load_state_dict(checkpoint["optimizer_state"])
+        except:
+            print('Failed to load optimizer state, starting to train from scratch')
 
     return restored_trainer

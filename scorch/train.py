@@ -49,7 +49,8 @@ def train(model_source_path,
           silent=False,
           checkpoint_prefix='',
           dataset_kwargs={},
-          model_kwargs={}):
+          model_kwargs={},
+          new_optimizer=False):
 
     # Initializing Horovod
     hvd.init()
@@ -155,7 +156,8 @@ def train(model_source_path,
                                                   use_cuda=use_cuda,
                                                   max_train_iterations=max_train_iterations,
                                                   max_valid_iterations=max_valid_iterations,
-                                                  max_test_iterations=max_test_iterations)
+                                                  max_test_iterations=max_test_iterations,
+                                                  new_optimizer=new_optimizer)
         best_metrics = my_trainer.metrics
 
 
@@ -242,6 +244,7 @@ def training():
     parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
     parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
     parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
+    parser.add_argument('--new-optimizer', help='Use new optimizer when loading from the checkpoint', action=store_true)
     #parser.add_argument('--xorovod')
     args = vars(parser.parse_args())
 
@@ -261,7 +264,8 @@ def training():
               silent=args['silent'],
               checkpoint_prefix=args['checkpoint_prefix'],
               dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
-              model_kwargs=eval('{' + args['model_args'] + '}'))
+              model_kwargs=eval('{' + args['model_args'] + '}'),
+              new_optimizer=args['new_optimizer'])
 
 if __name__ == '__main__':
     training()
