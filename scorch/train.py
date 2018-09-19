@@ -11,6 +11,8 @@ import gc
 from tensorboardX import SummaryWriter
 import tensorboardX
 import scorch.data
+import numpy
+import random
 
 import torchvision.transforms as transform
 
@@ -23,7 +25,7 @@ def show(tb_writer, to_show, epoch):
         'images': tb_writer.add_image,
         'texts': tb_writer.add_text,
         'audios': tb_writer.add_audio,
-        # 'figures': (lambda x, y, z: tb_writer.add_image(x, tensorboardX.utils.figure_to_image(y), z)),
+        'figures': (lambda x, y, z: tb_writer.add_figure(x, y, z)),
         'graphs': tb_writer.add_graph,
         'embeddings': tb_writer.add_embedding}
 
@@ -50,7 +52,15 @@ def train(model_source_path,
           checkpoint_prefix='',
           dataset_kwargs={},
           model_kwargs={},
-          new_optimizer=False):
+          new_optimizer=False,
+          seed=0):
+
+    numpy.random.seed(seed)
+    random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available:
+        torch.cuda.manual_seed(seed)
 
     # Initializing Horovod
     hvd.init()
@@ -62,32 +72,34 @@ def train(model_source_path,
     if hvd.rank() == 0:
         tb_writer = SummaryWriter()
 
+    # Importing a model from a specified file
     spec = importlib.util.spec_from_file_location("model", model_source_path)
     model = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(model)
 
+    # Importing a dataset from a specified file
     spec = importlib.util.spec_from_file_location("dataset", dataset_source_path)
     dataset = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dataset)
 
-    ## Creating neural network and a socket for it
-
+    # Creating neural network instance
     net = model.Network(**model_kwargs)
-    #net = torch.nn.parallel.DataParallel(net).eval()
 
+    # Model CPU -> GPU
     if use_cuda:
         torch.cuda.set_device(hvd.local_rank())
         net = net.cuda()
 
+    # Creating a Socket for a network
     socket = model.Socket(net)
+
+    # Preparing Socket for Horovod training
     socket.optimizer = hvd.DistributedOptimizer(
         socket.optimizer,
         named_parameters=socket.model.named_parameters())
-
     hvd.broadcast_parameters(socket.model.state_dict(), root_rank=0)
 
     # Creating the datasets
-
     ds_index = dataset.DataSetIndex(dataset_path, **dataset_kwargs)
 
     train_dataset = dataset.DataSet(
@@ -99,6 +111,7 @@ def train(model_source_path,
     test_dataset = dataset.DataSet(
         ds_index, mode='test')
 
+    # Preparing the datasets for Horovod
     train_sampler = torch.utils.data.distributed.DistributedSampler(
         train_dataset, num_replicas=hvd.size(), rank=hvd.rank())
 
@@ -108,8 +121,7 @@ def train(model_source_path,
     test_sampler = torch.utils.data.distributed.DistributedSampler(
         test_dataset, num_replicas=hvd.size(), rank=hvd.rank())
 
-    ## Creating dataloaders from the datasets
-
+    ## Creating dataloaders based on datasets
     train_loader = scorch.data.DataLoader(train_dataset,
                                                batch_size=batch_size,
                                                shuffle=False,
@@ -137,16 +149,18 @@ def train(model_source_path,
                                                collate_fn=utils.default_collate,
                                                sampler=test_sampler)
 
-
+    # Shut up if you're not the first process
     if hvd.rank() != 0:
         silent = True
 
+    # Creating a trainer
     my_trainer = trainer.Trainer(socket,
                                  silent=silent,
                                  use_cuda=use_cuda,
                                  max_train_iterations=max_train_iterations,
                                  max_valid_iterations=max_valid_iterations,
                                  max_test_iterations=max_test_iterations)
+
     best_metrics = None
 
     if checkpoint is not None:
@@ -160,24 +174,29 @@ def train(model_source_path,
                                                   new_optimizer=new_optimizer)
         best_metrics = my_trainer.metrics
 
-
+    # Training cycle
     for epoch_index in range(epochs):
-        #try:
+
         if not silent and hvd.rank() == 0:
             print("\n=== Epoch #" + str(my_trainer.epoch + 1) + " ===")
 
+        # Training
         gc.enable()
         loss = my_trainer.train(train_loader)
         gc.collect()
-        #print("Problem in train")
 
         train_metrics = {}
 
+        # Validation on training subuset
         if validate_on_train:
             train_metrics = my_trainer.validate(train_loader)
             gc.collect()
 
+        # Validation on validation subset
         valid_metrics = my_trainer.validate(valid_loader)
+        gc.collect()
+
+        # Processing resulting metrics
         for metric_name in valid_metrics:
             metric_data = {'valid': valid_metrics[metric_name]}
 
@@ -189,21 +208,22 @@ def train(model_source_path,
                     'metrics/' + metric_name + '/' + checkpoint_prefix,
                     metric_data, my_trainer.epoch)
 
-        inputs, outputs = my_trainer.test(test_loader)
-
-        if hvd.rank() == 0:
-            show(tb_writer, my_trainer.socket.process(inputs, outputs), my_trainer.epoch)
+        # Running tests for visualization
+        for input, output, test_id in my_trainer.test(test_loader):
+            # if hvd.rank() == 0:
+            show(tb_writer,
+                 my_trainer.socket.process(input, output, str(test_id)),
+                 my_trainer.epoch)
 
 
 
         gc.collect()
-        #except:
-        #    print("Problem in validation")
-        #    metrics = my_trainer.metrics
 
+        # Updating Learning Rate if needed
         socket.scheduler.step(valid_metrics['main'])
         gc.collect()
 
+        # Dumping the model
         if epoch_index % dump_period == 0 and hvd.rank() == 0:
             is_best = False
             if best_metrics == None:
@@ -245,7 +265,7 @@ def training():
     parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
     parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
     parser.add_argument('--new-optimizer', help='Use new optimizer when loading from the checkpoint', action='store_true')
-    #parser.add_argument('--xorovod')
+    parser.add_argument('--seed', help='Seed for random number generators', default=0, type=int)
     args = vars(parser.parse_args())
 
     ## Calling training function
@@ -265,7 +285,8 @@ def training():
               checkpoint_prefix=args['checkpoint_prefix'],
               dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
               model_kwargs=eval('{' + args['model_args'] + '}'),
-              new_optimizer=args['new_optimizer'])
+              new_optimizer=args['new_optimizer'],
+              seed=args['seed'])
 
 if __name__ == '__main__':
     training()

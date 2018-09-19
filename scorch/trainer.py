@@ -77,7 +77,7 @@ class Trainer():
 
         for i in pbar:
             start = time.time()
-            input, target = next(iterator)
+            input, target, ids = next(iterator)
             data_time.update(time.time() - start)
 
             if self.use_cuda:
@@ -157,7 +157,7 @@ class Trainer():
         for i in pbar:
 
             start = time.time()
-            input, target = next(iterator)
+            input, target, ids = next(iterator)
             data_time.update(time.time() - start)
 
             if self.use_cuda:
@@ -253,9 +253,6 @@ class Trainer():
 
         self.socket.model.eval()
 
-        inputs = []
-        outputs = []
-
         gc.collect()
 
         pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent)
@@ -263,7 +260,7 @@ class Trainer():
 
         for i in pbar:
 
-            input = next(iterator)
+            input, id = next(iterator)
 
             if self.use_cuda:
                 for index in range(len(input)):
@@ -274,17 +271,19 @@ class Trainer():
             for index in range(len(output)):
                 output[index] = output[index].detach()
 
+            for index in range(len(input)):
+                input[index] = input[index].detach()
+
             if self.use_cuda:
                 for index in range(len(output)):
                     output[index] = output[index].cpu()
 
+                for index in range(len(input)):
+                    input[index] = input[index].cpu()
+
             gc.collect()
 
-            inputs.append(input)
-            outputs.append(output)
-
-        return inputs, outputs
-
+            yield input, output, id
 
 
     def make_checkpoint(self, prefix='./', is_best=False, info=""):
@@ -332,6 +331,8 @@ def load_from_checkpoint(checkpoint_name,
 
     restored_trainer.epoch = checkpoint['epoch']
     restored_trainer.socket.model.load_state_dict(checkpoint["model_state"])
+    restored_trainer.metrics = checkpoint["metrics"]
+
     if not new_optimizer:
         try:
             restored_trainer.socket.optimizer.load_state_dict(checkpoint["optimizer_state"])
