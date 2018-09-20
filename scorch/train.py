@@ -61,6 +61,7 @@ def train(model_source_path,
 
     if torch.cuda.is_available:
         torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
 
     # Initializing Horovod
     hvd.init()
@@ -212,7 +213,7 @@ def train(model_source_path,
         for input, output, test_id in my_trainer.test(test_loader):
             # if hvd.rank() == 0:
             show(tb_writer,
-                 my_trainer.socket.process(input, output, str(test_id)),
+                 my_trainer.socket.visualize(input, output, str(test_id)),
                  my_trainer.epoch)
 
 
