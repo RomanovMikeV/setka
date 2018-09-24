@@ -48,6 +48,8 @@ class Trainer():
     def train(self,
               train_loader):
 
+        train_loader.dataset.shuffle()
+
         gc.enable()
         self.epoch += 1
 
@@ -120,14 +122,14 @@ class Trainer():
 
             pbar.set_description(line)
 
-        train_loader.dataset.ds_index.shuffle()
-
         time.sleep(1)
         gc.collect()
         return losses.avg
 
 
     def validate(self, valid_loader):
+
+        valid_loader.dataset.shuffle()
 
         gc.enable()
 
@@ -242,11 +244,13 @@ class Trainer():
         return metrics
 
 
-    def test(self, test_dataloader):
+    def test(self, test_loader):
         gc.enable()
 
-        iterator = iter(test_dataloader)
-        n_iterations = len(test_dataloader)
+        test_loader.dataset.shuffle()
+
+        iterator = iter(test_loader)
+        n_iterations = len(test_loader)
 
         if self.max_test_iterations >= 0:
             n_iterations = min(self.max_test_iterations, n_iterations)

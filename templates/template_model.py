@@ -1,14 +1,38 @@
 import torch
 import torchvision
 import sklearn.metrics
+import matplotlib.pyplot as plt
 
 class Network(torch.nn.Module):
+    '''
+    The Network itself
+    '''
     def __init__(self):
-        # Define your model here
-        pass
+        super(Network, self).__init__()
+
+        # Define your network components here
+
+        self.conv1 = torch.nn.Conv2d(1, 64, (5, 5), padding=2)
+        self.pool1 = torch.nn.MaxPool2d(2, 2)
+
+        self.conv2 = torch.nn.Conv2d(64, 256, (5, 5), padding=2)
+        self.pool2 = torch.nn.MaxPool2d(2, 2)
+
+        self.classifier = torch.nn.Linear(256, 10)
 
     def forward(self, input):
-        # Forward call goes here
+
+        # Define your forward propagation function here
+
+        res1 = self.pool1(torch.nn.functional.tanh(self.conv1(input[0])))
+        res2 = self.pool2(torch.nn.functional.tanh(self.conv2(res1)))
+
+        x = res2.mean(dim=3).mean(dim=2)
+
+        x = self.classifier(x)
+
+        # Return the list of results
+
         return [x]
 
     def __call__(self, input):
@@ -18,54 +42,96 @@ class Network(torch.nn.Module):
 
 
 class Socket:
+    '''
+    The Socket class knows how to treat the  Network class well.
+    '''
     def __init__(self, model):
+
+        # The model is plugged into the socket
         self.model = model
 
-        # Select which modules to train
-        # These modules will be trained and switched as trainable when needed
-        # Others will be switched to the validation mode
+        # Define the modules of the network that you are going to train
+        # These modules the training loop will switch between training and
+        # evaluation modes.
 
         self.train_modules = torch.nn.ModuleList([
-            ])
+            self.model.conv1,
+            self.model.conv2,
+            self.model.classifier])
 
-        # Choose your optimizer
+        # Define the optimizer for your network.
+
         self.optimizer = torch.optim.Adam(
             self.train_modules.parameters(),
             lr=3.0e-4)
 
-        # Choose your scheduler
+        # Define your scheduler for the network
+
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer)
 
     def criterion(self, pred, target):
-        # Define your criterion
-        # It can be your function, but remember that it should be
-        # differntiable by pytorch
-        loss_f = your_loss_function()
+
+        # Define here the criterion for optimization
+
+        loss_f = torch.nn.CrossEntropyLoss()
+
         return loss_f(pred[0], target[0])
 
     def metrics(self, pred, target):
-        # Define here your set of metrics that will be computed after each
-        # epoch. The main metric by which we make a decision to reduce the
-        # learning rate should be called "main"
-        metric_1 = your_metric()
-        metric_2 = your_metric()
+
+        # Define here the metrics for your method.
+        # The 'main' metrics will be used by scheduler and, also
+        # it will be used for best checkpoint selection process.
+        # Choose wisely.
+
+        accuracy = (
+            (pred[0].numpy().argmax(axis=1) == target[0].numpy()).sum() /
+            pred[0].size(0))
+        errors = 1.0 - accuracy
         loss = self.criterion(pred, target)
-        return {'main': metric_1, 'metric_1': metric_1,
-                'metric_2': metric_2, 'loss': loss}
 
+        return {'main': accuracy,
+                'accuracy': accuracy,
+                'errors': errors,
+                'loss': loss}
 
+    def process_result(self, input, output):
 
-    def process(self, inputs, outputs):
-        res = {'images': {}, 'texts': {}}
+        # This method will be used by test script.
+        # The outputs of this function will be collected and saved as
+        # the results of your network.
 
-        for index in range(len(inputs[0])):
-            res['images'][index] = inputs[0][index]
+        return output
 
-        for index in range(len(outputs[0])):
-            text = ''
-            for number in range(len(outputs[0][index])):
-                text += str(number) + ': ' + str(outputs[0][index][number]) + '\n'
-            res['texts'][index] = (text)
+    def visualize(self, input, output, id):
+
+        # This function is used for visualization with TensorboardX.
+        # You can make here:
+        # 'images' -- numpy images
+        # 'figures' -- matplotlib figures
+        # 'texts' -- texts
+        # 'audios' -- numpy audios
+        # 'graphs' -- onnx graphs
+        # 'embeddings' -- embeddings
+
+        # Create the result container
+        res = {'figures': {}}
+
+        fig = plt.figure(figsize=(10, 10))
+        plt.imshow(input[0][0, 0, :, :])
+
+        text = ''
+        for number in range(len(output[0][0])):
+            text += str(number) + ': ' + str(output[0][0][number].item()) + ' | '
+
+        plt.title(text)
+
+        # Add item to the container. Note that ID will be used in the
+        # tensorboard as the image name
+
+        res['figures'][id] = fig
+
+        plt.close(fig)
 
         return res

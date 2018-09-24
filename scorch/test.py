@@ -23,7 +23,6 @@ from . import utils
 
 def test(model_source_path,
               dataset_source_path,
-              dataset_path,
               batch_size=1,
               num_workers=0,
               checkpoint=None,
@@ -73,7 +72,7 @@ def test(model_source_path,
     hvd.broadcast_parameters(socket.model.state_dict(), root_rank=0)
 
     # Creating the datasets
-    ds_index = dataset.DataSetIndex(dataset_path, **dataset_kwargs)
+    ds_index = dataset.DataSetIndex(**dataset_kwargs)
 
     test_dataset = dataset.DataSet(
         ds_index, mode='test')
@@ -108,11 +107,7 @@ def test(model_source_path,
         my_trainer = trainer.load_from_checkpoint(checkpoint,
                                                   socket,
                                                   silent=silent,
-                                                  use_cuda=use_cuda,
-                                                  max_train_iterations=max_train_iterations,
-                                                  max_valid_iterations=max_valid_iterations,
-                                                  max_test_iterations=max_test_iterations,
-                                                  new_optimizer=new_optimizer)
+                                                  use_cuda=use_cuda)
         best_metrics = my_trainer.metrics
 
     if not os.path.exists('results'):
@@ -147,7 +142,6 @@ def testing():
     parser.add_argument('--model', help='File with a model specifications', required=True)
     parser.add_argument('--dataset', help='File with a dataset sepcification', required=True)
     parser.add_argument('--max-test-iterations', help='Maximum test iterations', default=-1, type=int)
-    parser.add_argument('-dp', '--dataset-path', help='Path to the dataset', required=True)
     parser.add_argument('-s', '--silent', help='do not print the status of learning',
                         action='store_true')
     parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
@@ -157,7 +151,7 @@ def testing():
 
     ## Calling inference function
 
-    test(args['model'], args['dataset'], args['dataset_path'],
+    test(args['model'], args['dataset'],
               batch_size=args['batch_size'],
               num_workers=args['workers'],
               checkpoint=args['checkpoint'],

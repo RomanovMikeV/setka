@@ -37,7 +37,6 @@ def show(tb_writer, to_show, epoch):
 
 def train(model_source_path,
           dataset_source_path,
-          dataset_path,
           batch_size=4,
           num_workers=0,
           dump_period=1,
@@ -101,7 +100,7 @@ def train(model_source_path,
     hvd.broadcast_parameters(socket.model.state_dict(), root_rank=0)
 
     # Creating the datasets
-    ds_index = dataset.DataSetIndex(dataset_path, **dataset_kwargs)
+    ds_index = dataset.DataSetIndex(**dataset_kwargs)
 
     train_dataset = dataset.DataSet(
         ds_index, mode='train')
@@ -259,7 +258,6 @@ def training():
     parser.add_argument('--max-train-iterations', help='Maximum training iterations', default=-1, type=int)
     parser.add_argument('--max-valid-iterations', help='Maximum validation iterations', default=-1, type=int)
     parser.add_argument('--max-test-iterations', help='Maximum test iterations', default=-1, type=int)
-    parser.add_argument('-dp', '--dataset-path', help='Path to the dataset', required=True)
     parser.add_argument('-s', '--silent', help='do not print the status of learning',
                         action='store_true')
     parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
@@ -271,7 +269,7 @@ def training():
 
     ## Calling training function
 
-    train(args['model'], args['dataset'], args['dataset_path'],
+    train(args['model'], args['dataset'],
               batch_size=args['batch_size'],
               num_workers=args['workers'],
               dump_period=args['dump_period'],
