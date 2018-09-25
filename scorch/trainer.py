@@ -86,7 +86,6 @@ class Trainer():
                 for index in range(len(input)):
                     input[index] = input[index].cuda()
 
-            if self.use_cuda:
                 for index in range(len(target)):
                     target[index] = target[index].cuda()
 
@@ -187,7 +186,6 @@ class Trainer():
                 for index in range(len(output)):
                     output[index] = output[index].cpu()
 
-            if self.use_cuda:
                 for index in range(len(target)):
                     target[index] = target[index].cpu()
 
@@ -264,7 +262,7 @@ class Trainer():
 
         for i in pbar:
 
-            input, id = next(iterator)
+            input, _, id = next(iterator)
 
             if self.use_cuda:
                 for index in range(len(input)):

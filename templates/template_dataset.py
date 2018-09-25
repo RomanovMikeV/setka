@@ -88,19 +88,11 @@ class DataSet():
 
         id = self.order[index]
 
-
-        if self.mode == 'test':
-            img = self.transform(self.data[id, :, :])
-            target = self.labels[id]
-            id = 'test/' + str(id)
-
-            return [img.unsqueeze(0).float()], id
-
         img = self.transform(self.data[id, :, :])
         target = self.labels[id]
         id = 'train/' + str(id)
 
-        img = img.unsqueeze(0)
+        img = img.unsqueeze(0).float()
 
         img = img.float()
 
