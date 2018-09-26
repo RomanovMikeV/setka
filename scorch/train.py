@@ -212,7 +212,7 @@ def train(model_source_path,
         for input, output, test_id in my_trainer.test(test_loader):
             # if hvd.rank() == 0:
             show(tb_writer,
-                 my_trainer.socket.visualize(input, output, str(test_id)),
+                 my_trainer.socket.visualize(input, output, test_id),
                  my_trainer.epoch)
 
 
@@ -220,7 +220,9 @@ def train(model_source_path,
         gc.collect()
 
         # Updating Learning Rate if needed
-        socket.scheduler.step(valid_metrics['main'])
+        if socket.scheduler is not None:
+            socket.scheduler.step(valid_metrics['main'])
+
         gc.collect()
 
         # Dumping the model
