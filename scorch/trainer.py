@@ -227,16 +227,24 @@ class Trainer():
         for index in range(len(targets)):
             targets[index] = torch.cat(targets[index], dim=0)
 
-        metrics = self.socket.metrics(outputs, targets)
+        metrics = {}
+        try:
+            metrics = self.socket.metrics(outputs, targets)
+            self.metrics = metrics
+            if not self.silent:
+                print("\nMetrics: | ", " | ".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]), " |" )
+
+        except AttributeError:
+            if not self.silent:
+                print("Metrics are not defined for this model yet. Skipping.")
 
         del outputs, targets
         gc.collect()
 
-        time.sleep(1)
-        if not self.silent:
-            print("\nMetrics: | ", " | ".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]), " |" )
+        # time.sleep(1)
 
-        self.metrics = metrics
+
+
         gc.collect()
 
         return metrics

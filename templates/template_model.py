@@ -78,6 +78,7 @@ class Socket:
 
         return loss_f(pred[0], target[0])
 
+    # Optional
     def metrics(self, pred, target):
 
         # Define here the metrics for your method.
@@ -96,6 +97,7 @@ class Socket:
                 'errors': errors,
                 'loss': loss}
 
+    # Optional
     def process_result(self, input, output):
 
         # This method will be used by test script.
@@ -104,6 +106,7 @@ class Socket:
 
         return output
 
+    # Optional
     def visualize(self, input, output, id):
 
         # This function is used for visualization with TensorboardX.
@@ -130,7 +133,7 @@ class Socket:
         # Add item to the container. Note that ID will be used in the
         # tensorboard as the image name
 
-        res['figures'][id] = fig
+        res['figures'][str(id)] = fig
 
         plt.close(fig)
 

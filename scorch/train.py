@@ -208,19 +208,24 @@ def train(model_source_path,
                     'metrics/' + metric_name + '/' + checkpoint_prefix,
                     metric_data, my_trainer.epoch)
 
-        # Running tests for visualization
-        for input, output, test_id in my_trainer.test(test_loader):
-            # if hvd.rank() == 0:
-            show(tb_writer,
-                 my_trainer.socket.visualize(input, output, test_id),
-                 my_trainer.epoch)
+        try:
+            # Running tests for visualization
+            for input, output, test_id in my_trainer.test(test_loader):
+                # if hvd.rank() == 0:
+
+                show(tb_writer,
+                        my_trainer.socket.visualize(input, output, test_id),
+                        my_trainer.epoch)
+        except AttributeError:
+            if hvd.rank() == 0:
+                print('Visualization is not implemented yet. Skipping.')
 
 
 
         gc.collect()
 
         # Updating Learning Rate if needed
-        if socket.scheduler is not None:
+        if socket.scheduler is not None and 'main' in valid_metrics:
             socket.scheduler.step(valid_metrics['main'])
 
         gc.collect()

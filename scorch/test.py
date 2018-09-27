@@ -117,7 +117,10 @@ def test(model_source_path,
     for input, output, test_id in my_trainer.test(test_loader):
         result = {}
         for index in range(len(test_id)):
-            result[test_id[index]] = socket.process_result(input[index], output[index])
+            try:
+                result[test_id[index]] = socket.process_result(input[index], output[index])
+            except AttributeError:
+                result[test_id[index]] = output[index]
 
         torch.save(result,
             os.path.join('results',

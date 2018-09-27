@@ -101,31 +101,42 @@ The syntax for the model file is the following:
 
 ```python
 class Network(torch.nn.Module):
+    '''
+    The Network itself
+    '''
     def __init__(self):
-        super(Network, self).__init__()
         pass
 
     def forward(self, input):
-        return [output1, output2]
+        return [list_of_results]
 
     def __call__(self, input):
         return self.forward(input)
 
+
+
+
 class Socket:
     def __init__(self, model):
-        self.model = model
-
-    def criterion(self, output, target):
         pass
 
-    def metrics(self, output, target):
-        pass
+    def criterion(self, pred, target):
+        return one_value
 
+    # Optional
+    def metrics(self, pred, target):
+        return {'dictionary': 'should be returned',
+                'main': 'is used for scheduler and checkpoints'}
+
+    # Optional
     def process_result(self, input, output):
-        pass
+        return {'id1': result_for_id_1, 'id2': result_for_id2}
 
+    # Optional
     def visualize(self, input, output, id):
-        pass
+        return {'texts': {'id1': 'bla', 'id2': 'blabla'},
+                'figures': {'id1': fig1, 'id2': fig2}}
+
 ```
 
 The requirements are as follows:
@@ -135,11 +146,25 @@ The requirements are as follows:
   * Outputs a **list** of outputs.
 * There should be also the ```__call__``` function specified that is a proxy for the forward function.
 * There should be a ```Socket``` class defined in order to specify how to handle the model, it should contain:
-  * ```criterion``` method that takes as inputs a **list** of tensors with predictions and a **list** of tensors with targets. The output should be a number.
-  * ```metrics``` method that specifies the metrics which are of the interest for your experiment. It should take as inputs a list of tensors with predictions and a list of tensors with targets and return a list of metrics which.
-  * ```torch.nn.ModuleList``` of ```trainable_modules```. Only the modules that were specified here will be trained.
+  * ```criterion``` method that takes as inputs a **list** of tensors with predictions and a **list** of tensors with targets. The output should be a number (torch tensor with 1 element).
+  * ```metrics``` (optional)
+  method that specifies the metrics which are of the interest for your experiment. It should take as inputs a list of tensors with predictions and a list of tensors with targets and return a list of metrics which. The metrics should be returned in the form of the dictionary. This dictionary should
+  contain the **'main'** element with the help of which the best model will be selected and saved in
+  a separate checkpoint with ```_best.pth.tar``` postfix. Also it will be used by scheduler to decide
+  when to decrease the learning rate or to do other manipulations.
+  * ```torch.nn.ModuleList``` of ```trainable_modules```. Only the modules that were specified here will be trained (they will be switched into the ```train``` and ```eval``` modes when needed and the optimizer
+  will only update them).
+  * ```process_result``` (optional) method takes as inputs the input to the Network forward method
+  and the output of it. It is needed to process the output of the network before saving
+  in the scorch-test script. The output of this method will be saved as a result in a sequence of
+  ```pth.tar``` files.
+  * ```visualize``` (optional) method takes as inputs the input to the Network forward method
+  and the output of it. It should return the dictionary containing dictionaries that will be visualized
+  using the TensorbardX. The output may contain sections: 'images', 'figures', 'graphs', 'texts', 'outputs' and 'embeddings'. Each of the sections should contain the dictionary containing as keys ids of the
+  test items and what should be visualized as value. For example, the result may be:
+  ```{'figures': {'id1': fig1, 'id2': fig2}}```.
 
-The reason there are lists everywhere is the following: the network may have more than one input and more than one output. We have to deal with this fact smart enough to reuse the code. Thus, the best way to do things is to pass the values of interests in lists.
+The reason there are lists everywhere is the following: the network may have more than one input and more than one output. We have to deal with this fact smart enough to reuse the code. Thus, the best way to do things is to pass the values of interest in lists.
 
 ## Dataset module syntax
 
@@ -185,6 +210,6 @@ The dataset script should have at least the class DataSet which should have the 
 
 * ```__init__```, the constructor that defines all three parts of the dataset. The mode of the dataset should be defined here.
 * ```__len__``` function that returns the length of the dataset
-* ```__getitem__``` function that returns a list of input tensors and a list of target tensors
+* ```__getitem__``` function that returns a list of input tensors, list of target tensors and ids for samples
 
 Although it is enough to have only the DataSet specified, it is recommended to specify also the DataSetIndex class that contains the information about the whole dataset. It is recommended to share one instance of the DataSetIndex between all the instances of the DataSet with different modes to avoid doubling or tripling the memory used to store this index and also to avoid collecting the dataset index several times.
