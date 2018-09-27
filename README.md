@@ -1,13 +1,14 @@
 
 # Scorch: utilities for network training with PyTorch
 
-This package is a set of codes that may be reused quite often
-for different networks trainings.
+This package is a set of scripts that may be often reused
+for different networks training. At the moment (as of Scorch 0.1) the
+package supports only feed-forward training. Recurrent networks are coming.
 
 ## Prerequisites
 
 You will need openmpi installed before running or installing this package.
-The easiest way to get the openmpi on linux machine without root is to use 
+The easiest way to get the openmpi on linux machine without root is to use
 [LinuxBrew](http://linuxbrew.sh/).
 
 After the LinuxBrew is installed, run this:
@@ -20,37 +21,57 @@ After the success you are ready to install this package.
 It is also recommended that you install [PyTorch](https://pytorch.org/) for your
 system before you install scorch.
 
-Also you will need to install tensorflow in order to be able to use tensorboardX.
+Also you will need to install tensorflow  with
 
-Both are easy to install using Conda.
+```
+conda install tensorflow
+```
+
+Install tensorboardX with
+```
+pip install tensorboardX
+```
 
 ## Installation
-To install this package, use 
+To install this package, use
 ```
 pip install git+http://github.com/RomanovMikeV/scorch
 ```
-To use notebooks for testing the model and the dataset you
+
+To use notebooks for testing the model and the dataset, you
 will need Jupyter Notebook or JupyterLab installed.
 
 ## Usage
 
-Here is the minimal command to run to train the model specified in MODEL_FILE with a
+Here is the minimal command to train the model specified in MODEL_FILE with a
 dataset specified in DATASET_FILE, the data is located in the DATASET_PATH.
-
 ```
-scorch-train --model MODEL_FILE --dataset DATASET_FILE --dataset-path DATASET_PATH
+scorch-train --model MODEL_FILE --dataset DATASET_FILE
 ```
 
-Here is a list of parameters of the script (it will be soon updated):
+This command will train the network, save checkpoints in the "checkpoints"
+directory, save the logs and visualizations in the "runs" directory.
 
-To see the full list of parameters, please use
+To see the full list of parameters, please use:
 ```
 scorch-train --help
 ```
 
-This scripy relies on the Hororvod to parallelize the model training for several devices.
-You can use mpi calls as follows (to run the script on 4 devices of the localhost in 
-parallel):
+To get the inference results of the model on the test part of your dataset,
+use this command:
+```
+scorch-test --model MODEL_FILE --dataset DATASET_FILE
+```
+
+This command will produce the result of the network on the test subset of the
+dataset and save it in the set of ```batchId_deviceId.pth.tar``` files in the
+```results``` directory. Note that you need to specify the checkpoint in order to
+get the results of the pretrained network.
+
+This script relies on the Horovod to parallelize the model training for several
+devices an workstations.
+You can use mpi calls as follows (to run the script on 4 devices of
+the localhost in parallel):
 ```
 mpirun -np 4 \
     -H localhost:4 \
@@ -71,6 +92,9 @@ mpirun -np 16 \
     scorch-train SCORCH_TRAIN_PARAMETERS
 ```
 
+For more information, please check the
+[Horovod's homepage](https://github.com/uber/horovod).
+
 ## Model module syntax
 
 The syntax for the model file is the following:
@@ -80,21 +104,27 @@ class Network(torch.nn.Module):
     def __init__(self):
         super(Network, self).__init__()
         pass
-     
+
     def forward(self, input):
         return [output1, output2]
-        
+
     def __call__(self, input):
         return self.forward(input)
-    
+
 class Socket:
     def __init__(self, model):
         self.model = model
-    
-    def criterion(self, pred, target):
+
+    def criterion(self, output, target):
         pass
-    
-    def metrics(self, pred, target):
+
+    def metrics(self, output, target):
+        pass
+
+    def process_result(self, input, output):
+        pass
+
+    def visualize(self, input, output, id):
         pass
 ```
 
@@ -123,31 +153,31 @@ class DataSetIndex():
 class DataSet():
     def __init__(self, ds_index, mode='train'):
         self.ds_index = ds_index
-    
+
     def __len__(self):
         if self.mode == 'test':
             pass
-        
+
         elif self.mode == 'valid':
             pass
-        
+
         else:
             pass
-        
-        
+
+
     def __getitem__(self, index):
         img = None
         target = None
-        
+
         if self.mode == 'test':
             pass
-        
+
         elif self.mode == 'valid':
             pass
-        
+
         else:
             pass
-        
+
         return [img1, img2], [target1, target2]
 ```
 

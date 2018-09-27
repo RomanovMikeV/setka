@@ -263,8 +263,19 @@ def training():
     parser.add_argument('-s', '--silent', help='do not print the status of learning',
                         action='store_true')
     parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
-    parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
-    parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
+    parser.add_argument(
+        '--model-args',
+        help=('Model arguments which will be used during training. ' +
+              "The syntax is the same as the syntax of the python's dicts except for braces. " +
+              "Example: --model-args \"'hidden_neurons':20\". " +
+              "Note that here you may specify keyword parameters of your " +
+              "dataset specified in DATASET_FILE"), default='', type=str)
+    parser.add_argument(
+        '--dataset-args',
+        help=('Dataset arguments which will be used during training' +
+              'Syntax is the same as the syntax of the model arguments.' +
+              "Note that here you may specify keyword parameters of your " +
+              "model specified in MODEL_FILE"), default='', type=str)
     parser.add_argument('--new-optimizer', help='Use new optimizer when loading from the checkpoint', action='store_true')
     parser.add_argument('--seed', help='Seed for random number generators', default=0, type=int)
     args = vars(parser.parse_args())
