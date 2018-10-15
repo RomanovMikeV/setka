@@ -68,7 +68,7 @@ class Trainer():
 
         gc.collect()
 
-        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent)
+        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
         pbar.set_description("Ep: - "
                 "Time: ----(----)  "
                 "Data: ----(----)  "
@@ -146,7 +146,7 @@ class Trainer():
 
         self.socket.model.eval()
 
-        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent)
+        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
 
         end = time.time()
         pbar.set_description("Valid: - "
@@ -265,7 +265,7 @@ class Trainer():
 
         gc.collect()
 
-        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent)
+        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
         pbar.set_description("Testing: ")
 
         for i in pbar:
