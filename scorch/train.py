@@ -178,9 +178,6 @@ def train(model_source_path,
     # Training cycle
     for epoch_index in range(epochs):
 
-        if not silent and hvd.rank() == 0:
-            print("\n=== Epoch #" + str(my_trainer.epoch + 1) + " ===")
-
         # Training
         gc.enable()
         loss = my_trainer.train(train_loader)
@@ -209,17 +206,45 @@ def train(model_source_path,
                     'metrics/' + metric_name + '/' + checkpoint_prefix,
                     metric_data, my_trainer.epoch)
 
-        try:
-            # Running tests for visualization
-            for input, output, test_id in my_trainer.test(test_loader):
-                # if hvd.rank() == 0:
 
-                show(tb_writer,
-                        my_trainer.socket.visualize(input, output, test_id),
-                        my_trainer.epoch)
+            # Running tests for visualization
+        if hvd.rank() == 0:
+            inputs = []
+            outputs = []
+            test_ids = []
+
+        for input, output, test_id in my_trainer.test(test_loader):
+            if hvd.rank() == 0:
+                for item_index in range(len(test_id)):
+                    for input_index in range(len(input)):
+                        if len(inputs) <= input_index:
+                            inputs.append([])
+                        inputs[input_index].append(
+                            input[input_index][item_index].unsqueeze(0))
+
+                    for output_index in range(len(output)):
+                        if len(outputs) <= output_index:
+                            outputs.append([])
+                        outputs[output_index].append(
+                            output[output_index][item_index].unsqueeze(0))
+
+                    test_ids.append(test_id[item_index])
+
+
+        for index in range(len(inputs)):
+            inputs[index] = torch.cat(inputs[index], dim=0)
+
+        for index in range(len(outputs)):
+            outputs[index] = torch.cat(outputs[index], dim=0)
+
+        try:
+            show(tb_writer,
+                 my_trainer.socket.visualize(inputs, outputs, test_ids),
+                 my_trainer.epoch)
+
         except AttributeError:
             if hvd.rank() == 0:
-                print('Visualization is not implemented yet. Skipping.')
+                print('Visualization is not implemented. Skipping.')
 
 
 

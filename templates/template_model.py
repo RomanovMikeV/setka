@@ -107,7 +107,7 @@ class Socket:
         return output
 
     # Optional
-    def visualize(self, input, output, id):
+    def visualize(self, inputs, outputs, ids):
 
         # This function is used for visualization with TensorboardX.
         # You can make here:
@@ -121,20 +121,25 @@ class Socket:
         # Create the result container
         res = {'figures': {}}
 
-        fig = plt.figure(figsize=(10, 10))
-        plt.imshow(input[0][0, 0, :, :])
+        for index in range(len(ids)):
+            id = ids[index]
+            input = inputs[0][index]
+            output = outputs[0][index]
 
-        text = ''
-        for number in range(len(output[0][0])):
-            text += str(number) + ': ' + str(output[0][0][number].item()) + ' | '
+            fig = plt.figure(figsize=(10, 10))
+            plt.imshow(input[0, :, :])
 
-        plt.title(text)
+            text = ''
+            for number in range(len(output)):
+                text += str(number) + ': ' + str(output[number].item()) + ' | '
 
-        # Add item to the container. Note that ID will be used in the
-        # tensorboard as the image name
+                plt.title(text)
 
-        res['figures'][str(id)] = fig
+            # Add item to the container. Note that ID will be used in the
+            # tensorboard as the image name
 
-        plt.close(fig)
+            res['figures'][id] = fig
+
+            plt.close(fig)
 
         return res

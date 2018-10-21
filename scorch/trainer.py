@@ -6,6 +6,7 @@ import gc
 import collections
 import os
 from tqdm import tqdm
+import horovod.torch as hvd
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -68,12 +69,13 @@ class Trainer():
 
         gc.collect()
 
-        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
-        pbar.set_description("Ep: - "
-                "Time: ----(----)  "
-                "Data: ----(----)  "
-                "Loss:  --------(--------)  "
-                "LR: --------")
+        pbar = tqdm(
+            range(n_iterations), ascii=True,
+            disable=self.silent, ncols=0)
+        pbar.set_description(
+            "Train -  "
+            "D ----(----)  "
+            "L --------(--------)")
 
         end = time.time()
 
@@ -108,16 +110,13 @@ class Trainer():
             del loss, output
 
             # Print status
-            line = ("Train: {0} "
-                    "Time: {time.avg:.2f}({time.val:.2f})  "
-                    "Data: {data.avg:.2f}({data.val:.2f})  "
-                    "Loss:  {loss.avg:.2e}({loss.val:.2e})  "
-                    "LR: {lr:.2e}".format(
+            line = ("Train {0}  "
+                    "D {data.avg:.2f}({data.val:.2f})  "
+                    "L {loss.avg:.2e}({loss.val:.2e})  ".format(
                         self.epoch,
                         time=batch_time,
                         data=data_time,
-                        loss=losses,
-                        lr=self.socket.optimizer.param_groups[-1]['lr']))
+                        loss=losses))
 
             pbar.set_description(line)
 
@@ -136,8 +135,9 @@ class Trainer():
         data_time = AverageMeter()
         losses = AverageMeter()
 
-        outputs = []
-        targets = []
+        if hvd.rank() == 0:
+            outputs = []
+            targets = []
 
         iterator = iter(valid_loader)
         n_iterations = len(valid_loader)
@@ -146,14 +146,15 @@ class Trainer():
 
         self.socket.model.eval()
 
-        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
+        pbar = tqdm(
+            range(n_iterations), ascii=True,
+            disable=self.silent, ncols=0)
 
         end = time.time()
-        pbar.set_description("Valid: - "
-                "Time: ----(----)  "
-                "Data: ----(----)  "
-                "Loss:  --------(--------)  "
-                "LR: --------")
+        pbar.set_description(
+            "Valid -  "
+            "D ----(----)  "
+            "L --------(--------)")
 
         for i in pbar:
 
@@ -189,61 +190,56 @@ class Trainer():
                 for index in range(len(target)):
                     target[index] = target[index].cpu()
 
+            if hvd.rank() == 0:
+                for index in range(len(output)):
+                    output[index] = hvd.allgather(output[index])
 
-            for index in range(len(output)):
-                output[index] = output[index]
+                for index in range(len(target)):
+                    target[index] = hvd.allgather(target[index])
 
-            for index in range(len(target)):
-                target[index] = target[index]
-
-            outputs.append(output)
-            targets.append(target)
+                outputs.append(output)
+                targets.append(target)
 
             batch_time.update(time.time() - end)
             end = time.time()
 
-            line = ("Valid: {0} "
-                    "Time: {time.avg:.2f}({time.val:.2f})  "
-                    "Data: {data.avg:.2f}({data.val:.2f})  "
-                    "Loss:  {loss.avg:.2e}({loss.val:.2e})  "
-                    "LR: {lr:.2e}".format(
+            line = ("Valid {0}  "
+                    "D {data.avg:.2f}({data.val:.2f})  "
+                    "L {loss.avg:.2e}({loss.val:.2e})  ".format(
                         self.epoch,
-                        time=batch_time,
                         data=data_time,
-                        loss=losses,
-                        lr=self.socket.optimizer.param_groups[-1]['lr']))
-
-            pbar.set_description(line)
+                        loss=losses))
 
             del input
             del output, target
 
-        outputs = list(zip(*outputs))
-        targets = list(zip(*targets))
+            if i == len(pbar) - 1 and hvd.rank() == 0:
+                outputs = list(zip(*outputs))
+                targets = list(zip(*targets))
 
-        for index in range(len(outputs)):
-            outputs[index] = torch.cat(outputs[index], dim=0)
+                for index in range(len(outputs)):
+                    outputs[index] = torch.cat(outputs[index], dim=0)
 
-        for index in range(len(targets)):
-            targets[index] = torch.cat(targets[index], dim=0)
+                for index in range(len(targets)):
+                    targets[index] = torch.cat(targets[index], dim=0)
 
-        metrics = {}
-        try:
-            metrics = self.socket.metrics(outputs, targets)
-            self.metrics = metrics
-            if not self.silent:
-                print("\nMetrics: | ", " | ".join(["{}:{:.2e}".format(x, metrics[x]) for x in metrics]), " |" )
+                metrics = {}
+                try:
+                    metrics = self.socket.metrics(outputs, targets)
+                    self.metrics = metrics
+                    line += "Metrics: " + " ".join(
+                        ["{}:{:.2e}".format(x, metrics[x]) for x in metrics])
 
-        except AttributeError:
-            if not self.silent:
-                print("Metrics are not defined for this model yet. Skipping.")
 
-        del outputs, targets
+                except AttributeError:
+                    pass
+
+            pbar.set_description(line)
+
+        if hvd.rank() == 0:
+            del outputs, targets
+
         gc.collect()
-
-        # time.sleep(1)
-
-
 
         gc.collect()
 
@@ -266,7 +262,7 @@ class Trainer():
         gc.collect()
 
         pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
-        pbar.set_description("Testing: ")
+        pbar.set_description("Test  ")
 
         for i in pbar:
 
@@ -278,18 +274,19 @@ class Trainer():
 
             output = self.socket.model(input)
 
-            for index in range(len(output)):
-                output[index] = output[index].detach()
-
-            for index in range(len(input)):
-                input[index] = input[index].detach()
-
-            if self.use_cuda:
+            if hvd.rank() == 0:
                 for index in range(len(output)):
-                    output[index] = output[index].cpu()
+                    output[index] = hvd.allgather(output[index]).detach()
 
                 for index in range(len(input)):
-                    input[index] = input[index].cpu()
+                    input[index] = hvd.allgather(input[index]).detach()
+
+                if self.use_cuda:
+                    for index in range(len(output)):
+                        output[index] = output[index].cpu()
+
+                    for index in range(len(input)):
+                        input[index] = input[index].cpu()
 
             gc.collect()
 
