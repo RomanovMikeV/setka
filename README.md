@@ -1,8 +1,9 @@
 
 # Scorch: utilities for network training with PyTorch
 
-This package is a set of scripts that may be often reused
-for different networks training. At the moment (as of Scorch 0.1) the
+This package is a set of scripts that are often reused
+for different networks training procedures.
+At the moment (as of Scorch 0.1) the
 package supports only feed-forward training. Recurrent networks are coming.
 
 ## Prerequisites
