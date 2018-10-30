@@ -127,159 +127,164 @@ class Trainer():
 
     def validate(self, valid_loader):
 
-        valid_loader.dataset.shuffle()
+        metrics = {}
+        with torch.no_grad():
 
-        gc.enable()
+            valid_loader.dataset.shuffle()
 
-        batch_time = AverageMeter()
-        data_time = AverageMeter()
-        losses = AverageMeter()
+            gc.enable()
 
-        if hvd.rank() == 0:
-            outputs = []
-            targets = []
-
-        iterator = iter(valid_loader)
-        n_iterations = len(valid_loader)
-        if self.max_valid_iterations >= 0:
-            n_iterations = min(len(valid_loader), self.max_valid_iterations)
-
-        self.socket.model.eval()
-
-        pbar = tqdm(
-            range(n_iterations), ascii=True,
-            disable=self.silent, ncols=0)
-
-        end = time.time()
-        pbar.set_description(
-            "Valid -  "
-            "D ----(----)  "
-            "L --------(--------)")
-
-        for i in pbar:
-
-            start = time.time()
-            input, target, ids = next(iterator)
-            data_time.update(time.time() - start)
-
-            if self.use_cuda:
-                for index in range(len(input)):
-                    input[index] = input[index].cuda()
-
-            if self.use_cuda:
-                for index in range(len(target)):
-                    target[index] = target[index].cuda()
-
-            output = self.socket.model.forward(input)
-            loss = self.socket.criterion(output, target)
-
-            losses.update(loss.data.item())
-
-
-            for index in range(len(output)):
-                output[index] = output[index].detach()
-
-            for index in range(len(target)):
-                target[index] = target[index].detach()
-
-
-            if self.use_cuda:
-                for index in range(len(output)):
-                    output[index] = output[index].cpu()
-
-                for index in range(len(target)):
-                    target[index] = target[index].cpu()
+            batch_time = AverageMeter()
+            data_time = AverageMeter()
+            losses = AverageMeter()
 
             if hvd.rank() == 0:
+                outputs = []
+                targets = []
+
+            iterator = iter(valid_loader)
+            n_iterations = len(valid_loader)
+            if self.max_valid_iterations >= 0:
+                n_iterations = min(len(valid_loader), self.max_valid_iterations)
+
+            self.socket.model.eval()
+
+            pbar = tqdm(
+                range(n_iterations), ascii=True,
+                disable=self.silent, ncols=0)
+
+            end = time.time()
+            pbar.set_description(
+                "Valid -  "
+                "D ----(----)  "
+                "L --------(--------)")
+
+            for i in pbar:
+
+                start = time.time()
+                input, target, ids = next(iterator)
+                data_time.update(time.time() - start)
+
+                if self.use_cuda:
+                    for index in range(len(input)):
+                        input[index] = input[index].cuda()
+
+                if self.use_cuda:
+                    for index in range(len(target)):
+                        target[index] = target[index].cuda()
+
+                output = self.socket.model.forward(input)
+                loss = self.socket.criterion(output, target)
+
+                losses.update(loss.data.item())
+
+
                 for index in range(len(output)):
-                    output[index] = hvd.allgather(output[index])
+                    output[index] = output[index].detach()
 
                 for index in range(len(target)):
-                    target[index] = hvd.allgather(target[index])
-
-                outputs.append(output)
-                targets.append(target)
-
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            line = ("Valid {0}  "
-                    "D {data.avg:.2f}({data.val:.2f})  "
-                    "L {loss.avg:.2e}({loss.val:.2e})  ".format(
-                        self.epoch,
-                        data=data_time,
-                        loss=losses))
-
-            del input
-            del output, target
-
-            if i == len(pbar) - 1 and hvd.rank() == 0:
-                outputs = list(zip(*outputs))
-                targets = list(zip(*targets))
-
-                for index in range(len(outputs)):
-                    outputs[index] = torch.cat(outputs[index], dim=0)
-
-                for index in range(len(targets)):
-                    targets[index] = torch.cat(targets[index], dim=0)
-
-                metrics = {}
-                try:
-                    metrics = self.socket.metrics(outputs, targets)
-                    self.metrics = metrics
-                    line += "Metrics: " + " ".join(
-                        ["{}:{:.2e}".format(x, metrics[x]) for x in metrics])
+                    target[index] = target[index].detach()
 
 
-                except AttributeError:
-                    pass
+                #if self.use_cuda:
+                #    for index in range(len(output)):
+                #        output[index] = output[index].cpu()
 
-            pbar.set_description(line)
+                #    for index in range(len(target)):
+                #        target[index] = target[index].cpu()
 
-        if hvd.rank() == 0:
-            del outputs, targets
+                if hvd.rank() == 0:
+                    for index in range(len(output)):
+                        output[index] = hvd.allreduce(output[index])
 
-        gc.collect()
+                    for index in range(len(target)):
+                        target[index] = hvd.allreduce(target[index])
 
-        gc.collect()
+                    outputs.append(output)
+                    targets.append(target)
+
+                batch_time.update(time.time() - end)
+                end = time.time()
+
+                line = ("Valid {0}  "
+                        "D {data.avg:.2f}({data.val:.2f})  "
+                        "L {loss.avg:.2e}({loss.val:.2e})  ".format(
+                            self.epoch,
+                            data=data_time,
+                            loss=losses))
+
+                del input
+                del output, target
+
+                if i == len(pbar) - 1: # and hvd.rank() == 0:
+                    outputs = list(zip(*outputs))
+                    targets = list(zip(*targets))
+
+                    for index in range(len(outputs)):
+                        outputs[index] = torch.cat(outputs[index], dim=0)
+
+                    for index in range(len(targets)):
+                        targets[index] = torch.cat(targets[index], dim=0)
+
+                    metrics = {}
+                    try:
+                        metrics = self.socket.metrics(outputs, targets)
+                        for metric in metrics:
+                            self.metrics = metrics
+
+                        line += "Metrics: " + " ".join(
+                            ["{}:{:.2e}".format(x, metrics[x]) for x in metrics])
+
+
+                    except AttributeError:
+                        pass
+
+                pbar.set_description(line)
+
+            if hvd.rank() == 0:
+                del outputs, targets
+
+            gc.collect()
+
+            gc.collect()
 
         return metrics
 
 
     def test(self, test_loader):
-        gc.enable()
+        with torch.no_grad():
+            gc.enable()
 
-        test_loader.dataset.shuffle()
+            test_loader.dataset.shuffle()
 
-        iterator = iter(test_loader)
-        n_iterations = len(test_loader)
+            iterator = iter(test_loader)
+            n_iterations = len(test_loader)
 
-        if self.max_test_iterations >= 0:
-            n_iterations = min(self.max_test_iterations, n_iterations)
+            if self.max_test_iterations >= 0:
+                n_iterations = min(self.max_test_iterations, n_iterations)
 
-        self.socket.model.eval()
+            self.socket.model.eval()
 
-        gc.collect()
+            gc.collect()
 
-        pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
-        pbar.set_description("Test  ")
+            pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
+            pbar.set_description("Test  ")
 
-        for i in pbar:
+            for i in pbar:
 
-            input, _, id = next(iterator)
+                input, _, id = next(iterator)
 
-            if self.use_cuda:
-                for index in range(len(input)):
-                    input[index] = input[index].cuda()
+                if self.use_cuda:
+                    for index in range(len(input)):
+                        input[index] = input[index].cuda()
 
-            output = self.socket.model(input)
+                output = self.socket.model(input)
 
-            if hvd.rank() == 0:
                 for index in range(len(output)):
-                    output[index] = hvd.allgather(output[index]).detach()
+                    output[index] = hvd.allreduce(output[index])
 
                 for index in range(len(input)):
-                    input[index] = hvd.allgather(input[index]).detach()
+                    input[index] = hvd.allreduce(input[index])
 
                 if self.use_cuda:
                     for index in range(len(output)):
@@ -288,9 +293,9 @@ class Trainer():
                     for index in range(len(input)):
                         input[index] = input[index].cpu()
 
-            gc.collect()
+                gc.collect()
 
-            yield input, output, id
+                yield input, output, id
 
 
     def make_checkpoint(self, prefix='./', is_best=False, info=""):

@@ -279,21 +279,45 @@ def training():
 
     parser = argparse.ArgumentParser(
         description='Script to train a specified model with a specified dataset.')
-    parser.add_argument('-b','--batch-size', help='Batch size', default=8, type=int)
-    parser.add_argument('-w','--workers', help='Number of workers in a dataloader', default=0, type=int)
-    parser.add_argument('-d', '--dump-period', help='Dump period', default=1, type=int)
-    parser.add_argument('-e', '--epochs', help='Number of epochs to perform', default=1000, type=int)
-    parser.add_argument('-c', '--checkpoint', help='Checkpoint to load from', default=None)
-    parser.add_argument('--use-cuda', help='Use cuda for training', action='store_true')
-    parser.add_argument('--validate-on-train', help='Validate on train', action='store_true')
-    parser.add_argument('--model', help='File with a model specifications', required=True)
-    parser.add_argument('--dataset', help='File with a dataset sepcification', required=True)
-    parser.add_argument('--max-train-iterations', help='Maximum training iterations', default=-1, type=int)
-    parser.add_argument('--max-valid-iterations', help='Maximum validation iterations', default=-1, type=int)
-    parser.add_argument('--max-test-iterations', help='Maximum test iterations', default=-1, type=int)
-    parser.add_argument('-s', '--silent', help='do not print the status of learning',
+    parser.add_argument('-b','--batch-size',
+                        help='Batch size', default=8, type=int)
+    parser.add_argument('-w','--workers',
+                        help='Number of workers in a dataloader',
+                        default=0, type=int)
+    parser.add_argument('-d', '--dump-period',
+                        help='Dump period', default=1, type=int)
+    parser.add_argument('-e', '--epochs',
+                        help='Number of epochs to perform',
+                        default=1000, type=int)
+    parser.add_argument('-c', '--checkpoint',
+                        help='Checkpoint to load from', default=None)
+    parser.add_argument('--use-cuda',
+                        help='Use cuda for training',
                         action='store_true')
-    parser.add_argument('-cp', '--checkpoint-prefix', help='Prefix to the checkpoint name', default='')
+    parser.add_argument('--validate-on-train',
+                        help='Validate on train',
+                        action='store_true')
+    parser.add_argument('--model',
+                        help='File with a model specifications',
+                        required=True)
+    parser.add_argument('--dataset',
+                        help='File with a dataset sepcification',
+                        required=True)
+    parser.add_argument('--max-train-iterations',
+                        help='Maximum training iterations',
+                        default=-1, type=int)
+    parser.add_argument('--max-valid-iterations',
+                        help='Maximum validation iterations',
+                        default=-1, type=int)
+    parser.add_argument('--max-test-iterations',
+                        help='Maximum test iterations',
+                        default=-1, type=int)
+    parser.add_argument('-s', '--silent',
+                        help='do not print the status of learning',
+                        action='store_true')
+    parser.add_argument('-cp', '--checkpoint-prefix',
+                        help='Prefix to the checkpoint name',
+                        default='checkpoint')
     parser.add_argument(
         '--model-args',
         help=('Model arguments which will be used during training. ' +
@@ -307,8 +331,12 @@ def training():
               'Syntax is the same as the syntax of the model arguments.' +
               "Note that here you may specify keyword parameters of your " +
               "model specified in MODEL_FILE"), default='', type=str)
-    parser.add_argument('--new-optimizer', help='Use new optimizer when loading from the checkpoint', action='store_true')
-    parser.add_argument('--seed', help='Seed for random number generators', default=0, type=int)
+    parser.add_argument('--new-optimizer',
+                        help='Use new optimizer when loading from the checkpoint',
+                        action='store_true')
+    parser.add_argument('--seed',
+                        help='Seed for random number generators',
+                        default=0, type=int)
     args = vars(parser.parse_args())
 
     ## Calling training function
