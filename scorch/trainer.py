@@ -195,10 +195,10 @@ class Trainer():
 
                 #if hvd.rank() == 0:
                 for index in range(len(output)):
-                    output[index] = hvd.allreduce(output[index])
+                    output[index] = hvd.allgather(output[index])
 
                 for index in range(len(target)):
-                    target[index] = hvd.allreduce(target[index])
+                    target[index] = hvd.allgather(target[index])
 
                 outputs.append(output)
                 targets.append(target)
