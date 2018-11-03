@@ -252,7 +252,7 @@ class Trainer():
         return metrics
 
 
-    def test(self, test_loader):
+    def test(self, test_loader, solo_test=False):
         with torch.no_grad():
             gc.enable()
 
@@ -283,10 +283,14 @@ class Trainer():
                 output = self.socket.model(input)
 
                 for index in range(len(output)):
-                    output[index] = hvd.allgather(output[index])
+                    if not solo_test:
+                        output[index] = hvd.allgather(output[index])
+
+                    #print(output[index], '<- after')
 
                 for index in range(len(input)):
-                    input[index] = hvd.allgather(input[index])
+                    if not solo_test:
+                        input[index] = hvd.allgather(input[index])
 
                 #if self.use_cuda:
                 #    for index in range(len(output)):
