@@ -87,7 +87,7 @@ class Socket:
         # Choose wisely.
 
         accuracy = (
-            (pred[0].numpy().argmax(axis=1) == target[0].numpy()).sum() /
+            (pred[0].argmax(dim=1) == target[0]).sum() /
             pred[0].size(0))
         errors = 1.0 - accuracy
         loss = self.criterion(pred, target)
