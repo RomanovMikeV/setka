@@ -138,9 +138,9 @@ class Trainer():
             data_time = AverageMeter()
             losses = AverageMeter()
 
-            if hvd.rank() == 0:
-                outputs = []
-                targets = []
+            #if hvd.rank() == 0:
+            outputs = []
+            targets = []
 
             iterator = iter(valid_loader)
             n_iterations = len(valid_loader)
@@ -193,15 +193,15 @@ class Trainer():
                 #    for index in range(len(target)):
                 #        target[index] = target[index].cpu()
 
-                if hvd.rank() == 0:
-                    for index in range(len(output)):
-                        output[index] = hvd.allreduce(output[index])
+                #if hvd.rank() == 0:
+                for index in range(len(output)):
+                    output[index] = hvd.allreduce(output[index])
 
-                    for index in range(len(target)):
-                        target[index] = hvd.allreduce(target[index])
+                for index in range(len(target)):
+                    target[index] = hvd.allreduce(target[index])
 
-                    outputs.append(output)
-                    targets.append(target)
+                outputs.append(output)
+                targets.append(target)
 
                 batch_time.update(time.time() - end)
                 end = time.time()
@@ -227,6 +227,7 @@ class Trainer():
                         targets[index] = torch.cat(targets[index], dim=0)
 
                     metrics = {}
+
                     try:
                         metrics = self.socket.metrics(outputs, targets)
                         for metric in metrics:
@@ -241,8 +242,8 @@ class Trainer():
 
                 pbar.set_description(line)
 
-            if hvd.rank() == 0:
-                del outputs, targets
+            #if hvd.rank() == 0:
+            del outputs, targets
 
             gc.collect()
 
