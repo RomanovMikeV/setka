@@ -268,7 +268,8 @@ class Trainer():
 
             gc.collect()
 
-            pbar = tqdm(range(n_iterations), ascii=True, disable=self.silent, ncols=0)
+            pbar = tqdm(range(n_iterations), ascii=True,
+                        disable=self.silent, ncols=0)
             pbar.set_description("Test  ")
 
             for i in pbar:
@@ -282,17 +283,17 @@ class Trainer():
                 output = self.socket.model(input)
 
                 for index in range(len(output)):
-                    output[index] = hvd.allreduce(output[index])
+                    output[index] = hvd.allgather(output[index])
 
                 for index in range(len(input)):
-                    input[index] = hvd.allreduce(input[index])
+                    input[index] = hvd.allgather(input[index])
 
-                if self.use_cuda:
-                    for index in range(len(output)):
-                        output[index] = output[index].cpu()
-
-                    for index in range(len(input)):
-                        input[index] = input[index].cpu()
+                #if self.use_cuda:
+                #    for index in range(len(output)):
+                #        output[index] = output[index].cpu()
+                #
+                #    for index in range(len(input)):
+                #        input[index] = input[index].cpu()
 
                 gc.collect()
 

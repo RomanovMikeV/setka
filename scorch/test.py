@@ -114,22 +114,27 @@ def test(model_source_path,
         os.mkdir('results')
 
     batch_index = 0
-    for input, output, test_id in my_trainer.test(test_loader):
+
+    for inputs, outputs, test_ids in my_trainer.test(test_loader):
         result = {}
-        for index in range(len(test_id)):
+
+        for index in range(len(test_ids)):
             one_input = []
             one_output = []
+            test_id = test_ids[index]
 
-            for input_index in range(len(input)):
-                one_input.append(input[input_index][index])
+            for input_index in range(len(inputs)):
+                one_input.append(inputs[input_index][index])
 
-            for output_index in range(len(output)):
-                one_output.append(output[output_index][index])
+            for output_index in range(len(outputs)):
+                one_output.append(outputs[output_index][index])
 
             try:
-                result[test_id[index]] = socket.process_result(one_input, one_output)
+                result[test_id] = socket.process_result(one_input,
+                                                         one_output,
+                                                         test_id)
             except AttributeError:
-                result[test_id[index]] = one_ouput
+                result[test_id] = one_ouput
 
         torch.save(result,
             os.path.join('results',

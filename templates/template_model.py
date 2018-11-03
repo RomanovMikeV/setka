@@ -70,16 +70,16 @@ class Socket:
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer)
 
-    def criterion(self, pred, target):
+    def criterion(self, output, target):
 
         # Define here the criterion for optimization
 
         loss_f = torch.nn.CrossEntropyLoss()
 
-        return loss_f(pred[0], target[0])
+        return loss_f(output[0], target[0])
 
     # Optional
-    def metrics(self, pred, target):
+    def metrics(self, output, target):
 
         # Define here the metrics for your method.
         # The 'main' metrics will be used by scheduler and, also
@@ -87,10 +87,10 @@ class Socket:
         # Choose wisely.
 
         accuracy = (
-            float((pred[0].argmax(dim=1) == target[0]).sum()) /
-            float(pred[0].size(0)))
+            float((output[0].argmax(dim=1) == target[0]).sum()) /
+            float(output[0].size(0)))
         errors = 1.0 - accuracy
-        loss = self.criterion(pred, target)
+        loss = self.criterion(output, target)
 
         return {'main': accuracy,
                 'accuracy': accuracy,
@@ -98,7 +98,7 @@ class Socket:
                 'loss': loss}
 
     # Optional
-    def process_result(self, input, output):
+    def process_result(self, input, output, id):
 
         # This method will be used by test script.
         # The outputs of this function will be collected and saved as
@@ -107,7 +107,7 @@ class Socket:
         return output
 
     # Optional
-    def visualize(self, inputs, outputs, ids):
+    def visualize(self, input, output, id):
 
         # This function is used for visualization with TensorboardX.
         # You can make here:
@@ -121,25 +121,20 @@ class Socket:
         # Create the result container
         res = {'figures': {}}
 
-        for index in range(len(ids)):
-            id = ids[index]
-            input = inputs[0][index]
-            output = outputs[0][index]
+        fig = plt.figure(figsize=(10, 10))
+        plt.imshow(input[0][0, :, :])
 
-            fig = plt.figure(figsize=(10, 10))
-            plt.imshow(input[0, :, :])
+        text = ''
+        for number in range(len(output)):
+            text += str(number) + ': ' + str(output[0][number].item()) + ' | '
 
-            text = ''
-            for number in range(len(output)):
-                text += str(number) + ': ' + str(output[number].item()) + ' | '
-
-                plt.title(text)
+        plt.title(text)
 
             # Add item to the container. Note that ID will be used in the
             # tensorboard as the image name
 
-            res['figures'][id] = fig
+        res['figures'][id] = fig
 
-            plt.close(fig)
+        plt.close(fig)
 
         return res
