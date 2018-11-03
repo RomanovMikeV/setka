@@ -52,7 +52,9 @@ def train(model_source_path,
           dataset_kwargs={},
           model_kwargs={},
           new_optimizer=False,
-          seed=0):
+          seed=0,
+          solo_test=False,
+          deterministic_cuda=False):
 
     numpy.random.seed(seed)
     random.seed(seed)
@@ -61,7 +63,10 @@ def train(model_source_path,
     if torch.cuda.is_available:
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
+        if deterministic_cuda:
+            torch.backends.cudnn.deterministic = True
+        else:
+            torch.backends.cudnn.deterministic = False
 
     # Initializing Horovod
     hvd.init()
@@ -119,8 +124,13 @@ def train(model_source_path,
     valid_sampler = torch.utils.data.distributed.DistributedSampler(
         valid_dataset, num_replicas=hvd.size(), rank=hvd.rank())
 
-    test_sampler = torch.utils.data.distributed.DistributedSampler(
-        test_dataset, num_replicas=hvd.size(), rank=hvd.rank())
+    if solo_test:
+        test_batch_size = 1
+        test_sampler = torch.utils.data.sampler.SequentialSampler(test_dataset)
+    else:
+        test_batch_size = batch_size
+        test_sampler = torch.utils.data.distributed.DistributedSampler(
+            test_dataset, num_replicas=hvd.size(), rank=hvd.rank())
 
     ## Creating dataloaders based on datasets
     train_loader = scorch.data.DataLoader(train_dataset,
@@ -142,7 +152,7 @@ def train(model_source_path,
                                                sampler=valid_sampler)
 
     test_loader = scorch.data.DataLoader(test_dataset,
-                                               batch_size=1,
+                                               batch_size=test_batch_size,
                                                shuffle=False,
                                                num_workers=num_workers,
                                                drop_last=False,
@@ -213,7 +223,9 @@ def train(model_source_path,
             outputs = []
             test_ids = []
 
-        for input, output, test_id in my_trainer.test(test_loader):
+
+        for input, output, test_id in my_trainer.test(test_loader,
+                                                      solo_test=solo_test):
             if hvd.rank() == 0:
                 for item_index in range(len(test_id)):
                     for input_index in range(len(input)):
@@ -354,6 +366,14 @@ def training():
     parser.add_argument('--seed',
                         help='Seed for random number generators',
                         default=0, type=int)
+    parser.add_argument('--solo-test',
+                        help='This argument switches test to the mode' +
+                        'when the test is performed on one device with' +
+                        'batch_size=1',
+                        action='store_true')
+    parser.add_argument('--deterministic_cuda',
+                        help='Use deterministic CUDA backend (slower by ~10%)',
+                        action='store_true')
     args = vars(parser.parse_args())
 
     ## Calling training function
@@ -374,7 +394,9 @@ def training():
               dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
               model_kwargs=eval('{' + args['model_args'] + '}'),
               new_optimizer=args['new_optimizer'],
-              seed=args['seed'])
+              seed=args['seed'],
+              deterministic_cuda=args['deterministic_cuda'],
+              solo_test=args['solo_test'])
 
 if __name__ == '__main__':
     training()
