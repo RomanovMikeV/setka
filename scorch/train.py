@@ -230,21 +230,24 @@ def train(model_source_path,
 
                     test_ids.append(test_id[item_index])
 
+        if hvd.rank() == 0:
+            for index in range(len(inputs)):
+                inputs[index] = torch.cat(inputs[index], dim=0)
 
-        for index in range(len(inputs)):
-            inputs[index] = torch.cat(inputs[index], dim=0)
+            for index in range(len(outputs)):
+                outputs[index] = torch.cat(outputs[index], dim=0)
 
-        for index in range(len(outputs)):
-            outputs[index] = torch.cat(outputs[index], dim=0)
+            try:
+                show(tb_writer,
+                    my_trainer.socket.visualize(inputs, outputs, test_ids),
+                    my_trainer.epoch)
 
-        try:
-            show(tb_writer,
-                 my_trainer.socket.visualize(inputs, outputs, test_ids),
-                 my_trainer.epoch)
+            except AttributeError:
+                if hvd.rank() == 0:
+                    print('Visualization is not implemented. Skipping.')
 
-        except AttributeError:
-            if hvd.rank() == 0:
-                print('Visualization is not implemented. Skipping.')
+            del inputs
+            del outputs
 
 
 
