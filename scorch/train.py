@@ -100,9 +100,10 @@ def train(model_source_path,
     socket = model.Socket(net)
 
     # Preparing Socket for Horovod training
-    socket.optimizer = hvd.DistributedOptimizer(
-        socket.optimizer,
-        named_parameters=socket.model.named_parameters())
+    for opt_index in range(len(socket.optimizers)):
+        socket.optimizers[opt_index].optimizer = hvd.DistributedOptimizer(
+            socket.optimizers[opt_index].optimizer)
+
     hvd.broadcast_parameters(socket.model.state_dict(), root_rank=0)
 
     # Creating the datasets
@@ -183,7 +184,21 @@ def train(model_source_path,
                                                   max_valid_iterations=max_valid_iterations,
                                                   max_test_iterations=max_test_iterations,
                                                   new_optimizer=new_optimizer)
-        best_metrics = my_trainer.metrics
+        best_metrics = my_trainer.socket.metric_vals
+
+    # Validation before training
+
+    # Validation on training subuset
+    if validate_on_train:
+        train_metrics = my_trainer.validate(train_loader)
+        gc.collect()
+
+    # Validation on validation subset
+    valid_metrics = my_trainer.validate(valid_loader)
+    gc.collect()
+
+    if hasattr(socket, 'scheduling'):
+        socket.scheduling()
 
     # Training cycle
     for epoch_index in range(epochs):
@@ -204,6 +219,14 @@ def train(model_source_path,
         valid_metrics = my_trainer.validate(valid_loader)
         gc.collect()
 
+        # Updating Learning Rate if needed
+
+        if hasattr(socket, 'scheduling'):
+            socket.scheduling()
+
+        gc.collect()
+
+
         # Processing resulting metrics
         for metric_name in valid_metrics:
             metric_data = {'valid': valid_metrics[metric_name]}
@@ -214,7 +237,7 @@ def train(model_source_path,
             if hvd.rank() == 0:
                 tb_writer.add_scalars(
                     'metrics/' + metric_name + '/' + checkpoint_prefix,
-                    metric_data, my_trainer.epoch)
+                    metric_data, my_trainer.socket.epoch)
 
 
             # Running tests for visualization
@@ -279,22 +302,16 @@ def train(model_source_path,
 
         gc.collect()
 
-        # Updating Learning Rate if needed
-        if socket.scheduler is not None and 'main' in valid_metrics:
-            socket.scheduler.step(valid_metrics['main'])
-
-        gc.collect()
-
         # Dumping the model
         if epoch_index % dump_period == 0 and hvd.rank() == 0:
             is_best = False
             if best_metrics == None:
                 is_best = True
             else:
-                if best_metrics['main'] < my_trainer.metrics['main']:
+                if best_metrics['main'] < my_trainer.socket.metric_vals['main']:
                     is_best = True
             if is_best:
-                best_metrics = my_trainer.metrics
+                best_metrics = my_trainer.socket.metric_vals
 
             my_trainer.make_checkpoint(checkpoint_prefix,
                                        info=valid_metrics,

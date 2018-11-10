@@ -3,6 +3,12 @@ import torchvision
 import sklearn.metrics
 import matplotlib.pyplot as plt
 
+class OptimizerSwitch():
+    def __init__(self, train_module, optimizer, is_active=True, **kwargs):
+        self.optimizer = optimizer(train_module.parameters(), **kwargs)
+        self.module = train_module
+        self.active = is_active
+
 class Network(torch.nn.Module):
     '''
     The Network itself
@@ -38,9 +44,6 @@ class Network(torch.nn.Module):
     def __call__(self, input):
         return self.forward(input)
 
-
-
-
 class Socket:
     '''
     The Socket class knows how to treat the  Network class well.
@@ -54,21 +57,24 @@ class Socket:
         # These modules the training loop will switch between training and
         # evaluation modes.
 
-        self.train_modules = torch.nn.ModuleList([
-            self.model.conv1,
-            self.model.conv2,
-            self.model.classifier])
+        # Define the optimizers for your network.
 
-        # Define the optimizer for your network.
+        self.optimizers = [
+            OptimizerSwitch(
+                torch.nn.ModuleList([self.model.conv1, self.model.conv2]),
+                torch.optim.Adam, lr=3.0e-4),
+            OptimizerSwitch(self.model.classifier, torch.optim.Adam, lr=3.0e-4)
+        ]
 
-        self.optimizer = torch.optim.Adam(
-            self.train_modules.parameters(),
-            lr=3.0e-4)
+        self.metric_vals = {}
+        self.epoch = 0
+        self.iteration = 0
 
         # Define your scheduler for the network
-
-        self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            self.optimizer)
+        self.scheduler1 = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizers[0].optimizer)
+        self.scheduler2 = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            self.optimizers[1].optimizer)
 
     def criterion(self, output, target):
 
@@ -77,6 +83,11 @@ class Socket:
         loss_f = torch.nn.CrossEntropyLoss()
 
         return loss_f(output[0], target[0])
+
+    # Optional
+    def scheduling(self):
+        self.scheduler1.step(self.metric_vals['main'])
+        self.scheduler2.step(self.metric_vals['main'])
 
     # Optional
     def metrics(self, output, target):
@@ -92,10 +103,12 @@ class Socket:
         errors = 1.0 - accuracy
         loss = self.criterion(output, target)
 
-        return {'main': accuracy,
+        self.metric_vals = {'main': accuracy,
                 'accuracy': accuracy,
                 'errors': errors,
                 'loss': loss}
+
+        return self.metric_vals
 
     # Optional
     def process_result(self, input, output, id):

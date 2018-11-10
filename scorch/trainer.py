@@ -38,13 +38,11 @@ class Trainer():
                  name='Trainer'):
 
         self.socket = socket
-        self.epoch = 0
         self.silent = silent
         self.max_train_iterations = max_train_iterations
         self.max_valid_iterations = max_valid_iterations
         self.max_test_iterations = max_test_iterations
         self.use_cuda = use_cuda
-        self.metrics = None
 
     def train(self,
               train_loader):
@@ -52,7 +50,7 @@ class Trainer():
         train_loader.dataset.shuffle()
 
         gc.enable()
-        self.epoch += 1
+        self.socket.epoch += 1
 
         batch_time = AverageMeter()
         data_time = AverageMeter()
@@ -91,15 +89,27 @@ class Trainer():
                 for index in range(len(target)):
                     target[index] = target[index].cuda()
 
-            self.socket.train_modules.train()
+            for opt_index in range(len(self.socket.optimizers)):
+                if self.socket.optimizers[opt_index].active:
+                    self.socket.optimizers[opt_index].module.train()
 
             output = self.socket.model.forward(input)
             loss = self.socket.criterion(output, target)
-            self.socket.optimizer.zero_grad()
-            loss.backward()
-            self.socket.optimizer.step()
 
-            self.socket.train_modules.eval()
+            for opt_index in range(len(self.socket.optimizers)):
+                self.socket.optimizers[opt_index].optimizer.zero_grad()
+
+            loss.backward()
+
+            for opt_index in range(len(self.socket.optimizers)):
+                if self.socket.optimizers[opt_index].active:
+                    self.socket.optimizers[opt_index].optimizer.step()
+
+            for opt_index in range(len(self.socket.optimizers)):
+                if self.socket.optimizers[opt_index].active:
+                    self.socket.optimizers[opt_index].module.eval()
+
+            self.socket.iteration += 1
 
             losses.update(loss.data.item())
 
@@ -113,7 +123,7 @@ class Trainer():
             line = ("Train {0}  "
                     "D {data.avg:.2f}({data.val:.2f})  "
                     "L {loss.avg:.2e}({loss.val:.2e})  ".format(
-                        self.epoch,
+                        self.socket.epoch,
                         time=batch_time,
                         data=data_time,
                         loss=losses))
@@ -209,7 +219,7 @@ class Trainer():
                 line = ("Valid {0}  "
                         "D {data.avg:.2f}({data.val:.2f})  "
                         "L {loss.avg:.2e}({loss.val:.2e})  ".format(
-                            self.epoch,
+                            self.socket.epoch,
                             data=data_time,
                             loss=losses))
 
@@ -228,17 +238,13 @@ class Trainer():
 
                     metrics = {}
 
-                    try:
+                    if hasattr(self.socket, "metrics"):
                         metrics = self.socket.metrics(outputs, targets)
                         for metric in metrics:
                             self.metrics = metrics
 
                         line += "Metrics: " + " ".join(
                             ["{}:{:.2e}".format(x, metrics[x]) for x in metrics])
-
-
-                    except AttributeError:
-                        pass
 
                 pbar.set_description(line)
 
@@ -307,11 +313,16 @@ class Trainer():
     def make_checkpoint(self, prefix='./', is_best=False, info=""):
 
         checkpoint = {
-            "epoch": self.epoch,
+            "epoch": self.socket.epoch,
+            "iteration": self.socket.iteration,
             "model_state": self.socket.model.state_dict(),
-            "optimizer_state": self.socket.optimizer.state_dict(),
+            #"optimizer_state": self.socket.optimizer.state_dict(),
             "info": info,
-            "metrics": self.metrics}
+            "metrics": self.socket.metric_vals}
+
+        for opt_index in range(len(self.socket.optimizers)):
+            checkpoint['optimizer_state_' + str(opt_index)] = self.socket.optimizers[opt_index].optimizer.state_dict()
+            checkpoint['optimizer_switch_' + str(opt_index)] = self.socket.optimizers[opt_index].active
 
         if not os.path.exists('checkpoints'):
             os.mkdir('checkpoints')
@@ -347,14 +358,18 @@ def load_from_checkpoint(checkpoint_name,
                                metric_mode=metric_mode,
                                use_cuda=use_cuda)
 
-    restored_trainer.epoch = checkpoint['epoch']
+    restored_trainer.socket.epoch = checkpoint['epoch']
+    restored_trainer.socket.iteration = checkpoint['iteration']
     restored_trainer.socket.model.load_state_dict(checkpoint["model_state"])
-    restored_trainer.metrics = checkpoint["metrics"]
+    restored_trainer.socket.metric_vals = checkpoint["metrics"]
+    #restored_trainer.metrics = checkpoint["metrics"]
 
     if not new_optimizer:
-        try:
-            restored_trainer.socket.optimizer.load_state_dict(checkpoint["optimizer_state"])
-        except:
-            print('Failed to load optimizer state, starting to train from scratch')
+        for opt_index in range(len(restored_trainer.socket.optimizers)):
+            try:
+                restored_trainer.socket.optimizers[index].optimizer.load_state_dict(checkpoint["optimizer_state_" + str(opt_index)])
+                restored_trainer.socket.optimizers[index].active = checkpoint["optimizer_active_" + str(opt_index)]
+            except:
+                print('Failed to load optimizer ' + str(1) + ' state, starting to train from scratch')
 
     return restored_trainer
