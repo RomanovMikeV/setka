@@ -370,6 +370,6 @@ def load_from_checkpoint(checkpoint_name,
                 restored_trainer.socket.optimizers[index].optimizer.load_state_dict(checkpoint["optimizer_state_" + str(opt_index)])
                 restored_trainer.socket.optimizers[index].active = checkpoint["optimizer_active_" + str(opt_index)]
             except:
-                print('Failed to load optimizer ' + str(1) + ' state, starting to train from scratch')
+                print('Failed to load optimizer ' + str(opt_index) + '.')
 
     return restored_trainer

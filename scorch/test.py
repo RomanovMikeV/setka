@@ -113,7 +113,7 @@ def test(model_source_path,
                                                   socket,
                                                   silent=silent,
                                                   use_cuda=use_cuda)
-        best_metrics = my_trainer.metrics
+        best_metrics = my_trainer.socket.metrics
 
     if not os.path.exists('results'):
         os.mkdir('results')
@@ -167,7 +167,7 @@ def testing():
     parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
     parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
     parser.add_argument('--seed', help='Seed for random number generators', default=0, type=int)
-    parser.add_argumnet('--deterministic-cuda', help='Use deterministic cuda backend', action='store_true')
+    parser.add_argument('--deterministic-cuda', help='Use deterministic cuda backend', action='store_true')
     args = vars(parser.parse_args())
 
     ## Calling inference function
