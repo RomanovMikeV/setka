@@ -2,12 +2,7 @@ import torch
 import torchvision
 import sklearn.metrics
 import matplotlib.pyplot as plt
-
-class OptimizerSwitch():
-    def __init__(self, train_module, optimizer, is_active=True, **kwargs):
-        self.optimizer = optimizer(train_module.parameters(), **kwargs)
-        self.module = train_module
-        self.active = is_active
+from scorch.utils import OptimizerSwitch
 
 class Network(torch.nn.Module):
     '''
@@ -86,6 +81,13 @@ class Socket:
 
     # Optional
     def scheduling(self):
+
+        # This is scheduling method. Here you may change learning rate and
+        # make some more complex scheduling (such as switching between
+        # different optimizers, criterions, etc.). This method is optional.
+        # Your Socket may not contain this method. In that case, all the
+        # iterations will be performed in the same way.
+
         self.scheduler1.step(self.metric_vals['main'])
         self.scheduler2.step(self.metric_vals['main'])
 
@@ -113,9 +115,9 @@ class Socket:
     # Optional
     def process_result(self, input, output, id):
 
-        # This method will be used by test script.
+        # This method will be only used by test script.
         # The outputs of this function will be collected and saved as
-        # the results of your network.
+        # the results of your network (stored in json files).
 
         return output
 
