@@ -31,7 +31,8 @@ def test(model_source_path,
               silent=False,
               dataset_kwargs={},
               model_kwargs={},
-              seed=0):
+              seed=0,
+              deterministic_cuda=False):
 
     numpy.random.seed(seed)
     random.seed(seed)
@@ -40,6 +41,10 @@ def test(model_source_path,
     if torch.cuda.is_available:
         torch.cuda.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
+        if deterministic_cuda:
+            torch.backends.cudnn.deterministic = True
+        else:
+            torch.backends.cudnn.deterministic = False
 
     # Initializing Horovod
     hvd.init()
@@ -129,16 +134,14 @@ def test(model_source_path,
             for output_index in range(len(outputs)):
                 one_output.append(outputs[output_index][index])
 
-            try:
+            if hasattr(socket, 'process_result'):
                 result[test_id] = socket.process_result(one_input,
-                                                         one_output,
-                                                         test_id)
-            except AttributeError:
-                result[test_id] = one_ouput
+                                                        one_output,
+                                                        test_id)
 
         torch.save(result,
             os.path.join('results',
-                str(batch_index) + '_' + str(hvd.rank()) + '.pth.tar'))
+                str(hvd.rank()) + '_' + str(batch_index) + '.pth.tar'))
 
         batch_index += 1
 
@@ -164,6 +167,7 @@ def testing():
     parser.add_argument('--model-args', help='Model arguments which will be used during training', default='', type=str)
     parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
     parser.add_argument('--seed', help='Seed for random number generators', default=0, type=int)
+    parser.add_argumnet('--deterministic-cuda', help='Use deterministic cuda backend', action='store_true')
     args = vars(parser.parse_args())
 
     ## Calling inference function
@@ -177,7 +181,8 @@ def testing():
               silent=args['silent'],
               dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
               model_kwargs=eval('{' + args['model_args'] + '}'),
-              seed=args['seed'])
+              seed=args['seed'],
+              deterministic_cuda=args['deterministic_cuda'])
 
 if __name__ == '__main__':
     testing()

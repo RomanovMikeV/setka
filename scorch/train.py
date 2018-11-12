@@ -388,7 +388,7 @@ def training():
                         'when the test is performed on one device with' +
                         'batch_size=1',
                         action='store_true')
-    parser.add_argument('--deterministic_cuda',
+    parser.add_argument('--deterministic-cuda',
                         help='Use deterministic CUDA backend (slower by ~10%)',
                         action='store_true')
     args = vars(parser.parse_args())
