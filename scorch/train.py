@@ -196,6 +196,7 @@ def train(model_source_path,
     # Validation on validation subset
     valid_metrics = my_trainer.validate(valid_loader)
     gc.collect()
+    my_trainer.socket.metric_vals = valid_metrics
 
     if hasattr(socket, 'scheduling'):
         socket.scheduling()
@@ -218,6 +219,7 @@ def train(model_source_path,
         # Validation on validation subset
         valid_metrics = my_trainer.validate(valid_loader)
         gc.collect()
+        my_trainer.socket.metric_vals = valid_metrics
 
         # Updating Learning Rate if needed
 
@@ -305,7 +307,7 @@ def train(model_source_path,
         # Dumping the model
         if epoch_index % dump_period == 0 and hvd.rank() == 0:
             is_best = False
-            if best_metrics == None:
+            if best_metrics is None:
                 is_best = True
             else:
                 if best_metrics['main'] < my_trainer.socket.metric_vals['main']:
