@@ -32,7 +32,11 @@ def test(model_source_path,
               dataset_kwargs={},
               model_kwargs={},
               seed=0,
-              deterministic_cuda=False):
+              deterministic_cuda=False,
+              prefix=''):
+
+    if len(prefix) > 0:
+        prefix += '_'
 
     numpy.random.seed(seed)
     random.seed(seed)
@@ -115,8 +119,8 @@ def test(model_source_path,
                                                   use_cuda=use_cuda)
         best_metrics = my_trainer.socket.metrics
 
-    if not os.path.exists('results'):
-        os.mkdir('results')
+    if not os.path.exists(prefix + 'results'):
+        os.mkdir(prefix + 'results')
 
     batch_index = 0
 
@@ -140,7 +144,7 @@ def test(model_source_path,
                                                         test_id)
 
         torch.save(result,
-            os.path.join('results',
+            os.path.join(prefix + 'results',
                 str(hvd.rank()) + '_' + str(batch_index) + '.pth.tar'))
 
         batch_index += 1
@@ -168,6 +172,7 @@ def testing():
     parser.add_argument('--dataset-args', help='Dataset arguments which will be used during training', default='', type=str)
     parser.add_argument('--seed', help='Seed for random number generators', default=0, type=int)
     parser.add_argument('--deterministic-cuda', help='Use deterministic cuda backend', action='store_true')
+    parser.add_argument('--prefix', help='Prefix for the results folder', default='')
     args = vars(parser.parse_args())
 
     ## Calling inference function
@@ -182,7 +187,8 @@ def testing():
               dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
               model_kwargs=eval('{' + args['model_args'] + '}'),
               seed=args['seed'],
-              deterministic_cuda=args['deterministic_cuda'])
+              deterministic_cuda=args['deterministic_cuda'],
+              prefix=args['prefix'])
 
 if __name__ == '__main__':
     testing()
