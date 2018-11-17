@@ -142,6 +142,8 @@ def test(model_source_path,
                 result[test_id] = socket.process_result(one_input,
                                                         one_output,
                                                         test_id)
+            else:
+                result[test_id] = one_output
 
         torch.save(result,
             os.path.join(prefix + 'results',
