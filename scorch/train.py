@@ -184,19 +184,20 @@ def train(model_source_path,
                                                   max_valid_iterations=max_valid_iterations,
                                                   max_test_iterations=max_test_iterations,
                                                   new_optimizer=new_optimizer)
-        best_metrics = my_trainer.socket.metric_vals
+        best_metrics = my_trainer.socket.metrics_valid
 
     # Validation before training
 
     # Validation on training subuset
     if validate_on_train:
         train_metrics = my_trainer.validate(train_loader)
+        my_trainer.socket.metrics_train = train_metrics
         gc.collect()
 
     # Validation on validation subset
     valid_metrics = my_trainer.validate(valid_loader)
     gc.collect()
-    my_trainer.socket.metric_vals = valid_metrics
+    my_trainer.socket.metrics_valid = valid_metrics
 
     if hasattr(socket, 'scheduling'):
         socket.scheduling()
@@ -214,12 +215,13 @@ def train(model_source_path,
         # Validation on training subuset
         if validate_on_train:
             train_metrics = my_trainer.validate(train_loader)
+            my_trainer.socket.metrics_train = train_metrics
             gc.collect()
 
         # Validation on validation subset
         valid_metrics = my_trainer.validate(valid_loader)
         gc.collect()
-        my_trainer.socket.metric_vals = valid_metrics
+        my_trainer.socket.metrics_valid = valid_metrics
 
         # Updating Learning Rate if needed
 
@@ -286,14 +288,14 @@ def train(model_source_path,
 
                 test_id = test_ids[index]
 
-                try:
+                if hasattr(my_trainer.socket, 'visualize'):
                     show(tb_writer,
                          my_trainer.socket.visualize(
                             one_input, one_output, test_id),
-                         my_trainer.epoch)
+                         my_trainer.socket.epoch)
 
-                except AttributeError:
-                    pass
+                #except AttributeError:
+                #    pass
                     # if hvd.rank() == 0:
                         # print('Visualization is not implemented. Skipping.')
 
@@ -310,10 +312,10 @@ def train(model_source_path,
             if best_metrics is None:
                 is_best = True
             else:
-                if best_metrics['main'] < my_trainer.socket.metric_vals['main']:
+                if best_metrics['main'] < my_trainer.socket.metrics_valid['main']:
                     is_best = True
             if is_best:
-                best_metrics = my_trainer.socket.metric_vals
+                best_metrics = my_trainer.socket.metrics_valid
 
             my_trainer.make_checkpoint(checkpoint_prefix,
                                        info=valid_metrics,

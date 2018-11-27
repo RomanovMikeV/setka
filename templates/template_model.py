@@ -88,8 +88,10 @@ class Socket:
         # Your Socket may not contain this method. In that case, all the
         # iterations will be performed in the same way.
 
-        self.scheduler1.step(self.metric_vals['main'])
-        self.scheduler2.step(self.metric_vals['main'])
+        pass
+
+        #self.scheduler1.step(self.metric_vals['main'])
+        #self.scheduler2.step(self.metric_vals['main'])
 
     # Optional
     def metrics(self, output, target):

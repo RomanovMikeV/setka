@@ -78,6 +78,9 @@ class Trainer():
         end = time.time()
 
         for i in pbar:
+            if hasattr(self.socket, 'scheduling'):
+                self.socket.scheduling()
+
             start = time.time()
             input, target, ids = next(iterator)
             data_time.update(time.time() - start)
@@ -129,6 +132,7 @@ class Trainer():
                         loss=losses))
 
             pbar.set_description(line)
+
 
         time.sleep(1)
         gc.collect()
@@ -318,7 +322,10 @@ class Trainer():
             "model_state": self.socket.model.state_dict(),
             #"optimizer_state": self.socket.optimizer.state_dict(),
             "info": info,
-            "metrics": self.socket.metric_vals}
+            "metrics_valid": self.socket.metrics_valid}
+
+        if hasattr(self.socket, 'metrics_train'):
+            checkpoint['metrics_train'] = self.socket.metrics_train
 
         for opt_index in range(len(self.socket.optimizers)):
             checkpoint['optimizer_state_' + str(opt_index)] = self.socket.optimizers[opt_index].optimizer.state_dict()
@@ -361,7 +368,10 @@ def load_from_checkpoint(checkpoint_name,
     restored_trainer.socket.epoch = checkpoint['epoch']
     restored_trainer.socket.iteration = checkpoint['iteration']
     restored_trainer.socket.model.load_state_dict(checkpoint["model_state"])
-    restored_trainer.socket.metric_vals = checkpoint["metrics"]
+    restored_trainer.socket.metrics_valid = checkpoint["metrics_valid"]
+
+    if 'metrics_train' in checkpoint:
+        restored_trainer.socket.metrics_train = checkpoint["metrics_train"]
     #restored_trainer.metrics = checkpoint["metrics"]
 
     if not new_optimizer:
