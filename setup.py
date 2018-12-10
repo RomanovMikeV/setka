@@ -20,8 +20,8 @@ setuptools.setup(
     ),
     entry_points = {
         'console_scripts': [
-            'scorch-train = scorch.train:training',
-            'scorch-test = scorch.test:testing'
+            'scorch-train = scorch.bash:training',
+            'scorch-test = scorch.bash:testing'
         ]
     }
 )

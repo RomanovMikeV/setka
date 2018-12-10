@@ -13,30 +13,14 @@ import tensorboardX
 import scorch.data
 import numpy
 import random
+import os
 
-import torchvision.transforms as transform
-
+from . import internal
 from . import trainer
-from . import utils
 
-def show(tb_writer, to_show, epoch):
-
-    type_writers = {
-        'images': tb_writer.add_image,
-        'texts': tb_writer.add_text,
-        'audios': tb_writer.add_audio,
-        'figures': (lambda x, y, z: tb_writer.add_figure(x, y, z)),
-        'graphs': tb_writer.add_graph,
-        'embeddings': tb_writer.add_embedding}
-
-    for type in type_writers:
-        if type in to_show:
-            for desc in to_show[type]:
-                type_writers[type](desc, to_show[type][desc], str(epoch))
-
-
-def train(model_source_path,
-          dataset_source_path,
+def train(NetworkClass,
+          SocketClass,
+          DataSetClass,
           batch_size=4,
           num_workers=0,
           dump_period=1,
@@ -56,13 +40,13 @@ def train(model_source_path,
           solo_test=False,
           deterministic_cuda=False):
 
-    numpy.random.seed(seed)
-    random.seed(seed)
-    torch.manual_seed(seed)
+    #numpy.random.seed(seed)
+    #random.seed(seed)
+    #torch.manual_seed(seed)
 
     if torch.cuda.is_available:
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+    #    torch.cuda.manual_seed(seed)
+    #    torch.cuda.manual_seed_all(seed)
         if deterministic_cuda:
             torch.backends.cudnn.deterministic = True
         else:
@@ -78,18 +62,8 @@ def train(model_source_path,
     if hvd.rank() == 0:
         tb_writer = SummaryWriter()
 
-    # Importing a model from a specified file
-    spec = importlib.util.spec_from_file_location("model", model_source_path)
-    model = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(model)
-
-    # Importing a dataset from a specified file
-    spec = importlib.util.spec_from_file_location("dataset", dataset_source_path)
-    dataset = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dataset)
-
     # Creating neural network instance
-    net = model.Network(**model_kwargs)
+    net = NetworkClass(**model_kwargs)
 
     # Model CPU -> GPU
     if use_cuda:
@@ -97,7 +71,7 @@ def train(model_source_path,
         net = net.cuda()
 
     # Creating a Socket for a network
-    socket = model.Socket(net)
+    socket = SocketClass(net)
 
     # Preparing Socket for Horovod training
     for opt_index in range(len(socket.optimizers)):
@@ -107,15 +81,15 @@ def train(model_source_path,
     hvd.broadcast_parameters(socket.model.state_dict(), root_rank=0)
 
     # Creating the datasets
-    ds_index = dataset.DataSetIndex(**dataset_kwargs)
+    ds_index = DataSetClass(**dataset_kwargs)
 
-    train_dataset = dataset.DataSet(
+    train_dataset = internal.DataSetWrapper(
         ds_index, mode='train')
 
-    valid_dataset = dataset.DataSet(
+    valid_dataset = internal.DataSetWrapper(
         ds_index, mode='valid')
 
-    test_dataset = dataset.DataSet(
+    test_dataset = internal.DataSetWrapper(
         ds_index, mode='test')
 
     # Preparing the datasets for Horovod
@@ -140,7 +114,7 @@ def train(model_source_path,
                                                num_workers=num_workers,
                                                drop_last=True,
                                                pin_memory=False,
-                                               collate_fn=utils.default_collate,
+                                               collate_fn=internal.default_collate,
                                                sampler=train_sampler)
 
     valid_loader = scorch.data.DataLoader(valid_dataset,
@@ -149,7 +123,7 @@ def train(model_source_path,
                                                num_workers=num_workers,
                                                drop_last=False,
                                                pin_memory=False,
-                                               collate_fn=utils.default_collate,
+                                               collate_fn=internal.default_collate,
                                                sampler=valid_sampler)
 
     test_loader = scorch.data.DataLoader(test_dataset,
@@ -158,7 +132,7 @@ def train(model_source_path,
                                                num_workers=num_workers,
                                                drop_last=False,
                                                pin_memory=False,
-                                               collate_fn=utils.default_collate,
+                                               collate_fn=internal.default_collate,
                                                sampler=test_sampler)
 
     # Shut up if you're not the first process
@@ -167,11 +141,11 @@ def train(model_source_path,
 
     # Creating a trainer
     my_trainer = trainer.Trainer(socket,
-                                 silent=silent,
-                                 use_cuda=use_cuda,
-                                 max_train_iterations=max_train_iterations,
-                                 max_valid_iterations=max_valid_iterations,
-                                 max_test_iterations=max_test_iterations)
+                                  silent=silent,
+                                  use_cuda=use_cuda,
+                                  max_train_iterations=max_train_iterations,
+                                  max_valid_iterations=max_valid_iterations,
+                                  max_test_iterations=max_test_iterations)
 
     best_metrics = None
 
@@ -289,10 +263,11 @@ def train(model_source_path,
                 test_id = test_ids[index]
 
                 if hasattr(my_trainer.socket, 'visualize'):
-                    show(tb_writer,
-                         my_trainer.socket.visualize(
+                    internal.show(
+                        tb_writer,
+                        my_trainer.socket.visualize(
                             one_input, one_output, test_id),
-                         my_trainer.socket.epoch)
+                        my_trainer.socket.epoch)
 
                 #except AttributeError:
                 #    pass
@@ -322,102 +297,129 @@ def train(model_source_path,
                                        is_best=is_best)
         gc.collect()
 
+    return my_trainer.socket.metrics_valid
 
-def training():
 
-    ## Training parameters
+def test(NetworkClass,
+         SocketClass,
+         DataSetClass,
+         batch_size=1,
+         num_workers=0,
+         checkpoint=None,
+         use_cuda=False,
+         max_test_iterations=-1,
+         silent=False,
+         dataset_kwargs={},
+         model_kwargs={},
+         seed=0,
+         deterministic_cuda=False,
+         prefix=''):
 
-    parser = argparse.ArgumentParser(
-        description='Script to train a specified model with a specified dataset.')
-    parser.add_argument('-b','--batch-size',
-                        help='Batch size', default=8, type=int)
-    parser.add_argument('-w','--workers',
-                        help='Number of workers in a dataloader',
-                        default=0, type=int)
-    parser.add_argument('-d', '--dump-period',
-                        help='Dump period', default=1, type=int)
-    parser.add_argument('-e', '--epochs',
-                        help='Number of epochs to perform',
-                        default=1000, type=int)
-    parser.add_argument('-c', '--checkpoint',
-                        help='Checkpoint to load from', default=None)
-    parser.add_argument('--use-cuda',
-                        help='Use cuda for training',
-                        action='store_true')
-    parser.add_argument('--validate-on-train',
-                        help='Validate on train',
-                        action='store_true')
-    parser.add_argument('--model',
-                        help='File with a model specifications',
-                        required=True)
-    parser.add_argument('--dataset',
-                        help='File with a dataset sepcification',
-                        required=True)
-    parser.add_argument('--max-train-iterations',
-                        help='Maximum training iterations',
-                        default=-1, type=int)
-    parser.add_argument('--max-valid-iterations',
-                        help='Maximum validation iterations',
-                        default=-1, type=int)
-    parser.add_argument('--max-test-iterations',
-                        help='Maximum test iterations',
-                        default=-1, type=int)
-    parser.add_argument('-s', '--silent',
-                        help='do not print the status of learning',
-                        action='store_true')
-    parser.add_argument('-cp', '--checkpoint-prefix',
-                        help='Prefix to the checkpoint name',
-                        default='checkpoint')
-    parser.add_argument(
-        '--model-args',
-        help=('Model arguments which will be used during training. ' +
-              "The syntax is the same as the syntax of the python's dicts except for braces. " +
-              "Example: --model-args \"'hidden_neurons':20\". " +
-              "Note that here you may specify keyword parameters of your " +
-              "dataset specified in DATASET_FILE"), default='', type=str)
-    parser.add_argument(
-        '--dataset-args',
-        help=('Dataset arguments which will be used during training' +
-              'Syntax is the same as the syntax of the model arguments.' +
-              "Note that here you may specify keyword parameters of your " +
-              "model specified in MODEL_FILE"), default='', type=str)
-    parser.add_argument('--new-optimizer',
-                        help='Use new optimizer when loading from the checkpoint',
-                        action='store_true')
-    parser.add_argument('--seed',
-                        help='Seed for random number generators',
-                        default=0, type=int)
-    parser.add_argument('--solo-test',
-                        help='This argument switches test to the mode' +
-                        'when the test is performed on one device with' +
-                        'batch_size=1',
-                        action='store_true')
-    parser.add_argument('--deterministic-cuda',
-                        help='Use deterministic CUDA backend (slower by ~10%)',
-                        action='store_true')
-    args = vars(parser.parse_args())
+    if len(prefix) > 0:
+        prefix += '_'
 
-    ## Calling training function
+    #numpy.random.seed(seed)
+    #random.seed(seed)
+    #torch.manual_seed(seed)
 
-    train(args['model'], args['dataset'],
-              batch_size=args['batch_size'],
-              num_workers=args['workers'],
-              dump_period=args['dump_period'],
-              epochs=args['epochs'],
-              checkpoint=args['checkpoint'],
-              use_cuda=args['use_cuda'],
-              validate_on_train=args['validate_on_train'],
-              max_train_iterations=args['max_train_iterations'],
-              max_valid_iterations=args['max_valid_iterations'],
-              max_test_iterations=args['max_test_iterations'],
-              silent=args['silent'],
-              checkpoint_prefix=args['checkpoint_prefix'],
-              dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
-              model_kwargs=eval('{' + args['model_args'] + '}'),
-              new_optimizer=args['new_optimizer'],
-              seed=args['seed'],
-              deterministic_cuda=args['deterministic_cuda'],
-              solo_test=args['solo_test'])
+    if torch.cuda.is_available:
+        #torch.cuda.manual_seed(seed)
+        #torch.cuda.manual_seed_all(seed)
+        if deterministic_cuda:
+            torch.backends.cudnn.deterministic = True
+        else:
+            torch.backends.cudnn.deterministic = False
 
-if __name__ == '__main__':
-    training()
+    # Initializing Horovod
+    hvd.init()
+
+    # Enabling garbage collector
+    gc.enable()
+
+    # Creating neural network instance
+    net = NetworkClass(**model_kwargs)
+
+    # Model CPU -> GPU
+    if use_cuda:
+        torch.cuda.set_device(hvd.local_rank())
+        net = net.cuda()
+
+    # Creating a Socket for a network
+    socket = SocketClass(net)
+
+    # Preparing Socket for Horovod
+    hvd.broadcast_parameters(socket.model.state_dict(), root_rank=0)
+
+    # Creating the datasets
+    ds_index = DataSetClass(**dataset_kwargs)
+
+    test_dataset = internal.DataSetWrapper(
+        ds_index, mode='test')
+
+    # Preparing the datasets for Horovod
+    test_sampler = torch.utils.data.distributed.DistributedSampler(
+        test_dataset, num_replicas=hvd.size(), rank=hvd.rank())
+
+    ## Creating dataloaders based on datasets
+    test_loader = scorch.data.DataLoader(test_dataset,
+                                         batch_size=batch_size,
+                                         shuffle=False,
+                                         num_workers=num_workers,
+                                         drop_last=False,
+                                         pin_memory=False,
+                                         collate_fn=internal.default_collate,
+                                         sampler=test_sampler)
+
+    # Shut up if you're not the first process
+    if hvd.rank() != 0:
+        silent = True
+
+    # Creating a trainer
+    my_trainer = trainer.Trainer(socket,
+                                 silent=silent,
+                                 use_cuda=use_cuda,
+                                 max_test_iterations=max_test_iterations)
+
+    best_metrics = None
+
+    if checkpoint is not None:
+        my_trainer = trainer.load_from_checkpoint(checkpoint,
+                                                  socket,
+                                                  silent=silent,
+                                                  use_cuda=use_cuda)
+        best_metrics = my_trainer.socket.metrics
+
+    if not os.path.exists(prefix + 'results'):
+        os.mkdir(prefix + 'results')
+
+    batch_index = 0
+
+    for inputs, outputs, test_ids in my_trainer.test(test_loader):
+        result = {}
+
+        for index in range(len(test_ids)):
+            one_input = []
+            one_output = []
+            test_id = test_ids[index]
+
+            for input_index in range(len(inputs)):
+                one_input.append(inputs[input_index][index])
+
+            for output_index in range(len(outputs)):
+                one_output.append(outputs[output_index][index])
+
+            if hasattr(socket, 'process_result'):
+                result[test_id] = socket.process_result(one_input,
+                                                        one_output,
+                                                        test_id)
+            else:
+                result[test_id] = one_output
+
+        torch.save(result,
+            os.path.join(prefix + 'results',
+                str(hvd.rank()) + '_' + str(batch_index) + '.pth.tar'))
+
+        batch_index += 1
+
+
+    gc.collect()
