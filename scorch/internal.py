@@ -99,5 +99,4 @@ class DataSetWrapper():
         return self.dataset.get_item(real_index, self.mode)
 
     def shuffle(self):
-        if self.mode == 'train':
-            self.order = numpy.random.permutation(self.dataset.get_len(self.mode))
+        self.order = numpy.random.permutation(self.dataset.get_len(self.mode))

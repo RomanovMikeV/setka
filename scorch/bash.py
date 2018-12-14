@@ -16,9 +16,7 @@ import random
 
 import torchvision.transforms as transform
 
-from . import trainer
 from . import utils
-from . import scripts
 
 
 def training():
@@ -49,21 +47,24 @@ def training():
                         help='File with a model specifications',
                         required=True)
     parser.add_argument('--dataset',
-                        help='File with a dataset sepcification',
+                        help='File with a dataset specification',
+                        required=True)
+    parser.add_argument('--trainer',
+                        help='File with trainer specification',
                         required=True)
     parser.add_argument('--max-train-iterations',
                         help='Maximum training iterations',
-                        default=-1, type=int)
+                        default=None, type=int)
     parser.add_argument('--max-valid-iterations',
                         help='Maximum validation iterations',
-                        default=-1, type=int)
+                        default=None, type=int)
     parser.add_argument('--max-test-iterations',
                         help='Maximum test iterations',
-                        default=-1, type=int)
+                        default=None, type=int)
     parser.add_argument('-s', '--silent',
                         help='do not print the status of learning',
                         action='store_true')
-    parser.add_argument('-cp', '--checkpoint-prefix',
+    parser.add_argument('-cn', '--checkpoint-name',
                         help='Prefix to the checkpoint name',
                         default='checkpoint')
     parser.add_argument(
@@ -105,29 +106,36 @@ def training():
     dataset = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dataset)
 
+    # Importing a trainer from a specified file
+    spec = importlib.util.spec_from_file_location("trainer", args['trainer'])
+    trainer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(trainer)
+
     ## Calling training function
 
-    scripts.train(
-              model.Network,
-              model.Socket,
-              dataset.DataSet,
+    model = model.Network()
+    dataset = dataset.DataSet()
+    trainer = trainer.Trainer(model,
+                              use_cuda=args['use_cuda'],
+                              seed=args['seed'],
+                              deterministic_cuda=args['deterministic_cuda'])
+
+    if args['checkpoint'] != None:
+        trainer.load(args['checkpoint'])
+
+
+    trainer.train(
+              dataset,
               batch_size=args['batch_size'],
               num_workers=args['workers'],
               dump_period=args['dump_period'],
               epochs=args['epochs'],
-              checkpoint=args['checkpoint'],
-              use_cuda=args['use_cuda'],
               validate_on_train=args['validate_on_train'],
               max_train_iterations=args['max_train_iterations'],
               max_valid_iterations=args['max_valid_iterations'],
               max_test_iterations=args['max_test_iterations'],
               silent=args['silent'],
-              checkpoint_prefix=args['checkpoint_prefix'],
-              dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
-              model_kwargs=eval('{' + args['model_args'] + '}'),
-              new_optimizer=args['new_optimizer'],
-              seed=args['seed'],
-              deterministic_cuda=args['deterministic_cuda'],
+              checkpoint_name=args['checkpoint_name'],
               solo_test=args['solo_test'])
 
 
@@ -142,7 +150,8 @@ def testing():
     parser.add_argument('-c', '--checkpoint', help='Checkpoint to load from', default=None)
     parser.add_argument('--use-cuda', help='Use cuda for training', action='store_true')
     parser.add_argument('--model', help='File with a model specifications', required=True)
-    parser.add_argument('--dataset', help='File with a dataset sepcification', required=True)
+    parser.add_argument('--dataset', help='File with a dataset specification', required=True)
+    parser.add_argument('--trainer', help='File with trainer specification', required=True)
     parser.add_argument('--max-test-iterations', help='Maximum test iterations', default=-1, type=int)
     parser.add_argument('-s', '--silent', help='do not print the status of learning',
                         action='store_true')
@@ -163,19 +172,23 @@ def testing():
     dataset = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dataset)
 
+    # Importing a trainer from a specified file
+    spec = importlib.util.spec_from_file_location("trainer", args['trainer'])
+    trainer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(trainer)
+
     ## Calling inference function
 
-    scripts.test(model.Network,
-                 model.Socket,
-                 dataset.DataSet,
+    model = model.Network()
+    dataset = dataset.DataSet()
+    trainer = trainer.Trainer(model)
+
+    if args['checkpoint'] != None:
+        trainer.load(args['checkpoint'])
+
+    trainer.predict(dataset,
                  batch_size=args['batch_size'],
                  num_workers=args['workers'],
-                 checkpoint=args['checkpoint'],
-                 use_cuda=args['use_cuda'],
-                 max_test_iterations=args['max_test_iterations'],
+                 max_iterations=args['max_test_iterations'],
                  silent=args['silent'],
-                 dataset_kwargs=eval('{' + args['dataset_args'] + '}'),
-                 model_kwargs=eval('{' + args['model_args'] + '}'),
-                 seed=args['seed'],
-                 deterministic_cuda=args['deterministic_cuda'],
                  prefix=args['prefix'])
