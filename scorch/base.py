@@ -197,7 +197,7 @@ class Trainer():
         random.seed(seed)
         torch.manual_seed(seed)
 
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             torch.cuda.manual_seed(seed)
             torch.cuda.manual_seed_all(seed)
             if deterministic_cuda:
@@ -620,7 +620,7 @@ class Trainer():
             data_time.update(time.time() - start)
 
             # Moving tensors to CUDA device
-            if self.use_cuda and torch.cuda_is_available():
+            if self.use_cuda and torch.cuda.is_available():
                 for index in range(len(input)):
                     input[index] = input[index].cuda()
 
