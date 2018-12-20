@@ -6,7 +6,6 @@ import sys
 import argparse
 import time
 import importlib.util
-import horovod.torch as hvd
 import gc
 from tensorboardX import SummaryWriter
 import tensorboardX
@@ -93,6 +92,10 @@ def training():
                         action='store_true')
     parser.add_argument('--deterministic-cuda',
                         help='Use deterministic CUDA backend (slower by ~10\%)',
+                        action='store_true')
+    parser.add_argument('--global-metrics',
+                        help='Compute metrics over whole dataset split.' +
+                             ' By default the metrics are computed batchwisely',
                         action='store_true')
     args = vars(parser.parse_args())
 

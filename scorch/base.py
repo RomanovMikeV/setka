@@ -179,7 +179,9 @@ class Trainer():
                  use_cuda=False,
                  seed=0,
                  deterministic_cuda=True,
-                 horovod=False):
+                 horovod=False,
+                 global_metrics=False,
+                 silent=False):
         '''
         Class constructor. This is one of the most important
         things that you have to redefine. In this function you should define:
@@ -217,6 +219,10 @@ class Trainer():
         self.metrics_train = {}
 
         self.best_metrics = None
+
+        self.global_metrics = global_metrics
+
+        self.silent = silent
 
         print(use_cuda, '<- use_cuda')
         self.use_cuda = use_cuda
@@ -352,7 +358,6 @@ class Trainer():
               max_train_iterations=None,
               max_valid_iterations=None,
               max_test_iterations=None,
-              silent=False,
               checkpoint_name='checkpoint',
               solo_test=False):
 
@@ -376,8 +381,6 @@ class Trainer():
             max_valid_iterations (int): number of iterations in validation procedure
 
             max_test_iterations (int): number of iterations in testing procedure
-
-            silent (bool): show no output if True
 
             checkpoint_prefix (str): prefix with which the chekpoint will be saved
                 for the experiment.
@@ -534,8 +537,7 @@ class Trainer():
                         batch_size=4,
                         shuffle=True,
                         num_workers=0,
-                        max_iterations=None,
-                        silent=False):
+                        max_iterations=None):
 
         '''
         Trains a model for one epoch.
@@ -550,8 +552,6 @@ class Trainer():
             num_workers (int): number of workers to use in torch.data.DataLoader
 
             max_iterations (int): maximum amount of iterations to perform during one epoch
-
-            silent (bool): outputs nothing if True.
 
         Returns:
             float, average loss value during epoch
@@ -600,7 +600,7 @@ class Trainer():
 
         # Progress bar
         pbar = tqdm(
-            range(n_iterations), ascii=True, disable=silent, ncols=0)
+            range(n_iterations), ascii=True, disable=self.silent, ncols=0)
 
         pbar.set_description(
             "Train -  "
@@ -608,6 +608,8 @@ class Trainer():
             "L --------(--------)")
 
         end = time.time()
+
+        avg_metrics = {}
 
         # Iterating through the batches
         for i in pbar:
@@ -632,6 +634,15 @@ class Trainer():
 
             output = self.model.forward(input)
             loss = self.criterion(output, target)
+
+            metrics = {}
+            if not self.global_metrics:
+                metrics = self.metrics(output, target)
+
+                for metric in metrics:
+                    if metric not in avg_metrics:
+                        avg_metrics[metric] = AverageMeter()
+                    avg_metrics[metric].update(metrics[metric])
 
             for opt_index in range(len(self.optimizers)):
                 self.optimizers[opt_index].optimizer.zero_grad()
@@ -665,6 +676,10 @@ class Trainer():
                         data=data_time,
                         loss=losses))
 
+            if len(metrics) > 0:
+                line += "Metrics: " + " ".join(
+                    ["{}:{:.2e}".format(x, avg_metrics[x].avg) for x in metrics])
+
             pbar.set_description(line)
 
         gc.collect()
@@ -676,9 +691,7 @@ class Trainer():
                            batch_size=4,
                            shuffle=False,
                            num_workers=0,
-                           max_iterations=None,
-                           silent=False,
-                           global_metrics=False):
+                           max_iterations=None):
         '''
         Validates a model for one epoch.
 
@@ -694,12 +707,6 @@ class Trainer():
             num_workers (int): number of workers to use in torch.data.DataLoader
 
             max_iterations (int): maximum amount of iterations to perform during one epoch
-
-            silent (bool): outputs nothing if True.
-
-            global_metrics (bool): collects all the batches if True and computes
-                metrics when the validation is done. Otherwise all of the metrics
-                are computed per batch and average value is stored.
 
         Returns:
             dict, dictionary with metrics.
@@ -752,7 +759,7 @@ class Trainer():
 
             pbar = tqdm(
                 range(n_iterations), ascii=True,
-                disable=silent, ncols=0)
+                disable=self.silent, ncols=0)
 
             end = time.time()
             pbar.set_description(
@@ -811,7 +818,7 @@ class Trainer():
                             data=data_time,
                             loss=losses))
 
-                if global_metrics:
+                if self.global_metrics:
                     if i == len(pbar) - 1:
                         outputs = list(zip(*outputs))
                         targets = list(zip(*targets))
@@ -867,9 +874,7 @@ class Trainer():
                        batch_size=4,
                        shuffle=True,
                        num_workers=0,
-                       max_iterations=None,
-                       silent=False,
-                       global_metrics=False):
+                       max_iterations=None):
 
         '''
         Validates a model for one epoch.
@@ -888,12 +893,6 @@ class Trainer():
             num_workers (int): number of workers to use in torch.data.DataLoader
 
             max_iterations (int): maximum amount of iterations to perform during one epoch
-
-            silent (bool): outputs nothing if True.
-
-            global_metrics (bool): collects all the batches if True and computes
-                metrics when the validation is done. Otherwise all of the metrics
-                are computed per batch and average value is stored.
 
         Returns:
             dict, dictionary with metrics.
@@ -941,7 +940,7 @@ class Trainer():
             gc.collect()
 
             pbar = tqdm(range(n_iterations), ascii=True,
-                        disable=silent, ncols=0)
+                        disable=self.silent, ncols=0)
             pbar.set_description("Test  ")
 
             for i in pbar:
@@ -973,7 +972,6 @@ class Trainer():
                 batch_size=1,
                 num_workers=0,
                 max_iterations=None,
-                silent=False,
                 prefix=''):
 
         '''
@@ -989,8 +987,6 @@ class Trainer():
             num_workers (int): amount of workers for data loading
 
             max_iterations (int): maximal amount of iterations to perform
-
-            silent (bool): show no output if True
 
             prefix (str): prefix for the dir with predictions
         '''
@@ -1015,7 +1011,7 @@ class Trainer():
                                                              batch_size=batch_size,
                                                              max_iterations=max_iterations,
                                                              num_workers=num_workers,
-                                                             silent=silent):
+                                                             silent=self.silent):
             result = {}
 
             for index in range(len(test_ids)):
