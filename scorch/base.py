@@ -224,7 +224,6 @@ class Trainer():
 
         self.silent = silent
 
-        print(use_cuda, '<- use_cuda')
         self.use_cuda = use_cuda
 
 
