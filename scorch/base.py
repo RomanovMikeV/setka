@@ -865,6 +865,9 @@ class Trainer():
             gc.collect()
             gc.collect()
 
+        for metric in metrics:
+            metrics[metric] /= n_items
+            
         return metrics
 
     def test_one_epoch(self,
