@@ -609,6 +609,11 @@ class Trainer():
         end = time.time()
 
         avg_metrics = {}
+        
+        
+        for opt_index in range(len(self.optimizers)):
+            if self.optimizers[opt_index].active:
+                self.optimizers[opt_index].module.train()
 
         # Iterating through the batches
         for i in pbar:
@@ -625,11 +630,6 @@ class Trainer():
 
                 for index in range(len(target)):
                     target[index] = target[index].cuda()
-
-
-            for opt_index in range(len(self.optimizers)):
-                if self.optimizers[opt_index].active:
-                    self.optimizers[opt_index].module.train()
 
             output = self.model.forward(input)
             loss = self.criterion(output, target)
@@ -651,10 +651,6 @@ class Trainer():
             for opt_index in range(len(self.optimizers)):
                 if self.optimizers[opt_index].active:
                     self.optimizers[opt_index].optimizer.step()
-
-            for opt_index in range(len(self.optimizers)):
-                if self.optimizers[opt_index].active:
-                    self.optimizers[opt_index].module.eval()
 
             self.iteration += 1
 
@@ -680,7 +676,11 @@ class Trainer():
                     ["{}:{:.2e}".format(x, avg_metrics[x].avg) for x in metrics])
 
             pbar.set_description(line)
-
+        
+        
+        for opt_index in range(len(self.optimizers)):
+            if self.optimizers[opt_index].active:
+                self.optimizers[opt_index].module.eval()
         gc.collect()
         return losses.avg
 
