@@ -610,10 +610,6 @@ class Trainer():
 
         avg_metrics = {}
         
-        
-        for opt_index in range(len(self.optimizers)):
-            if self.optimizers[opt_index].active:
-                self.optimizers[opt_index].module.train()
 
         # Iterating through the batches
         for i in pbar:
@@ -622,6 +618,10 @@ class Trainer():
             start = time.time()
             input, target, ids = next(iterator)
             data_time.update(time.time() - start)
+            
+            for opt_index in range(len(self.optimizers)):
+                if self.optimizers[opt_index].active:
+                    self.optimizers[opt_index].module.train()
 
             # Moving tensors to CUDA device
             if self.use_cuda and torch.cuda.is_available():
@@ -678,9 +678,10 @@ class Trainer():
             pbar.set_description(line)
         
         
-        for opt_index in range(len(self.optimizers)):
-            if self.optimizers[opt_index].active:
-                self.optimizers[opt_index].module.eval()
+            for opt_index in range(len(self.optimizers)):
+                if self.optimizers[opt_index].active:
+                    self.optimizers[opt_index].module.eval()
+                    
         gc.collect()
         return losses.avg
 
