@@ -427,8 +427,7 @@ class Trainer():
             loss = self.train_one_epoch(dataset,
                                         batch_size=batch_size,
                                         num_workers=num_workers,
-                                        max_iterations=max_train_iterations,
-                                        subset='train')
+                                        max_iterations=max_train_iterations)
             gc.collect()
 
             train_metrics = {}
