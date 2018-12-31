@@ -402,12 +402,16 @@ class Trainer():
         # Validation on training subuset
         if validate_on_train:
             self.metrics_train = self.validate_one_epoch(dataset,
+                                                         batch_size=batch_size,
+                                                         num_workers=num_workers,
                                                          max_iterations=max_valid_iterations,
                                                          subset='train')
             gc.collect()
 
         # Validation on validation subset
         self.metrics_valid = self.validate_one_epoch(dataset,
+                                                     batch_size=batch_size,
+                                                     num_workers=num_workers,
                                                      max_iterations=max_test_iterations,
                                                      subset='valid')
 
@@ -421,7 +425,10 @@ class Trainer():
             # Training
             gc.enable()
             loss = self.train_one_epoch(dataset,
-                                        max_iterations=max_train_iterations)
+                                        batch_size=batch_size,
+                                        num_workers=num_workers,
+                                        max_iterations=max_train_iterations,
+                                        subset='train')
             gc.collect()
 
             train_metrics = {}
@@ -429,12 +436,16 @@ class Trainer():
             # Validation on training subuset
             if validate_on_train:
                 self.metrics_train = self.validate_one_epoch(dataset,
+                                                             batch_size=batch_size,
+                                                             num_workers=num_workers,
                                                              max_iterations=max_valid_iterations,
                                                              subset='train')
                 gc.collect()
 
             # Validation on validation subset
             self.metrics_valid = self.validate_one_epoch(dataset,
+                                                         batch_size=batch_size,
+                                                         num_workers=num_workers,
                                                          max_iterations=max_valid_iterations,
                                                          subset='valid')
             gc.collect()
@@ -461,6 +472,8 @@ class Trainer():
 
 
             for input, output, test_id in self.test_one_epoch(dataset,
+                                                              batch_size=batch_size,
+                                                              num_workers=num_workers,
                                                               solo_test=solo_test,
                                                               max_iterations=max_test_iterations):
 
