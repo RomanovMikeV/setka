@@ -4,7 +4,7 @@ import random
 numpy.random.seed(0)
 random.seed(0)
 
-from keras.datasets import mnist
+from keras.datasets import cifar10
 from keras.models import Sequential
 from keras.layers import Dense, Conv2D, MaxPooling2D, Flatten, BatchNormalization
 import keras
@@ -13,16 +13,13 @@ import time
 
 # Computing result with keras
 
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
 #print(x_train.shape)
 #print(y_train.shape)
 
-x_train = x_train.reshape(list(x_train.shape) + [1])
-x_test = x_test.reshape(list(x_test.shape) + [1])
-
-y_train = y_train.reshape(list(y_train.shape) + [1])
-y_test = y_test.reshape(list(y_test.shape) + [1])
+x_train = x_train.reshape(list(x_train.shape))
+x_test = x_test.reshape(list(x_test.shape))
 
 train_reorder = numpy.random.permutation(len(x_train))
 
@@ -49,17 +46,28 @@ labels_test[numpy.arange(len(y_test)), y_test[:, 0]] = 1
 
 model = Sequential()
 
-model.add(Conv2D(64, 5, padding='same', activation='relu', input_shape=(28, 28, 1)))
+model.add(Conv2D(64, 3, padding='same', activation='relu', input_shape=(32, 32, 3)))
+model.add(BatchNormalization())
 model.add(MaxPooling2D())
-model.add(Conv2D(128, 5, padding='same', activation='relu'))
+model.add(Conv2D(128, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
 model.add(MaxPooling2D())
+model.add(Conv2D(256, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
+model.add(Conv2D(512, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
+model.add(Conv2D(1024, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
+
 model.add(Flatten())
-model.add(Dense(1024, activation='relu'))
-model.add(Dense(128, activation='relu'))
+model.add(BatchNormalization())
 model.add(Dense(10, activation='softmax'))
 
 model.compile(loss=keras.losses.categorical_crossentropy,
-              optimizer=keras.optimizers.Adam(lr=3.0e-5),
+              optimizer=keras.optimizers.Adam(lr=3.0e-4),
               metrics=['accuracy'])
 
 start = time.time()
@@ -82,18 +90,15 @@ keras_3_epochs_acc = scores[1]
 print('3 epochs loss:', scores[0])
 print('3 epochs acc :', scores[1])
 
+from keras.datasets import cifar10
+import time
+
 # Computing result with keras
 
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+(x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
-#print(x_train.shape)
-#print(y_train.shape)
-
-x_train = x_train.reshape(list(x_train.shape) + [1])
-x_test = x_test.reshape(list(x_test.shape) + [1])
-
-y_train = y_train.reshape(list(y_train.shape) + [1])
-y_test = y_test.reshape(list(y_test.shape) + [1])
+x_train = x_train.reshape(list(x_train.shape))
+x_test = x_test.reshape(list(x_test.shape))
 
 train_reorder = numpy.random.permutation(len(x_train))
 
@@ -134,40 +139,48 @@ class DataSet(scorch.base.DataSet):
             'test':  torch.from_numpy(x_test).transpose(1, 3).float()
         }
 
-        #print(self.data['train'].size())
-
         self.labels = {
             'train': torch.from_numpy(y_train).long(),
             'valid': torch.from_numpy(y_valid).long(),
             'test' : torch.from_numpy(y_test).long()
         }
 
-        # print(self.labels['train'].size())
-
 
 class Network(scorch.base.Network):
     def __init__(self):
         super(Network, self).__init__()
 
-        self.conv1 = torch.nn.Conv2d(1, 64, 5, padding=2)
+        self.conv1 = torch.nn.Conv2d(3, 64, 3, padding=2)
+        self.bn1 = torch.nn.BatchNorm2d(64)
         self.pool1 = torch.nn.MaxPool2d(2)
-        self.conv2 = torch.nn.Conv2d(64, 128, 5, padding=2)
+        self.conv2 = torch.nn.Conv2d(64, 128, 3, padding=2)
+        self.bn2 = torch.nn.BatchNorm2d(128)
         self.pool2 = torch.nn.MaxPool2d(2)
+        self.conv3 = torch.nn.Conv2d(128, 256, 3, padding=2)
+        self.bn3 = torch.nn.BatchNorm2d(256)
+        self.pool3 = torch.nn.MaxPool2d(2)
+        self.conv4 = torch.nn.Conv2d(256, 512, 3, padding=2)
+        self.bn4 = torch.nn.BatchNorm2d(512)
+        self.pool4 = torch.nn.MaxPool2d(2)
+        self.conv5 = torch.nn.Conv2d(512, 1024, 3, padding=2)
+        self.bn5 = torch.nn.BatchNorm2d(1024)
+        self.pool5 = torch.nn.MaxPool2d(2)
 
-        self.fc1 = torch.nn.Linear(6272, 1024)
-        self.fc2 = torch.nn.Linear(1024, 128)
-        self.fc3 = torch.nn.Linear(128, 10)
+        self.bn_last = torch.nn.BatchNorm1d(1024)
+        self.fc = torch.nn.Linear(1024, 10)
 
     def forward(self, input):
         res = input[0]
-        res = self.pool1(torch.relu(self.conv1(res)))
-        res = self.pool2(torch.relu(self.conv2(res)))
 
-        res = res.view([res.size(0), -1])
+        res = self.pool1(self.bn1(torch.relu(self.conv1(res))))
+        res = self.pool2(self.bn2(torch.relu(self.conv2(res))))
+        res = self.pool3(self.bn3(torch.relu(self.conv3(res))))
+        res = self.pool4(self.bn4(torch.relu(self.conv4(res))))
+        res = self.pool5(self.bn5(torch.relu(self.conv5(res))))
 
-        res = torch.relu(self.fc1(res))
-        res = torch.relu(self.fc2(res))
-        res = self.fc3(res)
+        res = res.mean(dim=3).mean(dim=2)
+
+        res = self.fc(self.bn_last(res))
 
         return [res]
 
@@ -193,19 +206,16 @@ trainer = scorch.base.Trainer(net,
 dataset = DataSet()
 
 start = time.time()
-trainer.train_one_epoch(dataset, batch_size=32, num_workers=4, max_iterations=10)
+trainer.train_one_epoch(dataset, batch_size=32, num_workers=4)
 print('One epoch time:', time.time() - start)
 
-trainer.validate_one_epoch(dataset, batch_size=32, max_iterations=10)
+trainer.validate_one_epoch(dataset, batch_size=32)
 
 print('One epoch loss:', trainer._loss.item())
 print('One epoch accuracy:', trainer._valid_metrics['main'].item())
 
 
 trainer.train(dataset, batch_size=32,
-             max_train_iterations=10,
-             max_valid_iterations=10,
-             max_test_iterations=2,
              num_workers=4,
              epochs=2)
 
