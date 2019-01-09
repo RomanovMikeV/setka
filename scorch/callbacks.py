@@ -94,8 +94,23 @@ class PrintCallback(Callback):
 
 class SaveResult(Callback):
     '''
+    Callback for saving predictions of the model. The results are
+    stored in a specified directory. Batches are processed with the specified
+    function ```f```. The directory is flushed during the __init__ and the
+    result is saved when the batch is finished (on_batch_end).
     '''
     def __init__(self, f=None, mode='predicting', dir='predictions'):
+        '''
+        Constructor
+
+        Args:
+            f (function): function to process the predictions.
+
+            mode (string): mode of the model when the predictions should be
+            saved.
+
+            dir (string): directory where the results should be stored.
+        '''
         self.f = f
         self.dir = dir
         self.index = 0
@@ -137,7 +152,16 @@ class SaveResult(Callback):
 
 
 class ShuffleDataset(Callback):
+    '''
+    Callback to shuffle datasets before the epoch starts (on_epoch_begin).
+    '''
     def __init__(self, shuffle_valid=False):
+        '''
+        Constructor.
+
+        shuffle_valid (bool): shuffle validation dataset too if True. If False
+            only the training dataset will be shuffled.
+        '''
         self.shuffle_valid = shuffle_valid
 
     def on_epoch_begin(self):
@@ -148,9 +172,21 @@ class ShuffleDataset(Callback):
 
 
 class ComputeMetrics(Callback):
+    '''
+    Callbacks for metric computation.
+    '''
     def __init__(self,
                  metrics=None,
                  steps_to_compute=1):
+
+        '''
+        Constructor.
+
+        metrics (dict): dictionary with metrics to compute.
+
+        steps_to_compute (int): how many steps to perform before metrics
+            computation.
+        '''
 
         self.steps_to_compute = steps_to_compute
         self.metrics = metrics
@@ -224,13 +260,20 @@ class ComputeMetrics(Callback):
 
 
 class MakeCheckpoints(Callback):
+    '''
+    Callback to make checkpoints. This callback takes into account the
+    ```metric```. If ```max_metric``` is ```True``` -- the higher the
+    monitored metric is the better the model is, if not -- the lower the
+    monitored metric is the better the model is. Checkpoint name is specified
+    with ```name```, the best model is saved with ```_best``` postfix.
+    '''
     def __init__(self,
                  metric='main',
-                 mode='max',
+                 max_metric=False,
                  name='checkpoint'):
         self.best_metric = None
         self.metric = metric
-        self.mode = mode
+        self.max_mode = max_mode
         self.name = name
 
     def on_epoch_end(self):
@@ -243,9 +286,9 @@ class MakeCheckpoints(Callback):
                 is_best = True
 
             if ((self.best_metric < self.trainer._valid_metrics[self.metric] and
-                 self.mode == 'max') or
+                 self.max_mode) or
                 (self.best_metric > self.trainer._valid_metrics[self.metric] and
-                 self.mode == 'min')):
+                 not self.max_mode)):
 
                  self.best_metric = self.trainer._valid_metrics[self.metric]
                  is_best = True
@@ -256,6 +299,11 @@ class MakeCheckpoints(Callback):
 
 
 class WriteToTensorboard(Callback):
+    '''
+    Callback to write the metrics to the TensorboardX.
+    If ```write_flag``` is ```False``` the results are not written to the
+    Tensorboard, ```True``` by default. ```name``` is a label of the model. 
+    '''
     def __init__(self,
                  processing_f=None,
                  write_flag=True,
@@ -266,7 +314,7 @@ class WriteToTensorboard(Callback):
         self.name = name
 
     def on_epoch_end(self):
-        if self.trainer._mode == 'validating':
+        if self.trainer._mode == 'validating' and write_flag:
             if self.trainer._subset == 'valid':
                 for metric_name in self.trainer._valid_metrics:
                     data = {}

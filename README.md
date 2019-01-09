@@ -1,34 +1,22 @@
 
 # Scorch: utilities for network training with PyTorch
 
-This package is a set of scripts that are often reused
-for different networks training procedures.
-At the moment (as of Scorch 0.1) the
-package supports only feed-forward training. Recurrent networks are coming.
+Scorch is a powerful and flexible tool for neural network training and fast
+prototyping.
 
 ## Prerequisites
 
-You will need openmpi installed before running or installing this package.
-The easiest way to get the openmpi on linux machine without root is to use
-[LinuxBrew](http://linuxbrew.sh/).
+Before using scorch, please install:
 
-After the LinuxBrew is installed, run this:
-```
-brew install openmpi
-```
+[PyTorch](https://pytorch.org/) for your
+system.
 
-After the success you are ready to install this package.
-
-It is also recommended that you install [PyTorch](https://pytorch.org/) for your
-system before you install scorch.
-
-Also you will need to install tensorflow  with
-
+tensorflow  with
 ```
 conda install tensorflow
 ```
 
-Install tensorboardX with
+tensorboardX with
 ```
 pip install tensorboardX
 ```
@@ -39,178 +27,205 @@ To install this package, use
 pip install git+http://github.com/RomanovMikeV/scorch
 ```
 
-To use notebooks for testing the model and the dataset, you
-will need Jupyter Notebook or JupyterLab installed.
-
 ## Usage
 
-Here is the minimal command to train the model specified in MODEL_FILE with a
-dataset specified in DATASET_FILE, the data is located in the DATASET_PATH.
-```
-scorch-train --model MODEL_FILE --dataset DATASET_FILE
-```
+Below is comparison with Keras:
 
-This command will train the network, save checkpoints in the "checkpoints"
-directory, save the logs and visualizations in the "runs" directory.
-
-To see the full list of parameters, please use:
-```
-scorch-train --help
-```
-
-To get the inference results of the model on the test part of your dataset,
-use this command:
-```
-scorch-test --model MODEL_FILE --dataset DATASET_FILE
-```
-
-This command will produce the result of the network on the test subset of the
-dataset and save it in the set of ```batchId_deviceId.pth.tar``` files in the
-```results``` directory. Note that you need to specify the checkpoint in order to
-get the results of the pretrained network.
-
-This script relies on the Horovod to parallelize the model training for several
-devices an workstations.
-You can use mpi calls as follows (to run the script on 4 devices of
-the localhost in parallel):
-```
-mpirun -np 4 \
-    -H localhost:4 \
-    -bind-to none -map-by slot \
-    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
-    -mca pml ob1 -mca btl ^openib \
-    scorch-train SCORCH_TRAIN_PARAMETERS
-```
-
-To run on several workstations, do as follows (16 processes in total,
-4 on server1, 4 on server2, 4 on server3, 4 on server4):
-```
-mpirun -np 16 \
-    -H server1:4,server2:4,server3:4,server4:4 \
-    -bind-to none -map-by slot \
-    -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH -x PATH \
-    -mca pml ob1 -mca btl ^openib \
-    scorch-train SCORCH_TRAIN_PARAMETERS
-```
-
-For more information, please check the
-[Horovod's homepage](https://github.com/uber/horovod).
-
-## Model module syntax
-
-The syntax for the model file is the following:
-
+Model training with Scorch:
 ```python
-class Network(torch.nn.Module):
-    '''
-    The Network itself
-    '''
+class DataSet(scorch.base.DataSet):
     def __init__(self):
-        pass
+        super(DataSet, self).__init__()
+        self.data = {
+            'train': torch.from_numpy(x_train).transpose(1, 3).float(),
+            'valid': torch.from_numpy(x_valid).transpose(1, 3).float(),
+            'test':  torch.from_numpy(x_test).transpose(1, 3).float()
+        }
+
+        self.labels = {
+            'train': torch.from_numpy(y_train).long(),
+            'valid': torch.from_numpy(y_valid).long(),
+            'test' : torch.from_numpy(y_test).long()
+        }
+
+
+class Network(scorch.base.Network):
+    def __init__(self):
+        super(Network, self).__init__()
+
+        self.conv1 = torch.nn.Conv2d(3, 64, 3, padding=2)
+        self.bn1 = torch.nn.BatchNorm2d(64)
+        self.pool1 = torch.nn.MaxPool2d(2)
+        self.conv2 = torch.nn.Conv2d(64, 128, 3, padding=2)
+        self.bn2 = torch.nn.BatchNorm2d(128)
+        self.pool2 = torch.nn.MaxPool2d(2)
+        self.conv3 = torch.nn.Conv2d(128, 256, 3, padding=2)
+        self.bn3 = torch.nn.BatchNorm2d(256)
+        self.pool3 = torch.nn.MaxPool2d(2)
+        self.conv4 = torch.nn.Conv2d(256, 512, 3, padding=2)
+        self.bn4 = torch.nn.BatchNorm2d(512)
+        self.pool4 = torch.nn.MaxPool2d(2)
+        self.conv5 = torch.nn.Conv2d(512, 1024, 3, padding=2)
+        self.bn5 = torch.nn.BatchNorm2d(1024)
+        self.pool5 = torch.nn.MaxPool2d(2)
+
+        self.bn_last = torch.nn.BatchNorm1d(1024)
+        self.fc = torch.nn.Linear(1024, 10)
 
     def forward(self, input):
-        return [list_of_results]
+        res = input[0]
 
-    def __call__(self, input):
-        return self.forward(input)
+        res = self.pool1(self.bn1(torch.relu(self.conv1(res))))
+        res = self.pool2(self.bn2(torch.relu(self.conv2(res))))
+        res = self.pool3(self.bn3(torch.relu(self.conv3(res))))
+        res = self.pool4(self.bn4(torch.relu(self.conv4(res))))
+        res = self.pool5(self.bn5(torch.relu(self.conv5(res))))
+
+        res = res.mean(dim=3).mean(dim=2)
+
+        res = self.fc(self.bn_last(res))
+
+        return [res]
 
 
+def criterion(preds, target):
+    return torch.nn.CrossEntropyLoss()(preds[0], target[0][:, 0])
+
+def accuracy(preds, target):
+    return (preds[0].argmax(dim=1) == target[0][:, 0]).float().mean()
+
+net = Network()
+trainer = scorch.base.Trainer(net,
+                  optimizers=[
+                      scorch.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
+                  callbacks=[
+                    scorch.callbacks.ComputeMetrics(
+                        metrics={'main': accuracy, 'loss': criterion}),
+                    scorch.callbacks.MakeCheckpoints(),
+                    scorch.callbacks.SaveResult(),
+                    scorch.callbacks.WriteToTensorboard()],
+                  criterion=criterion,
+                  use_cuda=False, silent=False)
+dataset = DataSet()
+
+start = time.time()
+trainer.train_one_epoch(dataset, batch_size=32, num_workers=4)
+print('One epoch time:', time.time() - start)
+
+trainer.validate_one_epoch(dataset, batch_size=32)
+
+print('One epoch loss:', trainer._loss.item())
+print('One epoch accuracy:', trainer._valid_metrics['main'].item())
 
 
-class Socket:
-    def __init__(self, model):
-        pass
+trainer.train(dataset, batch_size=32,
+             num_workers=4,
+             epochs=2)
 
-    def criterion(self, pred, target):
-        return one_value
-
-    # Optional
-    def metrics(self, pred, target):
-        return {'dictionary': 'should be returned',
-                'main': 'is used for scheduler and checkpoints'}
-
-    # Optional
-    def process_result(self, input, output):
-        return {'id1': result_for_id_1, 'id2': result_for_id2}
-
-    # Optional
-    def visualize(self, input, output, id):
-        return {'texts': {'id1': 'bla', 'id2': 'blabla'},
-                'figures': {'id1': fig1, 'id2': fig2}}
-
+print('3 epochs loss:', trainer._loss.item())
+print('3 epochs accuracy:', trainer._valid_metrics['main'].item())
 ```
 
-The requirements are as follows:
-* Network should have (obviously) the constructor
-* Network should have forward function which:
-  * Takes as input a **list** of inputs.
-  * Outputs a **list** of outputs.
-* There should be also the ```__call__``` function specified that is a proxy for the forward function.
-* There should be a ```Socket``` class defined in order to specify how to handle the model, it should contain:
-  * ```criterion``` method that takes as inputs a **list** of tensors with predictions and a **list** of tensors with targets. The output should be a number (torch tensor with 1 element).
-  * ```metrics``` (optional)
-  method that specifies the metrics which are of the interest for your experiment. It should take as inputs a list of tensors with predictions and a list of tensors with targets and return a list of metrics which. The metrics should be returned in the form of the dictionary. This dictionary should
-  contain the **'main'** element with the help of which the best model will be selected and saved in
-  a separate checkpoint with ```_best.pth.tar``` postfix. Also it will be used by scheduler to decide
-  when to decrease the learning rate or to do other manipulations.
-  * ```torch.nn.ModuleList``` of ```trainable_modules```. Only the modules that were specified here will be trained (they will be switched into the ```train``` and ```eval``` modes when needed and the optimizer
-  will only update them).
-  * ```process_result``` (optional) method takes as inputs the input to the Network forward method
-  and the output of it. It is needed to process the output of the network before saving
-  in the scorch-test script. The output of this method will be saved as a result in a sequence of
-  ```pth.tar``` files.
-  * ```visualize``` (optional) method takes as inputs the input to the Network forward method
-  and the output of it. It should return the dictionary containing dictionaries that will be visualized
-  using the TensorbardX. The output may contain sections: 'images', 'figures', 'graphs', 'texts', 'outputs' and 'embeddings'. Each of the sections should contain the dictionary containing as keys ids of the
-  test items and what should be visualized as value. For example, the result may be:
-  ```{'figures': {'id1': fig1, 'id2': fig2}}```.
+Keras model training:
+```python
+model = Sequential()
 
-The reason there are lists everywhere is the following: the network may have more than one input and more than one output. We have to deal with this fact smart enough to reuse the code. Thus, the best way to do things is to pass the values of interest in lists.
+model.add(Conv2D(64, 3, padding='same', activation='relu', input_shape=(32, 32, 3)))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
+model.add(Conv2D(128, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
+model.add(Conv2D(256, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
+model.add(Conv2D(512, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
+model.add(Conv2D(1024, 3, padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D())
 
-## Dataset module syntax
+model.add(Flatten())
+model.add(BatchNormalization())
+model.add(Dense(10, activation='softmax'))
 
-Here is a syntax for the Dataset module:
+model.compile(loss=keras.losses.categorical_crossentropy,
+              optimizer=keras.optimizers.Adam(lr=3.0e-4),
+              metrics=['accuracy'])
+
+start = time.time()
+
+model.fit(x_train, labels_train, epochs=1, batch_size=32, verbose=1)
+print("Epoch time:", time.time() - start)
+
+scores = model.evaluate(x_test, labels_test, verbose=0)
+print('One epoch loss:', scores[0])
+print('One epoch acc :', scores[1])
+
+keras_one_epoch_loss = scores[0]
+keras_one_epoch_acc = scores[1]
+
+res = model.fit(x_train, labels_train, epochs=2, batch_size=32, verbose=1)
+
+scores = model.evaluate(x_test, labels_test, verbose=1)
+keras_3_epochs_loss = scores[0]
+keras_3_epochs_acc = scores[1]
+print('3 epochs loss:', scores[0])
+print('3 epochs acc :', scores[1])
+```
+
+
+## Bash interfaces
+
+Soon will be available
+
+
+## Defining the Model
+
+Network should be defined as follows:
 
 ```python
-class DataSetIndex():
-    def __init__(self, path):
-        pass
+class Network(scorch.base.Network):
+    def __init__(self):
+        super().__init__()
 
-class DataSet():
-    def __init__(self, ds_index, mode='train'):
-        self.ds_index = ds_index
+        # Layers for your network should be defined here.
 
-    def __len__(self):
-        if self.mode == 'test':
-            pass
+    def forward(self, input):
 
-        elif self.mode == 'valid':
-            pass
+        # Your code here, compute res1 and res2.
 
-        else:
-            pass
-
-
-    def __getitem__(self, index):
-        img = None
-        target = None
-
-        if self.mode == 'test':
-            pass
-
-        elif self.mode == 'valid':
-            pass
-
-        else:
-            pass
-
-        return [img1, img2], [target1, target2]
+        return [res1, res2]
 ```
 
-The dataset script should have at least the class DataSet which should have the following specified:
 
-* ```__init__```, the constructor that defines all three parts of the dataset. The mode of the dataset should be defined here.
-* ```__len__``` function that returns the length of the dataset
-* ```__getitem__``` function that returns a list of input tensors, list of target tensors and ids for samples
+## Defining the DataSet
 
-Although it is enough to have only the DataSet specified, it is recommended to specify also the DataSetIndex class that contains the information about the whole dataset. It is recommended to share one instance of the DataSetIndex between all the instances of the DataSet with different modes to avoid doubling or tripling the memory used to store this index and also to avoid collecting the dataset index several times.
+Dataset should be defined as follows:
+```python
+class DataSet(scorch.base.DataSet):
+    def __init__(self):
+        '''
+        Definition of your dataset elements
+        '''
+        pass
+
+    def get_len(self, mode='train'):
+        '''
+        Function to get length of the subset specified with 'mode'.
+        '''
+        return len(self.data[mode])
+
+    def get_item(self, index, mode='train'):
+        '''
+        Function to get an item from from the subset of the dataset specified
+        with 'mode'.
+        '''
+        return [datum], [target], id
+```
+
+## Callbacks engine
+
+You can use as many callbacks available in callbacks collection or you may
+specify your own callbacks to extend the functionality of the package.
