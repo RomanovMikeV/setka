@@ -677,7 +677,7 @@ class Trainer():
             "iteration": self._iteration,
             "model_state": self._model.module.cpu().state_dict(),
             "info": info,
-            "metrics_valid": self._valid_metrics}
+            "metrics_val": self._val_metrics}
 
         if hasattr(self, 'metrics_train'):
             checkpoint['metrics_train'] = self._train_metrics
@@ -706,7 +706,7 @@ class Trainer():
         self._epoch = checkpoint['epoch']
         self._iteration = checkpoint['iteration']
         self._model.module.load_state_dict(checkpoint["model_state"])
-        self._valid_metrics = checkpoint["metrics_valid"]
+        self._val_metrics = checkpoint["metrics_val"]
 
         if 'metrics_train' in checkpoint:
             self._train_metrics = checkpoint["metrics_train"]

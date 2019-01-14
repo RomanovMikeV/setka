@@ -201,6 +201,7 @@ class ComputeMetrics(Callback):
         # clear all cache
         self.outputs = []
         self.targets = []
+        self.steps = 0
 
     def on_batch_end(self):
         if self.trainer._mode == 'training' or self.trainer._mode == 'validating':
@@ -231,11 +232,8 @@ class ComputeMetrics(Callback):
                         self.avg_metrics[metric] = internal.AverageMeter()
                     self.avg_metrics[metric].update(metrics[metric])
 
-                del self.outputs
-                del self.targets
-
-                self.outputs = []
-                self.targets = []
+                self.outputs.clear()
+                self.targets.clear()
                 self.steps = 0
 
             self.trainer._line += " ".join(
@@ -246,15 +244,15 @@ class ComputeMetrics(Callback):
     def on_epoch_end(self):
         # finilize metrics
 
-        del self.outputs
-        del self.targets
+        self.outputs.clear()
+        self.targets.clear()
 
         self.avg_metrics = {x:self.avg_metrics[x].avg for x in self.avg_metrics}
 
         if self.trainer._mode == 'validating' and self.trainer._subset == 'train':
             self.trainer._train_metrics = self.avg_metrics
         elif self.trainer._mode == 'validating' and self.trainer._subset == 'valid':
-            self.trainer._valid_metrics = self.avg_metrics
+            self.trainer._val_metrics = self.avg_metrics
 
         self.avg_metrics = {}
 
@@ -269,7 +267,7 @@ class MakeCheckpoints(Callback):
     '''
     def __init__(self,
                  metric='main',
-                 max_metric=False,
+                 max_mode=False,
                  name='checkpoint'):
         self.best_metric = None
         self.metric = metric
@@ -282,15 +280,15 @@ class MakeCheckpoints(Callback):
 
         if self.trainer._mode == 'validating' and self.trainer._subset == 'valid':
             if self.best_metric is None:
-                self.best_metric = self.trainer._valid_metrics[self.metric]
+                self.best_metric = self.trainer._val_metrics[self.metric]
                 is_best = True
 
-            if ((self.best_metric < self.trainer._valid_metrics[self.metric] and
+            if ((self.best_metric < self.trainer._val_metrics[self.metric] and
                  self.max_mode) or
-                (self.best_metric > self.trainer._valid_metrics[self.metric] and
+                (self.best_metric > self.trainer._val_metrics[self.metric] and
                  not self.max_mode)):
 
-                 self.best_metric = self.trainer._valid_metrics[self.metric]
+                 self.best_metric = self.trainer._val_metrics[self.metric]
                  is_best = True
 
             self.trainer.save(self.name + '.pth.tar')
@@ -302,24 +300,24 @@ class WriteToTensorboard(Callback):
     '''
     Callback to write the metrics to the TensorboardX.
     If ```write_flag``` is ```False``` the results are not written to the
-    Tensorboard, ```True``` by default. ```name``` is a label of the model. 
+    Tensorboard, ```True``` by default. ```name``` is a label of the model.
     '''
     def __init__(self,
                  processing_f=None,
                  write_flag=True,
                  name='checkpoint'):
         self.tb_writer = tensorboardX.SummaryWriter()
-        self.processing_f = processing_f
+        self.f = processing_f
         self.write_flag = write_flag
         self.name = name
 
     def on_epoch_end(self):
-        if self.trainer._mode == 'validating' and write_flag:
+        if self.trainer._mode == 'validating' and self.write_flag:
             if self.trainer._subset == 'valid':
-                for metric_name in self.trainer._valid_metrics:
+                for metric_name in self.trainer._val_metrics:
                     data = {}
 
-                    data['valid'] = self.trainer._valid_metrics[metric_name]
+                    data['valid'] = self.trainer._val_metrics[metric_name]
 
                     if hasattr(self.trainer, '_train_metrics'):
                         data['train'] = self.trainer._train_metrics[metric_name]
@@ -328,6 +326,30 @@ class WriteToTensorboard(Callback):
                         'metrics/' + metric_name + '/' + self.name,
                         data,
                         self.trainer._epoch)
+
+    def on_batch_end(self):
+        if self.trainer._mode == 'testing' and self.write_flag and self.f is not None:
+            for index in range(len(self.trainer._ids)):
+
+                one_input = []
+                for input_index in range(len(self.trainer._input)):
+                    one_input.append(self.trainer._input[input_index][index])
+
+                one_target = []
+                for target_index in range(len(self.trainer._target)):
+                    one_target.append(self.trainer._target[target_index][index])
+
+                one_output = []
+                for output_index in range(len(self.trainer._output)):
+                    one_output.append(self.trainer._output[output_index][index])
+
+                res = self.f(one_input, one_target, one_output)
+
+                internal.show(res)
+
+
+
+
 
             #if self.trainer._subset == 'valid':
             #    for metric_name in self.trainer._valid_metrics:
