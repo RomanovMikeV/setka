@@ -193,21 +193,21 @@ trainer = scorch.base.Trainer(net,
 dataset = DataSet()
 
 start = time.time()
-trainer.train_one_epoch(dataset, batch_size=32, num_workers=4, max_iterations=10)
+trainer.train_one_epoch(dataset, batch_size=32, num_workers=4)
 print('One epoch time:', time.time() - start)
 
-trainer.validate_one_epoch(dataset, batch_size=32, max_iterations=10)
+trainer.validate_one_epoch(dataset, batch_size=32)
 
 print('One epoch loss:', trainer._loss.item())
-print('One epoch accuracy:', trainer._valid_metrics['main'].item())
+print('One epoch accuracy:', trainer._val_metrics['main'].item())
 
 
 trainer.train(dataset, batch_size=32,
-             max_train_iterations=10,
-             max_valid_iterations=10,
+             #max_train_iterations=10,
+             #max_valid_iterations=10,
              max_test_iterations=2,
              num_workers=4,
              epochs=2)
 
 print('3 epochs loss:', trainer._loss.item())
-print('3 epochs accuracy:', trainer._valid_metrics['main'].item())
+print('3 epochs accuracy:', trainer._val_metrics['main'].item())
