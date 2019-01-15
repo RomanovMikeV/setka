@@ -212,7 +212,7 @@ print('One epoch time:', time.time() - start)
 trainer.validate_one_epoch(dataset, batch_size=32)
 
 print('One epoch loss:', trainer._loss.item())
-print('One epoch accuracy:', trainer._valid_metrics['main'].item())
+print('One epoch accuracy:', trainer._val_metrics['main'].item())
 
 
 trainer.train(dataset, batch_size=32,
@@ -220,4 +220,4 @@ trainer.train(dataset, batch_size=32,
              epochs=2)
 
 print('3 epochs loss:', trainer._loss.item())
-print('3 epochs accuracy:', trainer._valid_metrics['main'].item())
+print('3 epochs accuracy:', trainer._val_metrics['main'].item())
