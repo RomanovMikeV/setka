@@ -144,10 +144,6 @@ class SaveResult(Callback):
             #print("Saving result")
             torch.save(res, os.path.join(self.dir, str(self.index) + '.pth.tar'))
 
-            del self.trainer._output
-
-            self.trainer._output = res
-
             self.index += 1
 
 
@@ -301,6 +297,18 @@ class WriteToTensorboard(Callback):
     Callback to write the metrics to the TensorboardX.
     If ```write_flag``` is ```False``` the results are not written to the
     Tensorboard, ```True``` by default. ```name``` is a label of the model.
+    It is possible to add ```processing_f``` function that takes as inputs:
+    input, target and output and returns the dictionary with the outputs for
+    visualization. This dictionary may be represented as:
+    {
+        "images": dict with numpy images,
+        "texts": dict with texts,
+        "audios": dict with numpy audios,
+        "figures": dict with matplotlib figures,
+        "graphs": dict with onnx graphs,
+        "embeddings": dict with embeddings
+    }
+    Each of the dicts should have the following structure: {sample_id: result}.
     '''
     def __init__(self,
                  processing_f=None,
@@ -323,12 +331,30 @@ class WriteToTensorboard(Callback):
                         data['train'] = self.trainer._train_metrics[metric_name]
 
                     self.tb_writer.add_scalars(
-                        'metrics/' + metric_name + '/' + self.name,
+                        self.name + '/' + metric_name,
                         data,
                         self.trainer._epoch)
 
+    def show(self, to_show, id):
+
+        print(id)
+
+        type_writers = {
+            'images': self.tb_writer.add_image,
+            'texts': self.tb_writer.add_text,
+            'audios': self.tb_writer.add_audio,
+            'figures': (lambda x, y, z: self.tb_writer.add_figure(x, y, z)),
+            'graphs': self.tb_writer.add_graph,
+            'embeddings': self.tb_writer.add_embedding}
+
+        for type in type_writers:
+            if type in to_show:
+                for desc in to_show[type]:
+                    type_writers[type](self.name + '/' + str(id) + '/' + desc,
+                        to_show[type][desc], str(self.trainer._epoch))
+
     def on_batch_end(self):
-        if self.trainer._mode == 'testing' and self.write_flag and self.f is not None:
+        if self.trainer._mode == 'predicting' and self.write_flag and (self.f is not None):
             for index in range(len(self.trainer._ids)):
 
                 one_input = []
@@ -344,8 +370,9 @@ class WriteToTensorboard(Callback):
                     one_output.append(self.trainer._output[output_index][index])
 
                 res = self.f(one_input, one_target, one_output)
+                id = self.trainer._ids[index]
 
-                internal.show(res)
+                self.show(res, id)
 
 
 

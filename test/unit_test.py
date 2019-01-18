@@ -12,6 +12,8 @@ import scorch.base
 import scorch.callbacks
 #import scorch.scripts
 
+import matplotlib.pyplot as plt
+
 numpy.random.seed(0)
 random.seed(0)
 
@@ -96,6 +98,18 @@ def criterion(input, target):
 def accuracy(preds, target):
     return (preds[0].argmax(dim=1) == target[0]).float().mean()
 
+def visualize(one_input, one_target, one_output):
+    res = {'figures': []}
+
+    fig = plt.figure(figsize=(10, 10))
+    plt.imshow(one_input[0][0])
+
+    res['figures'] = {'input': fig}
+
+    plt.close()
+
+    return res
+
 trainer = scorch.base.Trainer(net,
                   criterion=criterion,
                   optimizers=[
@@ -105,7 +119,7 @@ trainer = scorch.base.Trainer(net,
                                 metrics={'main': accuracy, 'loss': criterion}),
                              scorch.callbacks.MakeCheckpoints(),
                              scorch.callbacks.SaveResult(),
-                             scorch.callbacks.WriteToTensorboard()],
+                             scorch.callbacks.WriteToTensorboard(processing_f=visualize)],
                   seed=1,
                   silent=False)
 dataset = DataSet()
