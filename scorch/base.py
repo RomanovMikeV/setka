@@ -681,7 +681,7 @@ class Trainer():
 
         self._model.module.cuda()
 
-        if hasattr(self, 'metrics_train'):
+        if hasattr(self, '_train_metrics'):
             checkpoint['metrics_train'] = self._train_metrics
 
         for opt_index in range(len(self._optimizers)):
