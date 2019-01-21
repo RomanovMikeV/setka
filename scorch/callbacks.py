@@ -337,8 +337,6 @@ class WriteToTensorboard(Callback):
 
     def show(self, to_show, id):
 
-        print(id)
-
         type_writers = {
             'images': self.tb_writer.add_image,
             'texts': self.tb_writer.add_text,
