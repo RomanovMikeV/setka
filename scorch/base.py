@@ -675,7 +675,7 @@ class Trainer():
         checkpoint = {
             "epoch": self._epoch,
             "iteration": self._iteration,
-            "model_state": self._model.module.state_dict().cpu(),
+            "model_state": self._model.module.cpu().state_dict(),
             "info": info,
             "metrics_val": self._val_metrics}
 
