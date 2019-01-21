@@ -58,22 +58,6 @@ def default_collate(batch):
     raise TypeError((error_msg.format(type(batch[0]))))
 
 
-def show(tb_writer, to_show, epoch):
-
-    type_writers = {
-        'images': tb_writer.add_image,
-        'texts': tb_writer.add_text,
-        'audios': tb_writer.add_audio,
-        'figures': (lambda x, y, z: tb_writer.add_figure(x, y, z)),
-        'graphs': tb_writer.add_graph,
-        'embeddings': tb_writer.add_embedding}
-
-    for type in type_writers:
-        if type in to_show:
-            for desc in to_show[type]:
-                type_writers[type](desc, to_show[type][desc], str(epoch))
-
-
 class DataSetWrapper():
     '''
     This is the wrapper for a dataset class.

@@ -375,12 +375,12 @@ class WriteToTensorboard(Callback):
                 self.show(res, id)
 
 
+class LearningRateScheduler(Callback):
+    def __init__(self):
+        pass
 
+    def on_epoch_begin(self):
+        pass
 
-
-            #if self.trainer._subset == 'valid':
-            #    for metric_name in self.trainer._valid_metrics:
-            #        self.tb_writer.add_scalars(
-            #            'metrics/' + metric_name + '/' + self.name,
-            #            self.trainer._valid_metrics[metric_name],
-            #            self.trainer._epoch)
+    def on_batch_begin(self):
+        pass

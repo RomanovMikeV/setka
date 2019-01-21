@@ -412,11 +412,11 @@ class Trainer():
 
             # Moving tensors to CUDA device
             if self._use_cuda and torch.cuda.is_available():
-                for index in range(len(input)):
-                    self.input[index] = self.input[index].cuda()
+                for index in range(len(self._input)):
+                    self._input[index] = self._input[index].cuda()
 
-                for index in range(len(target)):
-                    self.target[index] = self.target[index].cuda()
+                for index in range(len(self._target)):
+                    self._target[index] = self._target[index].cuda()
 
             self._output = self._model.forward(self._input)
             self._loss = self._criterion(self._output, self._target)
@@ -542,11 +542,11 @@ class Trainer():
                     callback.on_batch_begin()
 
                 if self._use_cuda:
-                    for index in range(len(input)):
+                    for index in range(len(self._input)):
                         self._input[index] = self._input[index].cuda()
 
                 if self._use_cuda:
-                    for index in range(len(target)):
+                    for index in range(len(self._target)):
                         self._target[index] = self._target[index].cuda()
 
                 self._output = self._model.forward(self._input)
@@ -650,7 +650,7 @@ class Trainer():
                 self._input, self._target, self._ids = next(iterator)
 
                 if self._use_cuda:
-                    for index in range(len(input)):
+                    for index in range(len(self._input)):
                         self._input[index] = self._input[index].cuda()
 
                 self._output = self._model(self._input)
@@ -675,9 +675,11 @@ class Trainer():
         checkpoint = {
             "epoch": self._epoch,
             "iteration": self._iteration,
-            "model_state": self._model.module.cpu().state_dict(),
+            "model_state": self._model.module.state_dict().cpu(),
             "info": info,
             "metrics_val": self._val_metrics}
+
+        self._model.module.cuda()
 
         if hasattr(self, 'metrics_train'):
             checkpoint['metrics_train'] = self._train_metrics
