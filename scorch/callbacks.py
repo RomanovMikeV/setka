@@ -373,6 +373,164 @@ class WriteToTensorboard(Callback):
                 self.show(res, id)
 
 
+class UnfreezeOnPlateau(Callback):
+    '''
+    This callback allows you to unfreeze optimizers one by one when the plateau
+    is reached. If used together with ReduceLROnPlateau, should be listed after
+    it. The following arguments may be specified:
+
+    metric (str) : name of the metric to monitor.
+
+    cooldown (int) : minimal amount of epochs between two learning rate changes.
+
+    limit (int) : amount of epochs since the last improvement of maximum of
+        the monitored metric before the learning rate change.
+
+    max_mode (bool) : if True then the higher is the metric the better.
+        Otherwise the lower is the metric the better.
+    '''
+    def __init__(self, cooldown=5, limit=5, metric='loss', max_mode=False):
+        self.cooldown = cooldown
+        self.limit = limit
+
+        self.since_last = 0
+        self.since_best = 0
+
+        self.best_metric = None
+        self.metric = metric
+        self.max_mode = max_mode
+
+        self.optimizer_index = 1
+
+
+    def on_init(self):
+        self.trainer._lr_reduce = False
+        self.complete = False
+
+
+    def on_epoch_end(self):
+        if self.trainer._mode == 'validating' and self.trainer._subset == 'valid':
+            if self.best_metric is None:
+                self.best_metric = self.trainer._val_metrics[self.metric]
+                self.since_best = 0
+
+            else:
+                new_metric = self.trainer._val_metrics[self.metric]
+
+                if ((new_metric > self.best_metric and self.max_mode) or
+                    (new_metric < self.best_metric and not self.max_mode)):
+
+                    self.best_metric = new_metric
+                    self.since_best = 0
+
+            if self.since_last >= self.cooldown and self.since_best >= self.limit and not self.complete:
+                print("Unfreezing optimizer ", str(self.optimizer_index))
+                self.trainer._optimizers[self.optimizer_index].is_active = True
+                self.since_last = 0
+                self.optimizer_index += 1
+                if self.optimizer_index >= len(self.trainer._optimizers):
+                    self.trainer._lr_reduce = True
+                    self.complete = True
+
+            self.since_best += 1
+            self.since_last += 1
+
+
+class ReduceLROnPlateau(Callback):
+    '''
+    This callback allows you to unfreeze optimizers one by one when the plateau
+    is reached. The following arguments may be specified:
+
+    metric (str) : name of the metric to monitor.
+
+    cooldown (int) : minimal amount of epochs between two learning rate changes.
+
+    limit (int) : amount of epochs since the last improvement of maximum of
+        the monitored metric before the learning rate change.
+
+    max_mode (bool) : if True then the higher is the metric the better.
+        Otherwise the lower is the metric the better.
+    '''
+    def __init__(self, cooldown=5, limit=5, factor=0.5, metric='loss', max_mode=False):
+        self.cooldown = cooldown
+        self.limit = limit
+        self.factor = factor
+
+        self.since_last = 0
+        self.since_best = 0
+
+        self.best_metric = None
+        self.metric = metric
+        self.max_mode = max_mode
+
+        self.optimizer_index = 1
+
+
+    def on_init(self):
+        self.trainer._lr_reduce=True
+
+
+    def on_epoch_end(self):
+        if self.trainer._mode == 'validating' and self.trainer._subset == 'valid' and self.trainer._lr_reduce:
+            if self.best_metric is None:
+                self.best_metric = self.trainer._val_metrics[self.metric]
+                self.since_best = 0
+
+            else:
+                new_metric = self.trainer._val_metrics[self.metric]
+
+                if ((new_metric > self.best_metric and self.max_mode) or
+                    (new_metric < self.best_metric and not self.max_mode)):
+
+                    self.best_metric = new_metric
+                    self.since_best = 0
+
+            if self.since_last >= self.cooldown and self.since_best >= self.limit:
+                print('Reducing learning rate')
+                for optimizer in self.trainer._optimizers:
+                    for g in optimizer.optimizer.param_groups:
+                        g['lr'] *= self.factor
+                self.since_last = 0
+
+        self.since_best += 1
+        self.since_last += 1
+
+
+
+class CyclicLR(Callback):
+    '''
+    This callback allows cyclic learning rate. It takes the learning rate that
+    is set to the optimizer in the beginning of the epoch and
+    in the end of the epoch the learning rate is set to the same value as it was
+    in the beginning.
+    '''
+    def __init__(self, period_f):
+        self.period_f = period_f
+
+    def on_epoch_begin(self):
+        self.lrs = []
+        for optimizer in self.trainer._optimizers:
+            self.lrs.append([])
+            for index in range(len(optimizer.optimizer.param_groups)):
+                self.lrs[-1].append(
+                    optimizer.optimizer.param_groups[index]['lr'])
+
+    def on_batch_begin(self):
+        # Here we should compute the learning rate based on a progress in an
+        # epoch.
+        for optim_index in range(len(self.trainer._optimizers)):
+            for group_index in range(len(self.trainer._optimizers[optim_index].optimizer.param_groups)):
+                self.trainer._optimizers[optim_index].optimizer.param_groups[group_index]['lr'] = (
+                    self.lrs[optim_index][group_index] * self.period_f(self.trainer._progress))
+       # lr = self.trainer.group_params['lr']
+
+    def on_epoch_end(self):
+        for optim_index in range(len(self.lrs)):
+            for group_index in range(len(self.trainer._optimizers[optim_index].optimizer.param_groups)):
+                self.trainer._optimizers[optim_index].optimizer.param_groups[group_index]['lr'] = (
+                    self.lrs[optim_index][group_index])
+
+
 class LearningRateScheduler(Callback):
     def __init__(self):
         pass

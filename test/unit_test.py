@@ -110,21 +110,33 @@ def visualize(one_input, one_target, one_output):
 
     return res
 
+def cycle(progress):
+    if progress < 0.5:
+        return 0.0
+    else:
+        return 0.0
+
 trainer = scorch.base.Trainer(net,
                   criterion=criterion,
                   optimizers=[
-                    scorch.base.OptimizerSwitch(
-                    net, torch.optim.Adam, lr=3.0e-5)],
+                    scorch.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
+                    scorch.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    scorch.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    scorch.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    scorch.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
                   callbacks=[scorch.callbacks.ComputeMetrics(
                                 metrics={'main': accuracy, 'loss': criterion}),
                              scorch.callbacks.MakeCheckpoints(),
                              scorch.callbacks.SaveResult(),
-                             scorch.callbacks.WriteToTensorboard(processing_f=visualize)],
+                             scorch.callbacks.WriteToTensorboard(processing_f=visualize),
+                             scorch.callbacks.ReduceLROnPlateau(),
+                             scorch.callbacks.UnfreezeOnPlateau(),
+                             scorch.callbacks.CyclicLR(period_f=cycle)],
                   seed=1,
                   silent=False)
 dataset = DataSet()
 
-for epoch in range(1):
+for epoch in range(100):
     trainer.train_one_epoch(dataset,
                             num_workers=2,
                             max_iterations=20,

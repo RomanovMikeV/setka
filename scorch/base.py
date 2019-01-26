@@ -398,6 +398,7 @@ class Trainer():
 
         # Iterating through the batches
         for i in pbar:
+            self._progress = i / len(pbar)
 
             start = time.time()
             self._input, self._target, self._ids = next(iterator)
@@ -533,6 +534,7 @@ class Trainer():
                 "L --------(--------)")
 
             for i in pbar:
+                self._progress = i / len(pbar)
 
                 start = time.time()
                 self._input, self._target, self._ids = next(iterator)
@@ -643,6 +645,7 @@ class Trainer():
             pbar.set_description("Test  ")
 
             for i in pbar:
+                self._progress = i / len(pbar)
 
                 for callback in self._callbacks:
                     callback.on_batch_begin()
@@ -678,8 +681,8 @@ class Trainer():
             "model_state": self._model.module.cpu().state_dict(),
             "info": info,
             "metrics_val": self._val_metrics}
-
-        self._model.module.cuda()
+        if self._use_cuda:
+            self._model.module.cuda()
 
         if hasattr(self, '_train_metrics'):
             checkpoint['metrics_train'] = self._train_metrics
