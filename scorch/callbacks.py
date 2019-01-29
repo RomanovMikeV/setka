@@ -2,6 +2,7 @@ import os
 import shutil
 import torch
 import tensorboardX
+import numpy
 
 from . import internal
 
@@ -167,37 +168,149 @@ class ShuffleDataset(Callback):
             self.trainer._dataset.shuffle()
 
 
+# class ComputeFunctionalMetrics(Callback):
+#     '''
+#     Callbacks for metric computation.
+#     '''
+#     def __init__(self,
+#                  metrics=None,
+#                  steps_to_compute=1):
+#
+#         '''
+#         Constructor.
+#
+#         metrics (dict): dictionary with metrics to compute.
+#
+#         steps_to_compute (int): how many steps to perform before metrics
+#             computation.
+#         '''
+#
+#         self.steps_to_compute = steps_to_compute
+#         self.metrics = metrics
+#         self.steps = 0
+#         self.avg_metrics = {}
+#
+#     def on_train_begin(self):
+#         if self.metrics is None:
+#             self.metrics = {'main': self.trainer._criterion}
+#
+#     def on_epoch_begin(self):
+#         # clear all cache
+#         self.outputs = []
+#         self.targets = []
+#         self.steps = 0
+#
+#     def on_batch_end(self):
+#         if self.trainer._mode == 'training' or self.trainer._mode == 'validating':
+#             self.steps += 1
+#
+#             one_output = [x.detach() for x in self.trainer._output]
+#             one_target = [x.detach() for x in self.trainer._target]
+#
+#             self.outputs.append(one_output)
+#             self.targets.append(one_target)
+#
+#             if self.steps >= self.steps_to_compute:
+#
+#                 self.outputs = list(zip(*self.outputs))
+#                 self.targets = list(zip(*self.targets))
+#
+#                 for index in range(len(self.outputs)):
+#                     self.outputs[index] = torch.cat(self.outputs[index], dim=0)
+#
+#                 for index in range(len(self.targets)):
+#                     self.targets[index] = torch.cat(self.targets[index], dim=0)
+#
+#                 metrics = {x:self.metrics[x](self.outputs, self.targets)
+#                        for x in self.metrics}
+#
+#                 for metric in metrics:
+#                     if metric not in self.avg_metrics:
+#                         self.avg_metrics[metric] = internal.AverageMeter()
+#                     self.avg_metrics[metric].update(metrics[metric])
+#
+#                 self.outputs.clear()
+#                 self.targets.clear()
+#                 self.steps = 0
+#
+#             self.trainer._line += " ".join(
+#                ["{}: {:.2e}({:.2e})".format(x, self.avg_metrics[x].avg,
+#                 self.avg_metrics[x].val)
+#                 for x in self.avg_metrics])
+#
+#     def on_epoch_end(self):
+#         # finilize metrics
+#
+#         self.outputs.clear()
+#         self.targets.clear()
+#
+#         self.avg_metrics = {x:self.avg_metrics[x].avg for x in self.avg_metrics}
+#
+#         if self.trainer._mode == 'validating' and self.trainer._subset == 'train':
+#             self.trainer._train_metrics = self.avg_metrics
+#         elif self.trainer._mode == 'validating' and self.trainer._subset == 'valid':
+#             self.trainer._val_metrics = self.avg_metrics
+#
+#         self.avg_metrics = {}
+#
+#         for metrics in self.metrics:
+#             if hasattr(metrics, 'reset'):
+#                 metrics.reset()
+
+
 class ComputeMetrics(Callback):
     '''
     Callbacks for metric computation.
     '''
     def __init__(self,
                  metrics=None,
+                 divide_first=None,
                  steps_to_compute=1):
 
         '''
         Constructor.
-
         metrics (dict): dictionary with metrics to compute.
-
         steps_to_compute (int): how many steps to perform before metrics
             computation.
         '''
 
         self.steps_to_compute = steps_to_compute
         self.metrics = metrics
-        self.steps = 0
-        self.avg_metrics = {}
+        self.names = []
 
-    def on_train_begin(self):
         if self.metrics is None:
-            self.metrics = {'main': self.trainer._criterion}
+            self.names = ['loss']
+            self.metrics = [self.trainer._criterion]
+
+        else:
+            for index in range(len(self.metrics)):
+                self.names.append(self.metrics[index].__name__)
+
+        if divide_first is None:
+            self.divide_first = [True] * len(self.metrics)
+        else:
+            self.divide_first = divide_first
+
+        self.steps = 0
+
+
+    def reset(self):
+        self.enumerators = []
+        self.denominators = []
+
+        for index in self.metrics:
+            self.enumerators.append(None)
+            self.denominators.append(None)
+
 
     def on_epoch_begin(self):
         # clear all cache
+        self.reset()
+
         self.outputs = []
         self.targets = []
         self.steps = 0
+
 
     def on_batch_end(self):
         if self.trainer._mode == 'training' or self.trainer._mode == 'validating':
@@ -220,22 +333,38 @@ class ComputeMetrics(Callback):
                 for index in range(len(self.targets)):
                     self.targets[index] = torch.cat(self.targets[index], dim=0)
 
-                metrics = {x:self.metrics[x](self.outputs, self.targets)
-                       for x in self.metrics}
+                for index in range(len(self.metrics)):
+                    enumerators, denominators = self.metrics[index](self.outputs, self.targets)
+                    enumerators = numpy.array(enumerators)
+                    denominators = numpy.array(denominators)
 
-                for metric in metrics:
-                    if metric not in self.avg_metrics:
-                        self.avg_metrics[metric] = internal.AverageMeter()
-                    self.avg_metrics[metric].update(metrics[metric])
+                    if self.enumerators[index] is None:
+                        self.enumerators[index] = enumerators
+                        self.denominators[index] = denominators
+                    else:
+                        self.enumerators[index] += enumerators
+                        self.denominators[index] += denominators
+
+                self.avg_values = {}
+                for index in range(len(self.enumerators)):
+                    if self.divide_first[index]:
+                        self.avg_values[self.names[index]] = (
+                            (self.enumerators[index] /
+                            (self.denominators[index] + 1.0e-12)).mean())
+                    else:
+                        self.avg_values[self.names[index]] = (
+                            self.enumerators[index].sum() /
+                            (self.denominators[index].sum() + 1.0e-12))
+
 
                 self.outputs.clear()
                 self.targets.clear()
                 self.steps = 0
 
             self.trainer._line += " ".join(
-               ["{}: {:.2e}({:.2e})".format(x, self.avg_metrics[x].avg,
-                self.avg_metrics[x].val)
-                for x in self.avg_metrics])
+               ["{}: {:.2e}".format(x, self.avg_values[x])
+                for x in self.avg_values])
+
 
     def on_epoch_end(self):
         # finilize metrics
@@ -243,14 +372,12 @@ class ComputeMetrics(Callback):
         self.outputs.clear()
         self.targets.clear()
 
-        self.avg_metrics = {x:self.avg_metrics[x].avg for x in self.avg_metrics}
-
         if self.trainer._mode == 'validating' and self.trainer._subset == 'train':
-            self.trainer._train_metrics = self.avg_metrics
+            self.trainer._train_metrics = self.avg_values
         elif self.trainer._mode == 'validating' and self.trainer._subset == 'valid':
-            self.trainer._val_metrics = self.avg_metrics
+            self.trainer._val_metrics = self.avg_values
 
-        self.avg_metrics = {}
+        self.avg_values = {}
 
 
 class MakeCheckpoints(Callback):
@@ -262,7 +389,7 @@ class MakeCheckpoints(Callback):
     with ```name```, the best model is saved with ```_best``` postfix.
     '''
     def __init__(self,
-                 metric='main',
+                 metric,
                  max_mode=False,
                  name='checkpoint'):
         self.best_metric = None
@@ -389,7 +516,7 @@ class UnfreezeOnPlateau(Callback):
     max_mode (bool) : if True then the higher is the metric the better.
         Otherwise the lower is the metric the better.
     '''
-    def __init__(self, cooldown=5, limit=5, metric='loss', max_mode=False):
+    def __init__(self, metric, cooldown=5, limit=5, max_mode=False):
         self.cooldown = cooldown
         self.limit = limit
 
@@ -404,7 +531,8 @@ class UnfreezeOnPlateau(Callback):
 
 
     def on_init(self):
-        self.trainer._lr_reduce = False
+        if hasattr(self.trainer, '_lr_reduce'):
+            self.trainer._lr_reduce = False
         self.complete = False
 
 
@@ -451,7 +579,7 @@ class ReduceLROnPlateau(Callback):
     max_mode (bool) : if True then the higher is the metric the better.
         Otherwise the lower is the metric the better.
     '''
-    def __init__(self, cooldown=5, limit=5, factor=0.5, metric='loss', max_mode=False):
+    def __init__(self, metric, cooldown=5, limit=5, factor=0.5, max_mode=False):
         self.cooldown = cooldown
         self.limit = limit
         self.factor = factor
@@ -529,6 +657,37 @@ class CyclicLR(Callback):
             for group_index in range(len(self.trainer._optimizers[optim_index].optimizer.param_groups)):
                 self.trainer._optimizers[optim_index].optimizer.param_groups[group_index]['lr'] = (
                     self.lrs[optim_index][group_index])
+
+
+class SwitchBetweenOptimizers(Callback):
+    '''
+    The callback allows to switch between the optimizers depending on the
+    iteration index.
+    '''
+    def __init__(self, optimizer_steps):
+        self.optimizer_steps = optimizer_steps
+        self.iteration = 0
+        self.cycle_len = sum(optimizer_steps)
+
+        self.optimizer_steps = [0]
+        for index in range(0, len(self.optimizer_steps) - 1):
+            self.optimizer_steps.append(
+                self.optimizer_steps[index] + optimzer_steps[index])
+
+    def on_batch_begin(self):
+        if self.iteration >= self.cycle_len:
+            self.iteration = 0
+
+        for index in range(len(self.trainer._optimizers)):
+            self.trainer._optimizers[index].is_active = False
+
+        optimizer_index = 0
+        while self.iteration > self.optimizer_steps[optimizer_index]:
+            self.trainer._optimizers[optimizer_index].is_active = False
+            optimizer_index += 1
+
+
+
 
 
 class LearningRateScheduler(Callback):

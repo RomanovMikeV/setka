@@ -95,8 +95,11 @@ net = Network()
 def criterion(input, target):
     return torch.nn.functional.cross_entropy(input[0], target[0])
 
+def loss(input, target):
+    return criterion(input, target), 1.0
+
 def accuracy(preds, target):
-    return (preds[0].argmax(dim=1) == target[0]).float().mean()
+    return (preds[0].argmax(dim=1) == target[0]).float().sum(), len(preds[0])
 
 def visualize(one_input, one_target, one_output):
     res = {'figures': []}
@@ -114,7 +117,7 @@ def cycle(progress):
     if progress < 0.5:
         return 0.0
     else:
-        return 0.0
+        return 1.0
 
 trainer = scorch.base.Trainer(net,
                   criterion=criterion,
@@ -125,12 +128,12 @@ trainer = scorch.base.Trainer(net,
                     scorch.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
                     scorch.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
                   callbacks=[scorch.callbacks.ComputeMetrics(
-                                metrics={'main': accuracy, 'loss': criterion}),
-                             scorch.callbacks.MakeCheckpoints(),
+                                metrics=[accuracy, loss]),
+                             scorch.callbacks.MakeCheckpoints('accuracy'),
                              scorch.callbacks.SaveResult(),
                              scorch.callbacks.WriteToTensorboard(processing_f=visualize),
-                             scorch.callbacks.ReduceLROnPlateau(),
-                             scorch.callbacks.UnfreezeOnPlateau(),
+                             scorch.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
+                             scorch.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
                              scorch.callbacks.CyclicLR(period_f=cycle)],
                   seed=1,
                   silent=False)
