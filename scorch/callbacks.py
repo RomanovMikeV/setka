@@ -163,7 +163,7 @@ class ShuffleDataset(Callback):
 
     def on_epoch_begin(self):
         if (self.trainer._mode == 'training' or
-            (self.trainer_mode == 'validation' and self.shuffle_valid)):
+            (self.trainer._mode == 'validation' and self.shuffle_valid)):
 
             self.trainer._dataset.shuffle()
 
