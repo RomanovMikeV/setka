@@ -620,8 +620,8 @@ class ReduceLROnPlateau(Callback):
                         g['lr'] *= self.factor
                 self.since_last = 0
 
-        self.since_best += 1
-        self.since_last += 1
+            self.since_best += 1
+            self.since_last += 1
 
 
 
