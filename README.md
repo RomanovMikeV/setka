@@ -1,3 +1,4 @@
+https://travis-ci.com/RomanovMikeV/scorch.svg?branch=master
 
 # Scorch: utilities for network training with PyTorch
 
