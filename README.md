@@ -1,6 +1,8 @@
 
 # Scorch: utilities for network training with PyTorch
 
+[![Build Status](https://travis-ci.com/username/projectname.svg?branch=master)](https://travis-ci.com/username/projectname)
+
 Scorch is a powerful and flexible tool for neural network training and fast
 prototyping.
 
