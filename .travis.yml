@@ -3,7 +3,6 @@ python:
   - "3.4"
   - "3.5"
   - "3.6"
-  - "3.7"
 
 install:
   - wget https://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -19,6 +18,7 @@ install:
   - conda install tensorboard
 
   - pip install tensorboardX
+  - pip install .
 
 script:
   python test/unit_test.py
