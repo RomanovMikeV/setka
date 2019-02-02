@@ -17,7 +17,7 @@ install:
   - conda install keras
   - conda install tensorboard
 
-  - pip install tensorboardX
+  - pip install tensorboardX tqdm
   - pip install .
 
 script:
