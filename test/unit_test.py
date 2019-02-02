@@ -142,13 +142,13 @@ dataset = DataSet()
 for epoch in range(100):
     trainer.train_one_epoch(dataset,
                             num_workers=2,
-                            max_iterations=20,
+                            max_iterations=10,
                             batch_size=32)
 
     trainer.validate_one_epoch(dataset,
                                subset='valid',
                                num_workers=2,
-                               max_iterations=20,
+                               max_iterations=10,
                                batch_size=32)
 
 
@@ -159,11 +159,11 @@ res = trainer.train(
              batch_size=32,
              num_workers=2,
              validate_on_train=True,
-             max_train_iterations=20,
-             max_valid_iterations=20,
+             max_train_iterations=2,
+             max_valid_iterations=2,
              max_test_iterations=2,
              solo_test=True,
-             epochs=5)
+             epochs=2)
 
 trainer.predict(dataset,
                 batch_size=32,
