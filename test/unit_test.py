@@ -50,7 +50,7 @@ labels_test[numpy.arange(len(y_test)), y_test] = 1
 
 class DataSet(scorch.base.DataSet):
     def __init__(self):
-        super().__init__()
+        super(DataSet, self).__init__()
         self.data = {
             'train': torch.from_numpy(x_train).transpose(1, 3).float(),
             'valid': torch.from_numpy(x_valid).transpose(1, 3).float(),
@@ -66,7 +66,7 @@ class DataSet(scorch.base.DataSet):
 
 class Network(scorch.base.Network):
     def __init__(self):
-        super().__init__()
+        super(Network, self).__init__()
 
         self.conv1 = torch.nn.Conv2d(1, 64, 5, padding=2)
         self.pool1 = torch.nn.MaxPool2d(2)
