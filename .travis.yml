@@ -3,22 +3,22 @@ python:
   - "3.6"
 
 install:
-  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export CONDA_HOME="$HOME/miniconda"
-  - export PATH="$CONDA_HOME/bin:$PATH"
-  - hash -r
-  - python --version
-  - which python
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda install pandas numpy
-  - conda install keras
-  - conda install tensorboard
-  - conda install pytorch-cpu torchvision-cpu -c pytorch
+#  - wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+#  - bash miniconda.sh -b -p $HOME/miniconda
+#  - export CONDA_HOME="$HOME/miniconda"
+#  - export PATH="$CONDA_HOME/bin:$PATH"
+#  - hash -r
+#  - python --version
+#  - which python
+#  - conda config --set always_yes yes --set changeps1 no
+#  - conda update -q conda
+#  - conda install pandas numpy
+#  - conda install keras
+#  - conda install tensorboard
+#  - conda install pytorch-cpu torchvision-cpu -c pytorch
 
   - pip install -U pip
-  - pip install tensorboardX tqdm matplotlib
+  - pip install requirements.txt
   - pip install .
 
 script:
