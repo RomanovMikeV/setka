@@ -8,6 +8,8 @@ install:
   - export CONDA_HOME="$HOME/miniconda"
   - export PATH="$CONDA_HOME/bin:$PATH"
   - hash -r
+  - python --version
+  - which python
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda upgrade --all
