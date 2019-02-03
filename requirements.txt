@@ -1,4 +1,6 @@
 torch
 torchvision
 numpy
+keras
+tensorboard
 tensorboardX
