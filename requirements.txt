@@ -5,3 +5,4 @@ keras
 tensorflow
 tensorboard
 tensorboardX
+tqdm
