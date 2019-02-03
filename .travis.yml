@@ -12,11 +12,10 @@ install:
   - which python
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  - conda upgrade --all
   - conda install pandas numpy
-  - conda install pytorch-cpu torchvision-cpu -c pytorch
   - conda install keras
   - conda install tensorboard
+  - conda install pytorch-cpu torchvision-cpu -c pytorch
 
   - pip install -U pip
   - pip install tensorboardX tqdm matplotlib
