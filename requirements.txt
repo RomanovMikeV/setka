@@ -6,3 +6,4 @@ tensorflow
 tensorboard
 tensorboardX
 tqdm
+matplotlib
