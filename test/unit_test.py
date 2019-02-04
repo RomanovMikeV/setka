@@ -73,7 +73,7 @@ class Network(scorch.base.Network):
         self.conv2 = torch.nn.Conv2d(8, 16, 5, padding=2)
         self.pool2 = torch.nn.MaxPool2d(2)
 
-        self.fc1 = torch.nn.Linear(6272 / 128 * 16, 128)
+        self.fc1 = torch.nn.Linear(784, 128)
         self.fc2 = torch.nn.Linear(128, 56)
         self.fc3 = torch.nn.Linear(56, 10)
 
