@@ -68,14 +68,14 @@ class Network(scorch.base.Network):
     def __init__(self):
         super(Network, self).__init__()
 
-        self.conv1 = torch.nn.Conv2d(1, 64, 5, padding=2)
+        self.conv1 = torch.nn.Conv2d(1, 8, 5, padding=2)
         self.pool1 = torch.nn.MaxPool2d(2)
-        self.conv2 = torch.nn.Conv2d(64, 128, 5, padding=2)
+        self.conv2 = torch.nn.Conv2d(8, 16, 5, padding=2)
         self.pool2 = torch.nn.MaxPool2d(2)
 
-        self.fc1 = torch.nn.Linear(6272, 1024)
-        self.fc2 = torch.nn.Linear(1024, 128)
-        self.fc3 = torch.nn.Linear(128, 10)
+        self.fc1 = torch.nn.Linear(784, 128)
+        self.fc2 = torch.nn.Linear(128, 56)
+        self.fc3 = torch.nn.Linear(56, 10)
 
     def forward(self, input):
         res = input[0]

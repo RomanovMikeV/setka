@@ -1,4 +1,9 @@
 torch
 torchvision
 numpy
+keras
+tensorflow
+tensorboard
 tensorboardX
+tqdm
+matplotlib
