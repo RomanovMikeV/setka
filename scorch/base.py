@@ -347,14 +347,18 @@ class Trainer():
 
         self._mode = 'training'
         self._subset = 'train'
+        self._dataset = dataset
 
-        self._dataset = internal.DataSetWrapper(
-            dataset, mode='train')
+        for callback in self._callbacks:
+            callback.on_epoch_begin()
+
+        train_dataset = internal.DataSetWrapper(
+            self._dataset, mode='train')
 
 
-        train_sampler = torch.utils.data.sampler.SequentialSampler(self._dataset)
+        train_sampler = torch.utils.data.sampler.SequentialSampler(train_dataset)
 
-        train_loader = data.DataLoader(self._dataset,
+        train_loader = data.DataLoader(train_dataset,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
@@ -392,9 +396,6 @@ class Trainer():
         end = time.time()
 
         avg_metrics = {}
-
-        for callback in self._callbacks:
-            callback.on_epoch_begin()
 
         # Iterating through the batches
         for i in pbar:
@@ -487,21 +488,22 @@ class Trainer():
 
         self._mode = 'validating'
         self._subset = subset
+        self._dataset = dataset
 
         metrics = {}
         with torch.no_grad():
 
-            # Creating test wrapper for the dataset
-            self._dataset = internal.DataSetWrapper(
-                dataset, mode=subset)
-
             for callback in self._callbacks:
                 callback.on_epoch_begin()
 
-            valid_sampler = torch.utils.data.sampler.SequentialSampler(self._dataset)
+            # Creating test wrapper for the dataset
+            valid_dataset = internal.DataSetWrapper(
+                dataset, mode=subset)
+
+            valid_sampler = torch.utils.data.sampler.SequentialSampler(valid_dataset)
 
             # Creating dataloader
-            valid_loader = data.DataLoader(self._dataset,
+            valid_loader = data.DataLoader(valid_dataset,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
@@ -605,6 +607,10 @@ class Trainer():
         '''
         self._mode = 'predicting'
         self._dataset = dataset
+        self._subset = subset
+
+        for callback in self._callbacks:
+            callback.on_epoch_begin()
 
         with torch.no_grad():
 
@@ -665,6 +671,9 @@ class Trainer():
 
                 del self._input, self._output, self._ids, self._target
 
+        for callback in self._callbacks:
+            callback.on_epoch_end()
+
 
     def save(self, name='./checkpoint', info=""):
 
@@ -718,7 +727,7 @@ class Trainer():
         #restored_trainer.metrics = checkpoint["metrics"]
 
         # if not new_optimizer:
-        for opt_index in range(len(self.optimizers)):
+        for opt_index in range(len(self._optimizers)):
             try:
                 self._optimizers[index].optimizer.load_state_dict(
                     checkpoint["optimizer_state_" + str(opt_index)])
