@@ -24,3 +24,4 @@ install:
 
 script:
   python test/unit_test.py
+  codecov

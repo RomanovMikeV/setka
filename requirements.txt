@@ -8,3 +8,4 @@ tensorboardX
 tqdm
 matplotlib
 scikit-image
+codecov
