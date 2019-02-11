@@ -23,5 +23,6 @@ install:
   - pip install .
 
 script:
-  python test/unit_test.py
-  codecov
+  coverage run test/unit_test.py
+  #python test/unit_test.py
+  #codecov

@@ -9,3 +9,4 @@ tqdm
 matplotlib
 scikit-image
 codecov
+coverage
