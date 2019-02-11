@@ -688,13 +688,13 @@ class Trainer():
             "epoch": self._epoch,
             "iteration": self._iteration,
             "model_state": self._model.module.cpu().state_dict(),
-            "info": info,
-            "metrics_val": self._val_metrics}
+            "info": info}
+
         if self._use_cuda:
             self._model.module.cuda()
 
-        if hasattr(self, '_train_metrics'):
-            checkpoint['metrics_train'] = self._train_metrics
+        if hasattr(self, '_metrics'):
+            checkpoint['metrics'] = self._metrics
 
         for opt_index in range(len(self._optimizers)):
             checkpoint['optimizer_state_' + str(opt_index)] = self._optimizers[opt_index].optimizer.state_dict()
