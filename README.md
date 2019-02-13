@@ -1,4 +1,7 @@
 [![Build Status](https://travis-ci.com/RomanovMikeV/scorch.svg?branch=master)](https://travis-ci.com/RomanovMikeV/scorch)
+[![codecov](https://codecov.io/gh/RomanovMikeV/scorch/branch/master/graph/badge.svg)](https://codecov.io/gh/RomanovMikeV/scorch)
+
+
 
 # Scorch: utilities for network training with PyTorch
 
