@@ -224,106 +224,106 @@ class Trainer():
             callback.on_init()
 
 
-    def train(self,
-              dataset,
-              batch_size=4,
-              num_workers=0,
-              epochs=1000,
-              validate_on_train=False,
-              max_train_iterations=None,
-              max_valid_iterations=None,
-              max_test_iterations=None,
-              solo_test=False):
-
-        '''
-        Train the model (full training procedure with validation and testing
-        stages).
-
-        Args:
-            dataset (base.DataSet)
-
-            batch_size (int): batch size for training and testing.
-
-            num_workers (int): number of workers to use with torch DataLoader.
-
-            epochs (int): number of epochs in training procedure
-
-            validate_on_train (bool): perform validation on training subset
-
-            max_train_iterations (int): number of iterations in training procedure
-
-            max_valid_iterations (int): number of iterations in validation procedure
-
-            max_test_iterations (int): number of iterations in testing procedure
-
-            solo_test (bool): if you need to feed the test inputs one-by-one.
-
-        '''
-
-        # Enabling garbage collector
-        gc.enable()
-
-        # Creating tensorboard writer
-        tb_writer = SummaryWriter()
-
-        # Validation on training subuset
-        if validate_on_train:
-            self.validate_one_epoch(dataset,
-                                    batch_size=batch_size,
-                                    num_workers=num_workers,
-                                    max_iterations=max_valid_iterations,
-                                    subset='train')
-            gc.collect()
-
-        # Validation on validation subset
-        self.validate_one_epoch(dataset,
-                                batch_size=batch_size,
-                                num_workers=num_workers,
-                                max_iterations=max_test_iterations,
-                                subset='valid')
-
-        gc.collect()
-
-        for callback in self._callbacks:
-            callback.on_train_begin()
-
-        # Training cycle
-        for epoch_index in range(epochs):
-
-            # Training
-            gc.enable()
-            self.train_one_epoch(dataset,
-                                 batch_size=batch_size,
-                                 num_workers=num_workers,
-                                 max_iterations=max_train_iterations)
-            gc.collect()
-
-            # Validation on training subuset
-            if validate_on_train:
-                self.validate_one_epoch(dataset,
-                                        batch_size=batch_size,
-                                        num_workers=num_workers,
-                                        max_iterations=max_valid_iterations,
-                                        subset='train')
-                gc.collect()
-
-            # Validation on validation subset
-            self.validate_one_epoch(dataset,
-                                    batch_size=batch_size,
-                                    num_workers=num_workers,
-                                    max_iterations=max_valid_iterations,
-                                    subset='valid')
-
-            gc.collect()
-
-            self.predict(dataset,
-                          batch_size=batch_size,
-                          num_workers=num_workers,
-                          solo_test=solo_test,
-                          max_iterations=max_test_iterations)
-
-        for callback in self._callbacks:
-            callback.on_train_end()
+    # def train(self,
+    #           dataset,
+    #           batch_size=4,
+    #           num_workers=0,
+    #           epochs=1000,
+    #           validate_on_train=False,
+    #           max_train_iterations=None,
+    #           max_valid_iterations=None,
+    #           max_test_iterations=None,
+    #           solo_test=False):
+    #
+    #     '''
+    #     Train the model (full training procedure with validation and testing
+    #     stages).
+    #
+    #     Args:
+    #         dataset (base.DataSet)
+    #
+    #         batch_size (int): batch size for training and testing.
+    #
+    #         num_workers (int): number of workers to use with torch DataLoader.
+    #
+    #         epochs (int): number of epochs in training procedure
+    #
+    #         validate_on_train (bool): perform validation on training subset
+    #
+    #         max_train_iterations (int): number of iterations in training procedure
+    #
+    #         max_valid_iterations (int): number of iterations in validation procedure
+    #
+    #         max_test_iterations (int): number of iterations in testing procedure
+    #
+    #         solo_test (bool): if you need to feed the test inputs one-by-one.
+    #
+    #     '''
+    #
+    #     # Enabling garbage collector
+    #     gc.enable()
+    #
+    #     # Creating tensorboard writer
+    #     tb_writer = SummaryWriter()
+    #
+    #     # Validation on training subuset
+    #     if validate_on_train:
+    #         self.validate_one_epoch(dataset,
+    #                                 batch_size=batch_size,
+    #                                 num_workers=num_workers,
+    #                                 max_iterations=max_valid_iterations,
+    #                                 subset='train')
+    #         gc.collect()
+    #
+    #     # Validation on validation subset
+    #     self.validate_one_epoch(dataset,
+    #                             batch_size=batch_size,
+    #                             num_workers=num_workers,
+    #                             max_iterations=max_test_iterations,
+    #                             subset='valid')
+    #
+    #     gc.collect()
+    #
+    #     for callback in self._callbacks:
+    #         callback.on_train_begin()
+    #
+    #     # Training cycle
+    #     for epoch_index in range(epochs):
+    #
+    #         # Training
+    #         gc.enable()
+    #         self.train_one_epoch(dataset,
+    #                              batch_size=batch_size,
+    #                              num_workers=num_workers,
+    #                              max_iterations=max_train_iterations)
+    #         gc.collect()
+    #
+    #         # Validation on training subuset
+    #         if validate_on_train:
+    #             self.validate_one_epoch(dataset,
+    #                                     batch_size=batch_size,
+    #                                     num_workers=num_workers,
+    #                                     max_iterations=max_valid_iterations,
+    #                                     subset='train')
+    #             gc.collect()
+    #
+    #         # Validation on validation subset
+    #         self.validate_one_epoch(dataset,
+    #                                 batch_size=batch_size,
+    #                                 num_workers=num_workers,
+    #                                 max_iterations=max_valid_iterations,
+    #                                 subset='valid')
+    #
+    #         gc.collect()
+    #
+    #         self.predict(dataset,
+    #                       batch_size=batch_size,
+    #                       num_workers=num_workers,
+    #                       solo_test=solo_test,
+    #                       max_iterations=max_test_iterations)
+    #
+    #     for callback in self._callbacks:
+    #         callback.on_train_end()
 
 
     def train_one_epoch(self,
@@ -390,8 +390,7 @@ class Trainer():
 
         pbar.set_description(
             "Train -  "
-            "D ----(----)  "
-            "L --------(--------)")
+            "D ----(----)  ")
 
         end = time.time()
 
@@ -532,8 +531,7 @@ class Trainer():
             end = time.time()
             pbar.set_description(
                 "Valid -  "
-                "D ----(----)  "
-                "L --------(--------)")
+                "D ----(----)")
 
             for i in pbar:
                 self._progress = i / len(pbar)
@@ -583,7 +581,6 @@ class Trainer():
 
     def predict(self,
                 dataset,
-                solo_test=True,
                 subset='test',
                 batch_size=4,
                 num_workers=0,
@@ -617,10 +614,6 @@ class Trainer():
             # Creating test wrapper for the dataset
             test_dataset = internal.DataSetWrapper(
                 dataset, mode=subset)
-
-            # Creating distributed samplers for horovod
-            if solo_test:
-                batch_size = 1
 
             test_sampler = torch.utils.data.sampler.SequentialSampler(test_dataset)
 
@@ -690,9 +683,6 @@ class Trainer():
             "model_state": self._model.module.cpu().state_dict(),
             "info": info}
 
-        if self._use_cuda:
-            self._model.module.cuda()
-
         if hasattr(self, '_metrics'):
             checkpoint['metrics'] = self._metrics
 
@@ -704,7 +694,11 @@ class Trainer():
             os.mkdir('checkpoints')
 
         torch.save(checkpoint,
-                   'checkpoints/' + name + '.pth.tar')
+                   os.path.join('checkpoints/', name))
+
+        if self._use_cuda:
+            self._model.module.cuda()
+
 
     def load(self, checkpoint_name):
         '''
@@ -720,12 +714,9 @@ class Trainer():
         self._epoch = checkpoint['epoch']
         self._iteration = checkpoint['iteration']
         self._model.module.load_state_dict(checkpoint["model_state"])
-        self._val_metrics = checkpoint["metrics_val"]
-
-        if 'metrics_train' in checkpoint:
-            self._train_metrics = checkpoint["metrics_train"]
-        #restored_trainer.metrics = checkpoint["metrics"]
-
+        if 'metrics' in checkpoint:
+            self._metrics = checkpoint['metrics']
+        
         # if not new_optimizer:
         for opt_index in range(len(self._optimizers)):
             try:
