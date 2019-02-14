@@ -716,13 +716,13 @@ class Trainer():
         self._model.module.load_state_dict(checkpoint["model_state"])
         if 'metrics' in checkpoint:
             self._metrics = checkpoint['metrics']
-        
+
         # if not new_optimizer:
         for opt_index in range(len(self._optimizers)):
             try:
-                self._optimizers[index].optimizer.load_state_dict(
+                self._optimizers[opt_index].optimizer.load_state_dict(
                     checkpoint["optimizer_state_" + str(opt_index)])
-                self._optimizers[index].active = checkpoint[
-                    "optimizer_active_" + str(opt_index)]
+                self._optimizers[opt_index].active = checkpoint[
+                    "optimizer_switch_" + str(opt_index)]
             except:
                 print('Failed to load optimizer ' + str(opt_index) + '.')

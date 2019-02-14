@@ -138,6 +138,7 @@ trainer = scorch.base.Trainer(net,
                              scorch.callbacks.CyclicLR(period_f=cycle)],
                   seed=1,
                   silent=False)
+
 dataset = DataSet()
 
 for epoch in range(100):
@@ -153,20 +154,36 @@ for epoch in range(100):
                                batch_size=32)
 
 
+# res = trainer.train(
+#              dataset,
+#              batch_size=32,
+#              num_workers=2,
+#              validate_on_train=True,
+#              max_train_iterations=2,
+#              max_valid_iterations=2,
+#              max_test_iterations=2,
+#              solo_test=True,
+#              epochs=2)
+for index in range(2):
+    trainer.train_one_epoch(dataset,
+                            batch_size=32,
+                            num_workers=2,
+                            max_iterations=2)
 
+    trainer.validate_one_epoch(dataset,
+                               subset='train',
+                               batch_size=32,
+                               num_workers=2,
+                               max_iterations=2)
 
-res = trainer.train(
-             dataset,
-             batch_size=32,
-             num_workers=2,
-             validate_on_train=True,
-             max_train_iterations=2,
-             max_valid_iterations=2,
-             max_test_iterations=2,
-             solo_test=True,
-             epochs=2)
+    trainer.validate_one_epoch(dataset,
+                               subset='valid',
+                               batch_size=32,
+                               num_workers=2,
+                               max_iterations=2)
 
 trainer.predict(dataset,
+                subset='test',
                 batch_size=32,
                 max_iterations=2)
 
@@ -175,6 +192,6 @@ trainer.predict(dataset,
                 batch_size=32,
                 max_iterations=2)
 
-#trainer.save('./checkpoints/checkpoint')
+trainer.save('checkpoint')
 
-#trainer.load('./checkpoints/checkpoint.pth.tar')
+trainer.load('./checkpoints/checkpoint.pth.tar')
