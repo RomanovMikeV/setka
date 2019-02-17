@@ -80,7 +80,7 @@ class SaveResult(Callback):
     function ```f```. The directory is flushed during the __init__ and the
     result is saved when the batch is finished (on_batch_end).
     '''
-    def __init__(self, f=None, mode='predicting', dir='predictions'):
+    def __init__(self, processing_f=None, mode='predicting', dir='predictions'):
         '''
         Constructor
 
@@ -92,7 +92,7 @@ class SaveResult(Callback):
 
             dir (string): directory where the results should be stored.
         '''
-        self.f = f
+        self.f = processing_f
         self.dir = dir
         self.index = 0
         self.mode = mode
@@ -144,7 +144,7 @@ class ShuffleDataset(Callback):
         if (self.trainer._mode == 'training' or
             (self.trainer._mode == 'validation' and self.shuffle_valid)):
 
-            self.trainer._dataset.shuffle()
+            self.trainer._ds_wrapper.shuffle()
 
 
 class ComputeMetrics(Callback):
@@ -168,8 +168,10 @@ class ComputeMetrics(Callback):
         self.names = []
 
         if self.metrics is None:
+            def loss(inp, targ):
+                return self.trainer._criterion(inp, targ), 1.0
             self.names = ['loss']
-            self.metrics = [self.trainer._criterion]
+            self.metrics = [loss]
 
         else:
             for index in range(len(self.metrics)):
@@ -460,6 +462,8 @@ class Logger(Callback):
 
     def save_image(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
+        if len(content.shape) == 3:
+            content = content.swapaxes(0, 2).swapaxes(0, 1)
         self.create_dir(fname)
         skimage.io.imsave(
             fname,
@@ -476,6 +480,7 @@ class Logger(Callback):
         self.create_dir(fname)
         scipy.io.wavfile.write(
             fname,
+            44100,
             content)
 
     def save_figure(self, name, content, epoch):

@@ -108,16 +108,61 @@ def visualize(one_input, one_target, one_output):
     plt.imshow(one_input[0][0])
 
     res['figures'] = {'input': fig}
+    res['images'] = {'zero_img': numpy.zeros([3, 100, 100]).astype('float64')}
+    res['texts'] = {'random_text': 'Little brown fox jumped over the lazy dog. Съешь ещё этих мягких французских булок да выпей яду.'}
+    res['audios'] = {'random_noise': numpy.random.randn(1000)}
 
     plt.close()
 
     return res
+
+def processing_placeholder(inp):
+    return inp
 
 def cycle(progress):
     if progress < 0.5:
         return 0.0
     else:
         return 1.0
+
+trainer = scorch.base.Trainer(net,
+                  criterion=criterion,
+                  optimizers=[
+                    scorch.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
+                    scorch.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    scorch.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    scorch.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    scorch.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
+                  callbacks=[
+                             scorch.callbacks.ShuffleDataset(shuffle_valid=True),
+                             scorch.callbacks.ComputeMetrics(),
+                             scorch.callbacks.ComputeMetrics(
+                                metrics=[accuracy, loss],
+                                divide_first=[True, False]),
+                             scorch.callbacks.MakeCheckpoints('accuracy'),
+                             scorch.callbacks.SaveResult(),
+                             scorch.callbacks.SaveResult(processing_f=processing_placeholder),
+                             scorch.callbacks.WriteToTensorboard(processing_f=visualize),
+                             scorch.callbacks.Logger(processing_f=visualize),
+                             scorch.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
+                             scorch.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
+                             scorch.callbacks.CyclicLR(period_f=cycle)],
+                  seed=1,
+                  silent=False)
+dataset = DataSet()
+
+for epoch in range(10):
+    trainer.train_one_epoch(dataset,
+                            num_workers=2,
+                            max_iterations=10,
+                            batch_size=32)
+
+    trainer.validate_one_epoch(dataset,
+                               subset='valid',
+                               num_workers=2,
+                               max_iterations=10,
+                               batch_size=32)
+
 
 trainer = scorch.base.Trainer(net,
                   criterion=criterion,
@@ -141,7 +186,7 @@ trainer = scorch.base.Trainer(net,
 
 dataset = DataSet()
 
-for epoch in range(100):
+for epoch in range(10):
     trainer.train_one_epoch(dataset,
                             num_workers=2,
                             max_iterations=10,
