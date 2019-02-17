@@ -349,16 +349,15 @@ class Trainer():
         self._subset = 'train'
         self._dataset = dataset
 
+        self._ds_wrapper = internal.DataSetWrapper(
+            self._dataset, mode='train')
+
         for callback in self._callbacks:
             callback.on_epoch_begin()
 
-        train_dataset = internal.DataSetWrapper(
-            self._dataset, mode='train')
+        train_sampler = torch.utils.data.sampler.SequentialSampler(self._ds_wrapper)
 
-
-        train_sampler = torch.utils.data.sampler.SequentialSampler(train_dataset)
-
-        train_loader = data.DataLoader(train_dataset,
+        train_loader = data.DataLoader(self._ds_wrapper,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
@@ -492,17 +491,17 @@ class Trainer():
         metrics = {}
         with torch.no_grad():
 
+            # Creating test wrapper for the dataset
+            self._ds_wrapper = internal.DataSetWrapper(
+                dataset, mode=subset)
+
             for callback in self._callbacks:
                 callback.on_epoch_begin()
 
-            # Creating test wrapper for the dataset
-            valid_dataset = internal.DataSetWrapper(
-                dataset, mode=subset)
-
-            valid_sampler = torch.utils.data.sampler.SequentialSampler(valid_dataset)
+            valid_sampler = torch.utils.data.sampler.SequentialSampler(self._ds_wrapper)
 
             # Creating dataloader
-            valid_loader = data.DataLoader(valid_dataset,
+            valid_loader = data.DataLoader(self._ds_wrapper,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
@@ -606,19 +605,20 @@ class Trainer():
         self._dataset = dataset
         self._subset = subset
 
-        for callback in self._callbacks:
-            callback.on_epoch_begin()
-
         with torch.no_grad():
 
             # Creating test wrapper for the dataset
-            test_dataset = internal.DataSetWrapper(
+            self._ds_wrapper = internal.DataSetWrapper(
                 dataset, mode=subset)
 
-            test_sampler = torch.utils.data.sampler.SequentialSampler(test_dataset)
+            for callback in self._callbacks:
+                callback.on_epoch_begin()
+
+            test_sampler = torch.utils.data.sampler.SequentialSampler(
+                self._ds_wrapper)
 
             # Creating dataloader
-            test_loader = data.DataLoader(test_dataset,
+            test_loader = data.DataLoader(self._ds_wrapper,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
