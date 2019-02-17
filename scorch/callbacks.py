@@ -73,32 +73,6 @@ class Callback():
         self.trainer = trainer
 
 
-class PrintCallback(Callback):
-    '''
-    Callback for testing.
-    '''
-    def on_init(self):
-        print("Init")
-
-    def on_train_begin(self):
-        print("Starting training")
-
-    def on_train_end(self):
-        print("Finishing training")
-
-    def on_epoch_begin(self):
-        print("Epoch strating")
-
-    def on_epoch_end(self):
-        print("Epoch end")
-
-    def on_batch_begin(self):
-        print("Batch start")
-
-    def on_batch_end(self):
-        print("Batch end")
-
-
 class SaveResult(Callback):
     '''
     Callback for saving predictions of the model. The results are
@@ -128,7 +102,6 @@ class SaveResult(Callback):
         os.mkdir(dir)
 
     def on_batch_end(self):
-
         if self.trainer._mode == self.mode:
             res = {}
             for index in range(len(self.trainer._ids)):
@@ -479,12 +452,6 @@ class Logger(Callback):
                         str(self.trainer._epoch) + '\t' +
                         str(self.trainer._metrics) + '\n')
 
-    def on_batch_end(self):
-        if self.trainer._mode == 'training':
-            with open(os.path.join(self.root_path, 'loss.txt'), 'a+') as fout:
-                fout.write(str(self.trainer._epoch) + '\t' +
-                           str(self.trainer._loss.detach().cpu().item()) + '\n')
-
     @staticmethod
     def create_dir(fname):
         dirname = os.path.dirname(fname)
@@ -531,6 +498,12 @@ class Logger(Callback):
                         to_show[type][desc], str(self.trainer._epoch))
 
     def on_batch_end(self):
+
+        if self.trainer._mode == 'training':
+            with open(os.path.join(self.root_path, 'loss.txt'), 'a+') as fout:
+                fout.write(str(self.trainer._epoch) + '\t' +
+                           str(self.trainer._loss.detach().cpu().item()) + '\n')
+
         if self.trainer._mode == 'predicting' and self.write_flag and (self.f is not None):
             for index in range(len(self.trainer._ids)):
 
