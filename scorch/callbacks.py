@@ -291,9 +291,21 @@ class MakeCheckpoints(Callback):
         self.subset = subset
 
 
+    @staticmethod
+    def create_dir(fname):
+        dirname = os.path.dirname(fname)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+
     def on_epoch_end(self):
 
         is_best = False
+
+        latest_path = 'checkpoints/' + self.name + '_latest.pth.tar'
+        best_path = 'checkpoints/' + self.name + '_best.pth.tar'
+
+        self.create_dir(latest_path)
 
         if self.trainer._mode == 'validating' and self.trainer._subset == self.subset:
             if self.best_metric is None:
@@ -308,9 +320,10 @@ class MakeCheckpoints(Callback):
                  self.best_metric = self.trainer._metrics[self.subset][self.metric]
                  is_best = True
 
-            self.trainer.save('checkpoints/' + self.name + '.pth.tar')
+
+            self.trainer.save(latest_path)
             if is_best:
-                self.trainer.save('checkpoints/' + self.name + '_best.pth.tar')
+                self.trainer.save(best_path)
 
 
 class WriteToTensorboard(Callback):
