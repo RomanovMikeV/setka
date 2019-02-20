@@ -308,9 +308,9 @@ class MakeCheckpoints(Callback):
                  self.best_metric = self.trainer._metrics[self.subset][self.metric]
                  is_best = True
 
-            self.trainer.save(self.name + '.pth.tar')
+            self.trainer.save('checkpoints/' + self.name + '.pth.tar')
             if is_best:
-                self.trainer.save(self.name + '_best.pth.tar')
+                self.trainer.save('checkpoints/' + self.name + '_best.pth.tar')
 
 
 class WriteToTensorboard(Callback):
@@ -402,11 +402,18 @@ class Logger(Callback):
     def __init__(self,
                  processing_f=None,
                  write_flag=True,
-                 name='checkpoint'):
+                 name='checkpoint',
+                 metric='loss',
+                 subset='valid',
+                 max_mode=False):
 
         self.f = processing_f
         self.write_flag = write_flag
         self.name = name
+        self.best_metric = None
+        self.subset = subset
+        self.metric = metric
+        self.max_mode = max_mode
 
     def on_init(self):
         if not os.path.exists('./logs'):
@@ -444,7 +451,6 @@ class Logger(Callback):
 
 
     def on_epoch_begin(self):
-
         if self.trainer._mode == 'training':
             if hasattr(self.trainer, '_metrics'):
                 print(self.trainer._metrics)
@@ -453,6 +459,31 @@ class Logger(Callback):
                     fout.write(
                         str(self.trainer._epoch) + '\t' +
                         str(self.trainer._metrics) + '\n')
+
+            last_checkpoint_name = os.path.join(self.root_path, 'checkpoints', 'last.pth.tar')
+            best_checkpoint_name = os.path.join(self.root_path, 'checkpoints', 'best.pth.tar')
+
+            self.create_dir(last_checkpoint_name)
+            self.trainer.save(last_checkpoint_name)
+
+            if hasattr(self.trainer, '_metrics'):
+                is_best = False
+                if self.best_metric is None:
+                    self.best_metric = self.trainer._metrics[self.subset][self.metric]
+                    is_best = True
+
+                if ((self.best_metric < self.trainer._metrics[self.subset][self.metric] and
+                     self.max_mode) or
+                    (self.best_metric > self.trainer._metrics[self.subset][self.metric] and
+                     not self.max_mode)):
+
+                     self.best_metric = self.trainer._metrics[self.subset][self.metric]
+                     is_best = True
+
+                if is_best:
+                    self.trainer.save(best_checkpoint_name)
+
+
 
     @staticmethod
     def create_dir(fname):
@@ -529,6 +560,13 @@ class Logger(Callback):
 
                 self.show(res, id)
 
+    def on_epoch_end(self):
+        line = 'MODE: ' + self.trainer._mode + '\tSUBSET: ' + self.trainer._subset + '\tINFO: ' + self.trainer._line
+        with open(os.path.join(self.root_path, 'log.txt'), 'a+') as fout:
+            fout.write(line + '\n')
+
+
+
 
 class UnfreezeOnPlateau(Callback):
     '''
@@ -593,7 +631,7 @@ class UnfreezeOnPlateau(Callback):
 
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit and not self.complete:
-                print("Unfreezing optimizer ", str(self.optimizer_index))
+                self.trainer._line += ("UNFREEZING (optimizer " + str(self.optimizer_index) + ")")
                 self.trainer._optimizers[self.optimizer_index].is_active = True
                 self.since_last = 0
                 self.optimizer_index += 1
@@ -667,7 +705,7 @@ class ReduceLROnPlateau(Callback):
                     self.since_best = 0
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
-                print('Reducing learning rate')
+                self.trainer._line += 'REDUCING lr'
                 for optimizer in self.trainer._optimizers:
                     for g in optimizer.optimizer.param_groups:
                         g['lr'] *= self.factor
@@ -709,29 +747,29 @@ class CyclicLR(Callback):
                     self.lrs[optim_index][group_index])
 
 
-class SwitchBetweenOptimizers(Callback):
-    '''
-    The callback allows to switch between the optimizers depending on the
-    iteration index.
-    '''
-    def __init__(self, optimizer_steps):
-        self.optimizer_steps = optimizer_steps
-        self.iteration = 0
-        self.cycle_len = sum(optimizer_steps)
-
-        self.optimizer_steps = [0]
-        for index in range(0, len(self.optimizer_steps) - 1):
-            self.optimizer_steps.append(
-                self.optimizer_steps[index] + optimzer_steps[index])
-
-    def on_batch_begin(self):
-        if self.iteration >= self.cycle_len:
-            self.iteration = 0
-
-        for index in range(len(self.trainer._optimizers)):
-            self.trainer._optimizers[index].is_active = False
-
-        optimizer_index = 0
-        while self.iteration > self.optimizer_steps[optimizer_index]:
-            self.trainer._optimizers[optimizer_index].is_active = False
-            optimizer_index += 1
+# class SwitchBetweenOptimizers(Callback):
+#     '''
+#     The callback allows to switch between the optimizers depending on the
+#     iteration index.
+#     '''
+#     def __init__(self, optimizer_steps):
+#         self.optimizer_steps = optimizer_steps
+#         self.iteration = 0
+#         self.cycle_len = sum(optimizer_steps)
+#
+#         self.optimizer_steps = [0]
+#         for index in range(0, len(self.optimizer_steps) - 1):
+#             self.optimizer_steps.append(
+#                 self.optimizer_steps[index] + optimzer_steps[index])
+#
+#     def on_batch_begin(self):
+#         if self.iteration >= self.cycle_len:
+#             self.iteration = 0
+#
+#         for index in range(len(self.trainer._optimizers)):
+#             self.trainer._optimizers[index].is_active = False
+#
+#         optimizer_index = 0
+#         while self.iteration > self.optimizer_steps[optimizer_index]:
+#             self.trainer._optimizers[optimizer_index].is_active = False
+#             optimizer_index += 1

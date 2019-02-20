@@ -690,11 +690,11 @@ class Trainer():
             checkpoint['optimizer_state_' + str(opt_index)] = self._optimizers[opt_index].optimizer.state_dict()
             checkpoint['optimizer_switch_' + str(opt_index)] = self._optimizers[opt_index].active
 
-        if not os.path.exists('checkpoints'):
-            os.mkdir('checkpoints')
+        #if not os.path.exists('checkpoints'):
+        #    os.mkdir('checkpoints')
 
         torch.save(checkpoint,
-                   os.path.join('checkpoints/', name))
+                   name)
 
         if self._use_cuda:
             self._model.module.cuda()
