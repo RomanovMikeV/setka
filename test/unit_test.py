@@ -239,4 +239,4 @@ trainer.predict(dataset,
 
 trainer.save('checkpoint')
 
-trainer.load('./checkpoints/checkpoint.pth.tar')
+trainer.load('./checkpoints/checkpoint_latest.pth.tar')
