@@ -1,9 +1,21 @@
+"""
+This is the base module of the package. It may also be called the
+engine. It contains the core classes that are used in the scripts
+such as:
+
+* OptimizerSwitch -- wrapper to facilitate work with optimizers.
+* DataSet -- a dataset class that Trainer needs.
+* Network -- a network class that Trainer needs.
+* Trainer -- class that performs training, validation and prediction.
+
+"""
+
+
 import numpy
 import os
 import random
 import torch
 import shutil
-#import horovod.torch as hvd
 import gc
 import time
 from tensorboardX import SummaryWriter
@@ -15,10 +27,36 @@ from . import data
 
 class OptimizerSwitch():
     '''
-    This class contains optimizer and the module that this optimizer should
-    optimize.
+    This class contains optimizer and the module that this
+    optimizer should optimize. The OptimizerSwitch tells trainer
+    if it should switch the modules to the training mode and back
+    to evaluation mode and if it should perform optimization for
+    this module's parameters.
     '''
+
     def __init__(self, train_module, optimizer, is_active=True, **kwargs):
+        '''
+        Constructs the OptimizerSwitch instance.
+
+        Args:
+            train_module (torch.nn.Module):
+
+            optimizer (torch.optim.Optimizer):
+
+            is_active (bool):
+
+            **kwargs:
+
+        Example:
+        ```
+        OptimizerSwitch(
+            net.params(),
+            torch.optim.Adam,
+            lr=3.0e-4,
+            is_active=False)
+        ```
+        '''
+
         self.optimizer = optimizer(train_module.parameters(), **kwargs)
         self.module = train_module
         self.active = is_active
@@ -26,45 +64,61 @@ class OptimizerSwitch():
 
 class DataSet():
     '''
-    Dataset index class, where all the information about the dataset is
-    collected. This class should have only the constructor, where the dataset
-    structure is described. It is recommended to store the class info here
-    instead of the DataSet class as in the other case the amount of memery
-    consumed by dataset info may triple.
+    Dataset class, where all the information about the dataset is
+    collected. It contains all the information about the dataset.
+    The dataset may be split into the subsets (that are ususally
+    referred to as ```train```, ```valid``` and ```test```, but
+    you may make much more different modes for your needs).
 
-    You may redefine in this class the following methods:
-    ```get_len```, ```get_item```.
+    The DataSet has the following methods:
+        * __init__ -- constructor, where the index collection
+            is ususally performed. You need to redefine it.
+            In the original constuctor the ```subset``` is set
+            to ```train```.
+
+        * __len__ -- function that is called when the ```len()```
+            operator is called and returns the volume of the
+            current subset. It is likely that you will need to
+            redefine it.
+
+        * __getitem__ -- function that gets the item of the dataset
+            by its index. It is likely that you will need to
+            redefine it.
+
+        * select_subset(subset) -- function that selects the subset
+            specified in the argument.
     '''
 
     def __init__(self):
         '''
-        Class constructor. Please overload this function definition when making
-        your dataset.
+        Class constructor. Dataset index collection is usually
+        performed here. You need to overload it.
+        In the original constuctor the ```subset``` is set
+        to ```train```.
         '''
-        pass
+        self.subset = 'train'
 
-    def get_len(self, mode='train'):
+
+    def __len__(self):
         '''
-        Function that gets length of dataset's subset specified in ```mode```.
-        By default is
+        Function that gets length of dataset's subset specified
+        in ```subset```. By default is
 
         ```
         return len(self.inputs[mode])
         ```
 
-        Args:
-            mode (str): subset of the dataset to get the length of.
-
         Returns:
-            int, number of elements in the subset.
+            int, number of elements in the selected subset.
         '''
 
-        return len(self.data[mode])
+        return len(self.data[self.subset])
 
-    def get_item(self, index, mode='train'):
+    def __getitem__(self, index):
         '''
-        Function that gets the item from the dataset's subset specified in
-        ```mode```.
+        Function that gets the item from the dataset's subset
+        specified in ```subset```. Most likely you will redefine
+        it.
 
         By default it is:
         ```
@@ -77,9 +131,7 @@ class DataSet():
         ```
 
         Args:
-            index: index of the item to be loaded
-
-            mode (str): subset of the dataset to get the length of.
+            index (int): index of the item to be loaded.
 
         Returns:
             list of inputs to the neural network for the item.
@@ -89,41 +141,71 @@ class DataSet():
             id (str is preferred) of the item.
         '''
 
-        datum = self.data[mode][index]
-        target = self.labels[mode][index]
+        datum = self.data[self.subset][index]
+        target = self.labels[self.subset][index]
 
-        id = mode + "_" + str(index)
+        id = self.subset + "_" + str(index)
 
         return [datum], [target], id
+
+    def select_subset(self, subset):
+        '''
+        Switches the current subset of the DataSet.
+
+        Args:
+            subset (str): subset identificator of the dataset
+
+        Returns:
+            self
+        '''
+        self.subset = subset
+        return self
 
 
 class Network(torch.nn.Module):
     '''
-    Base class for your models.
+    Base class for your models, where the element of your model are
+    defined and the forward propagation.
 
     Your networks should be a subclass of this class.
-    In your models you should redefine ```__init__``` function
-    to construct the model and ```forward``` function.
+
+    The model contains the following methods:
+
+        * __init__ -- class constructor. Usually here the blocks of
+            the network are specified. You will need to redefine
+            this method in your network.
+
+        * forward -- function that performs the forward propagation
+            of the signal through the network. You will need to
+            redefine this method in your network.
+
+        * __call__ -- alias to forward.
     '''
     def __init__(self):
         '''
         Class constructor.
 
-        You should define your network elements here. Network elements should
-        be ```torch.nn.Module``` subclasses' objects.
+        Most likely you have to redefine it.
 
-        Args:
-            This method may also take extra keyword arguments specified with
-            ```--network-args``` keyword in the bash or specified in
-            ```network_args``` parameter of a function call.
+        You should define your network elements here.
+        Network elements should be ```torch.nn.Module```
+        subclasses' objects.
         '''
         super(Network, self).__init__()
 
 
     def forward(self, input):
         '''
-        Forward propagation function for your network. By default this function
-        returns the input.
+        Forward propagation function for your network.
+
+        Most likely you have to redefine it.
+
+        By default this function returns the input.
+
+        Takes inputs and computes outputs.
+
+        To use the majority of callbacks, you have to wrap inputs
+        and outputs of the network into the lists.
 
         Args:
             input (list): A list of batches of inputs for your Network (most
@@ -131,59 +213,84 @@ class Network(torch.nn.Module):
                 Note that those inputs come in batches.
 
         Returns:
-            list: A list of outputs of Network for specified inputs.
+            (list) Outputs from the Network for specified inputs.
         '''
 
         return input
 
     def __call__(self, input):
         '''
-        Call should duplicate the forward propagation function
-        (in some versions of pytorch the __call__ is needed, while in the
-        others it is enough to have just forward function).
-
-        Args:
-            input (list): Same as ```forward``` function arguments.
-
-        Returns:
-            The same result as ```forward``` function.
+        Alias to forward.
         '''
         return self.forward(input)
 
 
 class Trainer():
     '''
-    Socket base class for your networks. The object of this class
-    knows how to deal with your network. It contains such fields and methods as
-    optimizers, criterion, metrics, process_result, visualize, scheduling.
+    Trainer can train and validate your network. It can also
+    predict results.
+
+    It contains the following methods:
+
+    * __init__ -- class constructor, where you specify everything
+        that you will need during the training procedure.
+
+    * train_one_epoch -- performs training for one epoch
+
+    * validate_one_epoch -- performs validation for one epoch
+
+    * predict -- predicts results
+
+    * save -- dumps network's and optimizer's states to the file
+
+    * load -- loads network's and optimizer's states from the file
+
     '''
     def __init__(self, model,
                  optimizers,
                  criterion,
                  callbacks=[],
-                 use_cuda=False,
                  seed=0,
                  deterministic_cuda=False,
                  silent=False):
         '''
-        Class constructor. This is one of the most important
-        things that you have to redefine. In this function you should define:
+        Class constructor.
 
-        ```self.optimizers``` -- a list of OptimizerSwitches that will be used
-        during the training procedure.
+        Args:
+            model (base.Network) -- model to train
+
+            optimizers (list of base.OptimizerSwitch) -- optimizer
+                to use during training. The optimisers whose
+                is_active flag is set to True will be used in the
+                optimization procedure (there may be many of them)
+
+            criterion (function) -- criterion (loss) function that
+                needs to be optimized
+
+            callbacks (list of callbacks.Callback) -- callbacks
+                that extend functionality of the trainer.
+
+            seed (int) -- seed for random number generators to use.
+
+            deterministic_cuda (bool) -- flag that specifies if
+                the cuda should behave deterministically
+                (takes more time to perform computations)
+
+            silent (bool) -- do not show output
+
 
         Args:
             model (base.Network): the model for the socket.
 
-            callbacks (list): List of scorch.callbacks to use during training.
+            callbacks (list): List of scorch.callbacks to use
+                during training.
 
-            use_cuda (bool): whether to use cuda if available or not.
+            seed (int): seed to initialize the random value
+                generators. 0 by default.
 
-            seed (int): seed to initialize the random value generators.
-            0 by default.
-
-            deterministic_cuda (bool): whether to use deterministic CUDA backend.
-            If True, the computations are slower, but deterministic.
+            deterministic_cuda (bool): whether to use deterministic
+                CUDA backend. If True, the computations are slower,
+                but deterministic.
 
             batch_to_metrics (int): how many batches to accumulate before
             metrics computation. Default is 1. If None -- use all batches for
@@ -216,8 +323,6 @@ class Trainer():
         self._best_metrics = None
 
         self._silent = silent
-
-        self._use_cuda = use_cuda
 
         for callback in self._callbacks:
             callback.set_trainer(self)
@@ -328,6 +433,7 @@ class Trainer():
 
     def train_one_epoch(self,
                         dataset,
+                        subset='train',
                         batch_size=4,
                         num_workers=0,
                         max_iterations=None):
@@ -336,21 +442,27 @@ class Trainer():
         Trains a model for one epoch.
 
         Args:
-            dataset (base.DataSet): dataset instance
+            dataset (base.DataSet): dataset instance to train on.
 
-            batch_size (int): batch size to use during training
+            subset (hashable): identifier of the dataset's subset
+                which willbe used for training.
 
-            num_workers (int): number of workers to use in torch.data.DataLoader
+            batch_size (int): batch size to use during training.
 
-            max_iterations (int): maximum amount of iterations to perform during one epoch
+            num_workers (int): number of workers to use in
+                torch.data.DataLoader.
+
+            max_iterations (int): maximum amount of iterations to
+                perform during one epoch. If None -- training
+                will be performed until the end of the subset.
         '''
 
         self._mode = 'training'
-        self._subset = 'train'
+        self._subset = subset
         self._dataset = dataset
 
-        self._ds_wrapper = internal.DataSetWrapper(
-            self._dataset, mode='train')
+        self._dataset.select_subset(subset)
+        self._ds_wrapper = internal.DataSetWrapper(self._dataset)
 
         for callback in self._callbacks:
             callback.on_epoch_begin()
@@ -411,7 +523,7 @@ class Trainer():
                 callback.on_batch_begin()
 
             # Moving tensors to CUDA device
-            if self._use_cuda and torch.cuda.is_available():
+            if torch.cuda.is_available():
                 for index in range(len(self._input)):
                     self._input[index] = self._input[index].cuda()
 
@@ -475,13 +587,17 @@ class Trainer():
         Args:
             dataset (base.DataSet): dataset instance
 
-            subset (str): which subset of the dataset to use
+            subset (hashable): which subset of the dataset to use
 
             batch_size (int): batch size to use during training
 
-            num_workers (int): number of workers to use in torch.data.DataLoader
+            num_workers (int): number of workers to use in
+                torch.data.DataLoader
 
-            max_iterations (int): maximum amount of iterations to perform during one epoch
+            max_iterations (int): maximum amount of iterations to
+                perform during one epoch. If None -- training
+                will be performed until the end of the subset.
+
         '''
 
         self._mode = 'validating'
@@ -492,8 +608,8 @@ class Trainer():
         with torch.no_grad():
 
             # Creating test wrapper for the dataset
-            self._ds_wrapper = internal.DataSetWrapper(
-                dataset, mode=subset)
+            dataset.select_subset(subset)
+            self._ds_wrapper = internal.DataSetWrapper(dataset)
 
             for callback in self._callbacks:
                 callback.on_epoch_begin()
@@ -542,11 +658,10 @@ class Trainer():
                 for callback in self._callbacks:
                     callback.on_batch_begin()
 
-                if self._use_cuda:
+                if torch.cuda.is_available():
                     for index in range(len(self._input)):
                         self._input[index] = self._input[index].cuda()
 
-                if self._use_cuda:
                     for index in range(len(self._target)):
                         self._target[index] = self._target[index].cuda()
 
@@ -591,15 +706,15 @@ class Trainer():
         Args:
             dataset (base.DataSet): dataset instance
 
-            solo_test (bool): tests images one-by-one.
-
-            subset (str): which subset of the dataset to use
+            subset (hashable): which subset of the dataset to use
 
             batch_size (int): batch size to use during training
 
-            num_workers (int): number of workers to use in torch.data.DataLoader
+            num_workers (int): number of workers to use in
+                torch.data.DataLoader
 
-            max_iterations (int): maximum amount of iterations to perform during one epoch
+            max_iterations (int): maximum amount of iterations to
+                perform during one epoch
         '''
         self._mode = 'predicting'
         self._dataset = dataset
@@ -608,8 +723,9 @@ class Trainer():
         with torch.no_grad():
 
             # Creating test wrapper for the dataset
+            dataset.select_subset(subset)
             self._ds_wrapper = internal.DataSetWrapper(
-                dataset, mode=subset)
+                dataset)
 
             for callback in self._callbacks:
                 callback.on_epoch_begin()
@@ -651,7 +767,7 @@ class Trainer():
 
                 self._input, self._target, self._ids = next(iterator)
 
-                if self._use_cuda:
+                if torch.cuda.is_available():
                     for index in range(len(self._input)):
                         self._input[index] = self._input[index].cuda()
 
@@ -668,35 +784,33 @@ class Trainer():
             callback.on_epoch_end()
 
 
-    def save(self, name='./checkpoint', info=""):
+    def save(self, name='./checkpoint'):
 
         '''
         Saves trainer to the checkpoint (stored in checkpoints directory).
 
         Args:
-            prefix (str):
+            name (str): name of the file where the model is saved.
         '''
 
         checkpoint = {
             "epoch": self._epoch,
             "iteration": self._iteration,
-            "model_state": self._model.module.cpu().state_dict(),
-            "info": info}
+            "model_state": self._model.module.cpu().state_dict()}
 
         if hasattr(self, '_metrics'):
             checkpoint['metrics'] = self._metrics
 
         for opt_index in range(len(self._optimizers)):
-            checkpoint['optimizer_state_' + str(opt_index)] = self._optimizers[opt_index].optimizer.state_dict()
-            checkpoint['optimizer_switch_' + str(opt_index)] = self._optimizers[opt_index].active
-
-        #if not os.path.exists('checkpoints'):
-        #    os.mkdir('checkpoints')
+            checkpoint['optimizer_state_' + str(opt_index)] = (
+                self._optimizers[opt_index].optimizer.state_dict())
+            checkpoint['optimizer_switch_' + str(opt_index)] = (
+                self._optimizers[opt_index].active)
 
         torch.save(checkpoint,
                    name)
 
-        if self._use_cuda:
+        if torch.cuda.is_available():
             self._model.module.cuda()
 
 
@@ -705,10 +819,10 @@ class Trainer():
         Loads model parameters from the checkpoint.
 
         Args:
-            checkpoint_name (str): path to the checkpoint of interest
+            checkpoint_name (str): path to the checkpoint
+                to load.
         '''
         checkpoint = torch.load(open(checkpoint_name, 'rb'))
-        #print(checkpoint['info'])
         print("Model restored from", checkpoint_name)
 
         self._epoch = checkpoint['epoch']
@@ -725,4 +839,5 @@ class Trainer():
                 self._optimizers[opt_index].active = checkpoint[
                     "optimizer_switch_" + str(opt_index)]
             except:
-                print('Failed to load optimizer ' + str(opt_index) + '.')
+                print('Failed to load optimizer ' +
+                    str(opt_index) + '.')

@@ -66,24 +66,20 @@ class DataSetWrapper():
     __init__, __len__, __getitem__.
     '''
 
-    def __init__(self, dataset, mode='train'):
+    def __init__(self, dataset):
         self.dataset = dataset
-        self.mode = mode
 
-        self.order = numpy.arange(self.dataset.get_len(mode))
-
-        if self.mode == 'train':
-            self.order = numpy.random.permutation(self.dataset.get_len(self.mode))
+        self.order = numpy.arange(len(self.dataset))
 
     def __len__(self):
-        return self.dataset.get_len(self.mode)
+        return len(self.dataset)
 
     def __getitem__(self, index):
         real_index = self.order[index]
-        return self.dataset.get_item(real_index, self.mode)
+        return self.dataset[real_index]
 
     def shuffle(self):
-        self.order = numpy.random.permutation(self.dataset.get_len(self.mode))
+        self.order = numpy.random.permutation(len(self.dataset))
 
 
 class AverageMeter(object):
