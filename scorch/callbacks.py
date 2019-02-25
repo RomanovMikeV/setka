@@ -9,6 +9,7 @@ import shutil
 import zipfile
 import scipy.io.wavfile
 import skimage
+import types
 
 from . import internal
 
@@ -18,31 +19,31 @@ class Callback():
 
     Callback has the following methods:
 
-    __init__(self) -- constructor
+    * __init__(self) -- constructor
 
-    on_train_begin(self) -- method that is executed when training starts
+    * on_train_begin(self) -- method that is executed when training starts
         (in the beginning of ```trainer.train```)
 
-    on_train_end(self) -- method that is executed when training starts
+    * on_train_end(self) -- method that is executed when training starts
         (in the end of ```trainer.train```)
 
-    on_epoch_begin(self) -- method that is executed when the epoch starts
+    * on_epoch_begin(self) -- method that is executed when the epoch starts
         (in the beginning of ```train_one_epoch```, ```validate_one_epoch```,
         ```predict```)
 
-    on_epoch_end(self) -- method that is executed when the epoch starts
+    * on_epoch_end(self) -- method that is executed when the epoch starts
         (in the end of ```train_one_epoch```, ```validate_one_epoch```,
         ```predict```)
 
-    on_batch_begin(self) -- method that is executed when the batch starts
+    * on_batch_begin(self) -- method that is executed when the batch starts
         (in the beginning of training cycle body in ```train_one_epoch```,
         ```validate_one_epoch```, ```predict```)
 
-    on_batch_end(self) -- method that is executed when the batch starts
+    * on_batch_end(self) -- method that is executed when the batch starts
         (in the end of training cycle body in ```train_one_epoch```,
         ```validate_one_epoch```, ```predict```)
 
-    set_trainer(self, trainer) -- method that links the trainer to the callback.
+    * set_trainer(self, trainer) -- method that links the trainer to the callback.
     '''
 
     def __init__(self):
@@ -76,33 +77,37 @@ class Callback():
 class SaveResult(Callback):
     '''
     Callback for saving predictions of the model. The results are
-    stored in a specified directory. Batches are processed with the specified
-    function ```f```. The directory is flushed during the __init__ and the
-    result is saved when the batch is finished (on_batch_end).
+    stored in a specified directory. Batches are processed with the
+    specified function ```f```. The directory is flushed during the
+    ```__init__``` and the result is saved when the batch is
+    finished (when on_batch_end is triggered).
     '''
-    def __init__(self, processing_f=None, mode='predicting', dir='predictions'):
+    def __init__(self, f=None,
+                 dir='predictions'):
         '''
         Constructor
 
         Args:
-            f (function): function to process the predictions.
+            f (function): function to process the
+                predictions.
 
-            mode (string): mode of the model when the predictions should be
-            saved.
-
-            dir (string): directory where the results should be stored.
+            dir (string): directory where the results should be
+                stored.
         '''
-        self.f = processing_f
+        self.f = f
         self.dir = dir
         self.index = 0
-        self.mode = mode
 
-        if os.path.exists(dir):
-            shutil.rmtree(dir)
-        os.mkdir(dir)
+        # if os.path.exists(dir):
+            # if os.path.islink(dir):
+                # os.remove(dir)
+            # else:
+                # shutil.rmtree(dir)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
 
     def on_batch_end(self):
-        if self.trainer._mode == self.mode:
+        if self.trainer._mode == 'predicting':
             res = {}
             for index in range(len(self.trainer._ids)):
 
@@ -129,27 +134,53 @@ class SaveResult(Callback):
 
 class ShuffleDataset(Callback):
     '''
-    Callback to shuffle datasets before the epoch starts (on_epoch_begin).
+    Callback to shuffle datasets before the epoch starts
+    (on_epoch_begin). Test set is never shuffled.
     '''
     def __init__(self, shuffle_valid=False):
         '''
         Constructor.
 
-        shuffle_valid (bool): shuffle validation dataset too if True. If False
-            only the training dataset will be shuffled.
+        Args:
+            shuffle_valid (bool): shuffle validation dataset too if
+                True. If False only the training dataset will be
+                shuffled. Note that the test set is never shuffled.
         '''
         self.shuffle_valid = shuffle_valid
 
     def on_epoch_begin(self):
         if (self.trainer._mode == 'training' or
-            (self.trainer._mode == 'validation' and self.shuffle_valid)):
+            (self.trainer._mode == 'validation' and
+             self.shuffle_valid)):
 
             self.trainer._ds_wrapper.shuffle()
 
 
 class ComputeMetrics(Callback):
     '''
-    Callbacks for metric computation.
+    This callback computes metrics when the validation is
+    performed. The metrics are updated on batch end. The parameter
+    ```steps_to_compute``` specifies on how many batches the
+    metrics are computed. When the epoch ends -- final metrics
+    are computed. The history is flushed when the
+    epoch starts.
+
+    Note: list of metrics should contain callables. Each of the
+        callables my return either one value or two values. If two
+        values are returned (or two numpy arrays of the same shape) --
+        the first value is treated as enumerator(s), the second is treated as a
+        denominator(s).
+        When the metric is requested -- the new enumerator(s) and
+        denomirator(s) are computed. Overall enumerators and denominators
+        are updated (new values added to the accumulated ones).
+        After that there are two options
+        for computing average for each of the metrics in arrays.
+        First option is to first sum all the accumulated enumerators
+        and denominators and then to divide one by another
+        (case of ```divide_first``` flag for the metric
+        is set to False). The second option is to first divide
+        each of the enumerators by its denominator and then average
+        (case of ```divide_first``` for the metric is set to True).
     '''
     def __init__(self,
                  metrics=None,
@@ -158,9 +189,14 @@ class ComputeMetrics(Callback):
 
         '''
         Constructor.
-        metrics (dict): dictionary with metrics to compute.
-        steps_to_compute (int): how many steps to perform before metrics
-            computation.
+
+        Args:
+            metrics (list): list of callables for metrics
+                computation. The callable should return two values:
+                enumerator and denominator.
+
+            steps_to_compute (int): how many steps to perform
+                before metrics update.
         '''
 
         self.steps_to_compute = steps_to_compute
@@ -225,9 +261,14 @@ class ComputeMetrics(Callback):
                     self.targets[index] = torch.cat(self.targets[index], dim=0)
 
                 for index in range(len(self.metrics)):
-                    enumerators, denominators = self.metrics[index](self.outputs, self.targets)
-                    enumerators = numpy.array(enumerators)
-                    denominators = numpy.array(denominators)
+                    res = self.metrics[index](self.outputs, self.targets)
+                    if isinstance(res, (list, tuple)):
+                        if len(res) == 2:
+                            enumerators = numpy.array(res[0])
+                            denominators = numpy.array(res[1])
+                    else:
+                        enumerators = numpy.array(res)
+                        denoinators = numpy.ones(enumerators.shape)
 
                     if self.enumerators[index] is None:
                         self.enumerators[index] = enumerators
@@ -273,17 +314,37 @@ class ComputeMetrics(Callback):
 
 class MakeCheckpoints(Callback):
     '''
-    Callback to make checkpoints. This callback takes into account the
-    ```metric```. If ```max_metric``` is ```True``` -- the higher the
-    monitored metric is the better the model is, if not -- the lower the
-    monitored metric is the better the model is. Checkpoint name is specified
-    with ```name```, the best model is saved with ```_best``` postfix.
+    This callback makes checkpoints during an experiment. Two checkpoints
+    are stored: the best one (with "_best" postfix) (created only in case the
+    needed metrics has already been computed) and the last one
+    (with "_last" postfix). You should specify the
+    metrics that will be monitored to select the best model.
+
+    The checkpoint is computed when epoch starts (on_epoch_begin).
+
+    The checkpoints are saved in the directory called "checkpoints". If the
+    checkpoints directory does not exist -- it will be created.
     '''
     def __init__(self,
                  metric,
                  subset='valid',
                  max_mode=False,
                  name='checkpoint'):
+
+        '''
+        Constructor.
+
+        Args:
+            metric (str): name of the metric to monitor
+
+            subset (hashable): name of the subset on which the metric will be
+                monitored
+
+            max_mode (bool): if True, the higher the metric -- the better the
+                model.
+
+            name (str): name of the checkpoint file.
+        '''
         self.best_metric = None
         self.metric = metric
         self.max_mode = max_mode
@@ -291,34 +352,38 @@ class MakeCheckpoints(Callback):
         self.subset = subset
 
 
-    @staticmethod
-    def create_dir(fname):
-        dirname = os.path.dirname(fname)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
+    # @staticmethod
+    # def create_dir(fname):
+    #     dirname = os.path.dirname(fname)
+    #     if not os.path.exists(dirname):
+    #         os.makedirs(dirname)
 
 
-    def on_epoch_end(self):
+    def on_epoch_begin(self):
 
         is_best = False
 
         latest_path = 'checkpoints/' + self.name + '_latest.pth.tar'
         best_path = 'checkpoints/' + self.name + '_best.pth.tar'
 
-        self.create_dir(latest_path)
+        # self.create_dir(latest_path)
 
-        if self.trainer._mode == 'validating' and self.trainer._subset == self.subset:
-            if self.best_metric is None:
-                self.best_metric = self.trainer._metrics[self.subset][self.metric]
-                is_best = True
+        if self.trainer._mode == 'training':
+            if hasattr(self.trainer, '_metrics'):
+                if self.subset in self.trainer._metrics:
+                    if self.metric in self.trainer._metrics[self.subset]:
+                        if self.best_metric is None:
+                            self.best_metric = (
+                                self.trainer._metrics[self.subset][self.metric])
+                            is_best = True
 
-            if ((self.best_metric < self.trainer._metrics[self.subset][self.metric] and
-                 self.max_mode) or
-                (self.best_metric > self.trainer._metrics[self.subset][self.metric] and
-                 not self.max_mode)):
+                        if ((self.best_metric < self.trainer._metrics[self.subset][self.metric] and
+                             self.max_mode) or
+                            (self.best_metric > self.trainer._metrics[self.subset][self.metric] and
+                             not self.max_mode)):
 
-                 self.best_metric = self.trainer._metrics[self.subset][self.metric]
-                 is_best = True
+                             self.best_metric = self.trainer._metrics[self.subset][self.metric]
+                             is_best = True
 
 
             self.trainer.save(latest_path)
@@ -328,12 +393,17 @@ class MakeCheckpoints(Callback):
 
 class WriteToTensorboard(Callback):
     '''
-    Callback to write the metrics to the TensorboardX.
-    If ```write_flag``` is ```False``` the results are not written to the
-    Tensorboard, ```True``` by default. ```name``` is a label of the model.
-    It is possible to add ```processing_f``` function that takes as inputs:
-    input, target and output and returns the dictionary with the outputs for
-    visualization. This dictionary may be represented as:
+    Callback to write the metrics to the TensorboardX. When the epoch starts
+    (on_epoch_begin), it uploads the computer metrics to the TnsorboardX.
+
+    It also writes the predictions to the tensorboard when the ```predict```
+    method of the Trainer is called and visualization function is specified.
+
+    Visaulization function (passed as ```f``` to the construtor)
+    takes as inputs: one input, target and output per sample and returns the
+    dictionary with the outputs for visualization. This dictionary may contain
+    the following keys:
+
     {
         "images": dict with numpy images,
         "texts": dict with texts,
@@ -342,14 +412,22 @@ class WriteToTensorboard(Callback):
         "graphs": dict with onnx graphs,
         "embeddings": dict with embeddings
     }
-    Each of the dicts should have the following structure: {sample_id: result}.
+    Each of the dicts should have the following structure:
+    {image_name: image} for images. For example, the following syntax will work:
+
+    ```
+    {"images": {"input": input_fig,
+                "output": ouput_fig,
+                "target": target_fig}}
+    ```
+
     '''
     def __init__(self,
-                 processing_f=None,
+                 f=None,
                  write_flag=True,
                  name='checkpoint'):
         self.tb_writer = tensorboardX.SummaryWriter()
-        self.f = processing_f
+        self.f = f
         self.write_flag = write_flag
         self.name = name
 
@@ -409,24 +487,57 @@ class WriteToTensorboard(Callback):
 
 class Logger(Callback):
     '''
-    This callback saves all the information that is important for experiment
-    reproduction.
+    This callback saves all the information about training process of the
+    model. It is important the training process understanding and for the
+    experiment reproducibility.
+
+    The information is stored in the directory ```./logs/time```, where
+    time is a string representation of the timestamp when the experiment has
+    started.
+
+    During the initialization, the Logger creates all the necessary directories
+    for storing information. It also saves the bash command that has triggered
+    the Trainer creation in the text file called "bash_command.txt", it saves
+    all the contents of the directory from where the command was called in the
+    archive "snapshot.zip" (except for ```checkpoints```, ```logs```,
+    ```predictions``` and ```runs``` directories). It also links the
+    directories ```./checkpoints``` to ```./logs/<timestamp>/checkpoints```
+    and ```./predictions``` to ```./logs/<timestamp>/predictions```
+
+    The following information is logged during the training process:
+
+    * loss value is saved after each batch in loss.txt file in the checkpoint
+        directory
+
+    * metrics values are stored in metrics.txt file (if metrics are specified)
+        in the checkpoint directory
+
+    * images, audios, figures, texts are stored in the corresponding directories
+        in the checkpoint directory if the processing function ```f``` is
+        specified.
+
     '''
     def __init__(self,
-                 processing_f=None,
+                 f=None,
                  write_flag=True,
-                 name='checkpoint',
-                 metric='loss',
-                 subset='valid',
-                 max_mode=False):
+                 name='checkpoint'):
 
-        self.f = processing_f
+        '''
+        Constructor.
+
+        Args:
+            f (callable): processing function to be used during prediction
+                process.
+
+            write_flag (bool): if False -- the visualization is not performed.
+
+            name (str): name of the experiment
+        '''
+
+        self.f = f
         self.write_flag = write_flag
         self.name = name
-        self.best_metric = None
-        self.subset = subset
-        self.metric = metric
-        self.max_mode = max_mode
+
 
     def on_init(self):
         if not os.path.exists('./logs'):
@@ -436,6 +547,7 @@ class Logger(Callback):
         if not os.path.exists(root_path):
             os.mkdir(root_path)
         self.root_path = os.path.join(root_path, str(datetime.datetime.now()))
+        self.root_path.replace('\s', '-')
 
         if not os.path.exists(self.root_path):
             os.mkdir(self.root_path)
@@ -462,6 +574,27 @@ class Logger(Callback):
 
                 zip.write(os.path.join(command_root_dir, file))
 
+        checkpoints_dir = os.path.join(self.root_path, 'checkpoints')
+        predictions_dir = os.path.join(self.root_path, 'predictions')
+
+        os.makedirs(checkpoints_dir)
+        os.makedirs(predictions_dir)
+
+        if os.path.exists('./checkpoints'):
+            if os.path.islink('./checkpoints'):
+                os.remove('./checkpoints')
+            else:
+                shutil.rmtree('./checkpoints')
+
+        if os.path.exists('./predictions'):
+            if os.path.islink('./predictions'):
+                os.remove('./predictions')
+            else:
+                shutil.rmtree('./predictions')
+
+        os.symlink(checkpoints_dir, './checkpoints')
+        os.symlink(predictions_dir, './predictions')
+
 
     def on_epoch_begin(self):
         if self.trainer._mode == 'training':
@@ -473,55 +606,25 @@ class Logger(Callback):
                         str(self.trainer._epoch) + '\t' +
                         str(self.trainer._metrics) + '\n')
 
-            last_checkpoint_name = os.path.join(self.root_path, 'checkpoints', 'last.pth.tar')
-            best_checkpoint_name = os.path.join(self.root_path, 'checkpoints', 'best.pth.tar')
-
-            self.create_dir(last_checkpoint_name)
-            self.trainer.save(last_checkpoint_name)
-
-            if hasattr(self.trainer, '_metrics'):
-                is_best = False
-                if self.best_metric is None:
-                    self.best_metric = self.trainer._metrics[self.subset][self.metric]
-                    is_best = True
-
-                if ((self.best_metric < self.trainer._metrics[self.subset][self.metric] and
-                     self.max_mode) or
-                    (self.best_metric > self.trainer._metrics[self.subset][self.metric] and
-                     not self.max_mode)):
-
-                     self.best_metric = self.trainer._metrics[self.subset][self.metric]
-                     is_best = True
-
-                if is_best:
-                    self.trainer.save(best_checkpoint_name)
-
-
-
-    @staticmethod
-    def create_dir(fname):
-        dirname = os.path.dirname(fname)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
 
     def save_image(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
         if len(content.shape) == 3:
             content = content.swapaxes(0, 2).swapaxes(0, 1)
-        self.create_dir(fname)
+        os.makedirs('/'.join(fname.split('/')[:-1]))
         skimage.io.imsave(
             fname,
             content)
 
     def save_text(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.txt')
-        self.create_dir(fname)
+        os.makedirs('/'.join(fname.split('/')[:-1]))
         with open(fname, 'w+') as fout:
             fout.write(content)
 
     def save_audio(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.wav')
-        self.create_dir(fname)
+        os.makedirs('/'.join(fname.split('/')[:-1]))
         scipy.io.wavfile.write(
             fname,
             44100,
@@ -529,7 +632,7 @@ class Logger(Callback):
 
     def save_figure(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
-        self.create_dir(fname)
+        os.makedirs('/'.join(fname.split('/')[:-1]))
         content.savefig(fname)
 
 
@@ -585,17 +688,8 @@ class UnfreezeOnPlateau(Callback):
     '''
     This callback allows you to unfreeze optimizers one by one when the plateau
     is reached. If used together with ReduceLROnPlateau, should be listed after
-    it. The following arguments may be specified:
-
-    metric (str) : name of the metric to monitor.
-
-    cooldown (int) : minimal amount of epochs between two learning rate changes.
-
-    limit (int) : amount of epochs since the last improvement of maximum of
-        the monitored metric before the learning rate change.
-
-    max_mode (bool) : if True then the higher is the metric the better.
-        Otherwise the lower is the metric the better.
+    it. It temporarily turns off LR reducing and, instead of it, performs
+    unfreezing.
     '''
     def __init__(self,
                  metric,
@@ -603,6 +697,21 @@ class UnfreezeOnPlateau(Callback):
                  cooldown=5,
                  limit=5,
                  max_mode=False):
+
+        '''
+        Constructor.
+
+        Args:
+            metric (str) : name of the metric to monitor.
+
+            cooldown (int) : minimal amount of epochs between two learning rate changes.
+
+            limit (int) : amount of epochs since the last improvement of maximum of
+                the monitored metric before the learning rate change.
+
+            max_mode (bool) : if True then the higher is the metric the better.
+                Otherwise the lower is the metric the better.
+        '''
 
         self.cooldown = cooldown
         self.limit = limit
@@ -659,18 +768,8 @@ class UnfreezeOnPlateau(Callback):
 
 class ReduceLROnPlateau(Callback):
     '''
-    This callback allows you to unfreeze optimizers one by one when the plateau
-    is reached. The following arguments may be specified:
-
-    metric (str) : name of the metric to monitor.
-
-    cooldown (int) : minimal amount of epochs between two learning rate changes.
-
-    limit (int) : amount of epochs since the last improvement of maximum of
-        the monitored metric before the learning rate change.
-
-    max_mode (bool) : if True then the higher is the metric the better.
-        Otherwise the lower is the metric the better.
+    This callback performs Learning Rate reducing when the plateau
+    is reached.
     '''
     def __init__(self,
                  metric,
@@ -679,6 +778,21 @@ class ReduceLROnPlateau(Callback):
                  limit=5,
                  factor=0.5,
                  max_mode=False):
+
+        '''
+        Constructor.
+
+        Args:
+            metric (str) : name of the metric to monitor.
+
+            cooldown (int) : minimal amount of epochs between two learning rate changes.
+
+            limit (int) : amount of epochs since the last improvement of maximum of
+                the monitored metric before the learning rate change.
+
+            max_mode (bool) : if True then the higher is the metric the better.
+                Otherwise the lower is the metric the better.
+        '''
 
         self.cooldown = cooldown
         self.limit = limit
@@ -734,10 +848,35 @@ class CyclicLR(Callback):
     This callback allows cyclic learning rate. It takes the learning rate that
     is set to the optimizer in the beginning of the epoch and
     in the end of the epoch the learning rate is set to the same value as it was
-    in the beginning.
+    in the beginning. During the epoch the value of Learning Rate is attenuated
+    by the value of the ```cycle``` function. If you are using per-epoch
+    scheduling (```ReduceLROnPlateau``` for instance) -- you will need to
+    list ```CyclicLR``` callback in the list of callbacks AFTER other scheduling
+    callbacks. Otherwise the per-epoch scheduling will not work.
+
+    When epoch starts (on_epoch_begin), the values of the learning rates
+    are saved.
+
+    When batch starts (on_batch_begin), the function computes the attenuation
+    coefficient for the learning rates saved during epoch start and sets the
+    learning rate of all th optimizers to the attenuated value.
+
+    When epoch ends (on_epoch_end), the values of the initial learning rates are
+    restored.
     '''
-    def __init__(self, period_f):
-        self.period_f = period_f
+
+    def __init__(self, cycle):
+        '''
+        Constructor.
+
+        Args:
+            cycle (callable): A function or callable that takes as input one
+                variable (float between 0 and 1, fraction of completed steps in
+                the epoch) and computes the coefficient for the learning rate
+                for the next step.
+        '''
+        self.cycle = cycle
+
 
     def on_epoch_begin(self):
         self.lrs = []
@@ -747,11 +886,12 @@ class CyclicLR(Callback):
                 self.lrs[-1].append(
                     optimizer.optimizer.param_groups[index]['lr'])
 
+
     def on_batch_begin(self):
         for optim_index in range(len(self.trainer._optimizers)):
             for group_index in range(len(self.trainer._optimizers[optim_index].optimizer.param_groups)):
                 self.trainer._optimizers[optim_index].optimizer.param_groups[group_index]['lr'] = (
-                    self.lrs[optim_index][group_index] * self.period_f(self.trainer._progress))
+                    self.lrs[optim_index][group_index] * self.cycle(self.trainer._progress))
 
     def on_epoch_end(self):
         for optim_index in range(len(self.lrs)):

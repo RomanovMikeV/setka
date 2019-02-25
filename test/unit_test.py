@@ -96,7 +96,7 @@ def criterion(input, target):
     return torch.nn.functional.cross_entropy(input[0], target[0])
 
 def loss(input, target):
-    return criterion(input, target), 1.0
+    return criterion(input, target)
 
 def accuracy(preds, target):
     return (preds[0].argmax(dim=1) == target[0]).float().sum(), len(preds[0])
@@ -141,12 +141,12 @@ trainer = scorch.base.Trainer(net,
                                 divide_first=[True, False]),
                              scorch.callbacks.MakeCheckpoints('accuracy'),
                              scorch.callbacks.SaveResult(),
-                             scorch.callbacks.SaveResult(processing_f=processing_placeholder),
-                             scorch.callbacks.WriteToTensorboard(processing_f=visualize),
-                             scorch.callbacks.Logger(processing_f=visualize),
+                             scorch.callbacks.SaveResult(f=processing_placeholder),
+                             scorch.callbacks.WriteToTensorboard(f=visualize),
+                             scorch.callbacks.Logger(f=visualize),
                              scorch.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
                              scorch.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
-                             scorch.callbacks.CyclicLR(period_f=cycle)],
+                             scorch.callbacks.CyclicLR(cycle=cycle)],
                   seed=1,
                   silent=False)
 dataset = DataSet()
@@ -176,11 +176,11 @@ trainer = scorch.base.Trainer(net,
                                 metrics=[accuracy, loss]),
                              scorch.callbacks.MakeCheckpoints('accuracy'),
                              scorch.callbacks.SaveResult(),
-                             scorch.callbacks.WriteToTensorboard(processing_f=visualize),
-                             scorch.callbacks.Logger(processing_f=visualize),
+                             scorch.callbacks.WriteToTensorboard(f=visualize),
+                             scorch.callbacks.Logger(f=visualize),
                              scorch.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
                              scorch.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
-                             scorch.callbacks.CyclicLR(period_f=cycle)],
+                             scorch.callbacks.CyclicLR(cycle=cycle)],
                   seed=1,
                   silent=False)
 
