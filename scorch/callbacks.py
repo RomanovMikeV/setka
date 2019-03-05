@@ -10,6 +10,8 @@ import zipfile
 import scipy.io.wavfile
 import skimage
 import types
+import pickle
+import copy
 
 from . import internal
 
@@ -77,13 +79,13 @@ class Callback():
 class SaveResult(Callback):
     '''
     Callback for saving predictions of the model. The results are
-    stored in a specified directory. Batches are processed with the
+    stored in a directory ```predictions``` and in directory specified in
+    ```trainer._predictions_dir```. Batches are processed with the
     specified function ```f```. The directory is flushed during the
     ```__init__``` and the result is saved when the batch is
     finished (when on_batch_end is triggered).
     '''
-    def __init__(self, f=None,
-                 dir='predictions'):
+    def __init__(self, f=None):
         '''
         Constructor
 
@@ -95,16 +97,11 @@ class SaveResult(Callback):
                 stored.
         '''
         self.f = f
-        self.dir = dir
         self.index = 0
 
-        # if os.path.exists(dir):
-            # if os.path.islink(dir):
-                # os.remove(dir)
-            # else:
-                # shutil.rmtree(dir)
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+        if not os.path.exists('./predictions'):
+            os.makedirs('./predictions')
+
 
     def on_batch_end(self):
         if self.trainer._mode == 'predicting':
@@ -127,7 +124,11 @@ class SaveResult(Callback):
                     res[self.trainer._ids[index]] = one_output
 
             #print("Saving result")
-            torch.save(res, os.path.join(self.dir, str(self.index) + '.pth.tar'))
+            torch.save(res, os.path.join('./predictions', str(self.index) + '.pth.tar'))
+
+            if hasattr(self.trainer, "_predictions_dir"):
+                torch.save(res, os.path.join(self.trainer._predictions_dir,
+                    str(self.index) + 'pth.tar'))
 
             self.index += 1
 
@@ -268,7 +269,7 @@ class ComputeMetrics(Callback):
                             denominators = numpy.array(res[1])
                     else:
                         enumerators = numpy.array(res)
-                        denoinators = numpy.ones(enumerators.shape)
+                        denominators = numpy.ones(enumerators.shape)
 
                     if self.enumerators[index] is None:
                         self.enumerators[index] = enumerators
@@ -322,8 +323,9 @@ class MakeCheckpoints(Callback):
 
     The checkpoint is computed when epoch starts (on_epoch_begin).
 
-    The checkpoints are saved in the directory called "checkpoints". If the
-    checkpoints directory does not exist -- it will be created.
+    The checkpoints are saved in the directory ```checkpoints``` and
+    in a directory specified in ```trainer._checkpoints_dir```. If the
+    ```checkpoints``` directory does not exist -- it will be created.
     '''
     def __init__(self,
                  metric,
@@ -351,6 +353,9 @@ class MakeCheckpoints(Callback):
         self.name = name
         self.subset = subset
 
+        if not os.path.exists('./checkpoints'):
+            os.makedirs('./checkpoints')
+
 
     # @staticmethod
     # def create_dir(fname):
@@ -362,11 +367,6 @@ class MakeCheckpoints(Callback):
     def on_epoch_begin(self):
 
         is_best = False
-
-        latest_path = 'checkpoints/' + self.name + '_latest.pth.tar'
-        best_path = 'checkpoints/' + self.name + '_best.pth.tar'
-
-        # self.create_dir(latest_path)
 
         if self.trainer._mode == 'training':
             if hasattr(self.trainer, '_metrics'):
@@ -386,9 +386,24 @@ class MakeCheckpoints(Callback):
                              is_best = True
 
 
-            self.trainer.save(latest_path)
+            self.trainer.save(os.path.join(
+                './checkpoints',
+                self.name + '_latest.pth.tar'))
+
             if is_best:
-                self.trainer.save(best_path)
+                self.trainer.save(os.path.join(
+                    './checkpoints',
+                    self.name + '_best.pth.tar'))
+
+            if hasattr(self.trainer, '_checkpoints_dir'):
+                self.trainer.save(os.path.join(
+                    self.trainer._checkpoints_dir,
+                    self.name + '_latest.pth.tar'))
+
+                if is_best:
+                    self.trainer.save(os.path.join(
+                        self.trainer._checkpoints_dir,
+                        self.name + '_best.pth.tar'))
 
 
 class WriteToTensorboard(Callback):
@@ -500,9 +515,10 @@ class Logger(Callback):
     the Trainer creation in the text file called "bash_command.txt", it saves
     all the contents of the directory from where the command was called in the
     archive "snapshot.zip" (except for ```checkpoints```, ```logs```,
-    ```predictions``` and ```runs``` directories). It also links the
-    directories ```./checkpoints``` to ```./logs/<timestamp>/checkpoints```
-    and ```./predictions``` to ```./logs/<timestamp>/predictions```
+    ```predictions``` and ```runs``` directories). It crestes the
+    directories ```./logs/<timestamp>/checkpoints```
+    and ```./logs/<timestamp>/predictions``` and sves paths to these directories
+    to the ```trainer._checkpoints_dir``` and ```trainer._predictions_dir```.
 
     The following information is logged during the training process:
 
@@ -538,21 +554,13 @@ class Logger(Callback):
         self.write_flag = write_flag
         self.name = name
 
+        self.root_path = os.path.join(
+            './logs',
+            self.name,
+            str(datetime.datetime.now()).replace('\s', '-')
+        )
 
-    def on_init(self):
-        if not os.path.exists('./logs'):
-            os.mkdir('logs')
-
-        root_path = os.path.join('logs', self.name)
-        if not os.path.exists(root_path):
-            os.mkdir(root_path)
-        self.root_path = os.path.join(root_path, str(datetime.datetime.now()))
-        self.root_path.replace('\s', '-')
-
-        if not os.path.exists(self.root_path):
-            os.mkdir(self.root_path)
-
-        self.paths = {'root': self.root_path}
+        os.makedirs(self.root_path)
 
         with open(os.path.join(self.root_path, 'bash_command.txt'), 'w+') as fout:
             fout.write(' '.join(sys.argv))
@@ -574,26 +582,16 @@ class Logger(Callback):
 
                 zip.write(os.path.join(command_root_dir, file))
 
+
+    def on_init(self):
         checkpoints_dir = os.path.join(self.root_path, 'checkpoints')
         predictions_dir = os.path.join(self.root_path, 'predictions')
 
         os.makedirs(checkpoints_dir)
         os.makedirs(predictions_dir)
 
-        if os.path.exists('./checkpoints'):
-            if os.path.islink('./checkpoints'):
-                os.remove('./checkpoints')
-            else:
-                shutil.rmtree('./checkpoints')
-
-        if os.path.exists('./predictions'):
-            if os.path.islink('./predictions'):
-                os.remove('./predictions')
-            else:
-                shutil.rmtree('./predictions')
-
-        os.symlink(checkpoints_dir, './checkpoints')
-        os.symlink(predictions_dir, './predictions')
+        self.trainer._checkpoints_dir = checkpoints_dir
+        self.trainer._predictions_dir = predictions_dir
 
 
     def on_epoch_begin(self):
@@ -634,6 +632,7 @@ class Logger(Callback):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
         os.makedirs('/'.join(fname.split('/')[:-1]))
         content.savefig(fname)
+        # make pickle dump
 
 
     def show(self, to_show, id):
@@ -898,6 +897,63 @@ class CyclicLR(Callback):
             for group_index in range(len(self.trainer._optimizers[optim_index].optimizer.param_groups)):
                 self.trainer._optimizers[optim_index].optimizer.param_groups[group_index]['lr'] = (
                     self.lrs[optim_index][group_index])
+
+
+class ExponentialWeightAveraging(Callback):
+    '''
+    This callback performs weight averaging during the training. The callback
+    duplicates a model and updates weights of it in the following way:
+    $$\tilde{w}_i = \gamma \tilde{w}_i + (1.0 - \gamma) w_i,$$
+    where $\tilde{w}$ is a weight of an averaged model, $\gamma$ is a parameter
+    of an exponential moving average, $w_i$ is a weight of an optimized model.
+
+    This callbacks does nothing until specified epoch. After this epoch it
+    begins tracking of the averaged model. During validation and testing, the
+    averaged model is used.
+    '''
+
+    def __init__(self,
+                 gamma=0.99,
+                 epoch_start=10):
+        self.gamma = gamma
+        self.epoch_start = epoch_start
+
+    def on_epoch_begin(self):
+        if (self.trainer._epoch >= self.epoch_start and
+            not hasattr(self, 'averaged_model') and
+            self.trainer._mode == 'training'):
+
+            self.averaged_model = copy.deepcopy(self.trainer._model)
+
+        if (hasattr(self, 'averaged_model') and (
+                self.trainer._mode == 'valid' or
+                self.trainer._mode == 'test')):
+            self.trainable_model = self.trainer._model
+            self.trainer._model = self.averaged_model
+
+    def on_epoch_end(self):
+        if (hasattr(self, 'averaged_model') and (
+                self.trainer._mode == 'valid' or
+                self.trainer._mode == 'test')):
+
+            self.trainer._model = self.trainable_model
+
+
+    def on_batch_end(self):
+        if (hasattr(self, 'averaged_model') and
+            self.trainer._mode == 'training'):
+
+            avg_pars = self.averaged_model.parameters()
+            trn_pars = self.trainer._model.parameters()
+
+            for avg_par, trn_par in zip(avg_pars, trn_pars):
+                avg_par = avg_par * (1.0 - self.gamma) + trn_par * self.gamma
+
+
+
+            #avg_par += (
+            #    (1.0 - self.gamma) * trn_par)
+            #avg_par /= (2.0 - self.gamma)
 
 
 # class SwitchBetweenOptimizers(Callback):
