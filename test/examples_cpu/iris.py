@@ -74,7 +74,8 @@ trainer = scorch.base.Trainer(model,
                               callbacks=[
                                 scorch.callbacks.ComputeMetrics(metrics=[loss, accuracy]),
                                 scorch.callbacks.ReduceLROnPlateau(metric='loss'),
-                                scorch.callbacks.ExponentialWeightAveraging()
+                                scorch.callbacks.ExponentialWeightAveraging(),
+                                scorch.callbacks.WriteToTensorboard()
                               ])
 
 for index in range(100):
