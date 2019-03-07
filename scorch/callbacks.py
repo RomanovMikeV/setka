@@ -457,7 +457,8 @@ class WriteToTensorboard(Callback):
                         data[metric_name][subset] = (
                             self.trainer._metrics[subset][metric_name])
 
-                self.tb_writer.add_scalars(
+                for metric_name in data:
+                    self.tb_writer.add_scalars(
                             self.name + '/' + metric_name,
                             data[metric_name],
                             self.trainer._epoch)
