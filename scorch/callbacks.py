@@ -449,16 +449,17 @@ class WriteToTensorboard(Callback):
     def on_epoch_begin(self):
         if self.trainer._mode == 'training' and self.write_flag:
             if hasattr(self.trainer, '_metrics'):
-                
-                for metric_name in self.trainer._metrics[subset]:
-                    data = {}
-                    for subset in self.trainer._metrics:
-                        data[subset] = (
+                data = {}
+                for subset in self.trainer._metrics:
+                    for metric_name in self.trainer._metrics[subset]:
+                        if metric_name not in data:
+                            data[metric_name] = {}
+                        data[metric_name][subset] = (
                             self.trainer._metrics[subset][metric_name])
 
-                    self.tb_writer.add_scalars(
+                self.tb_writer.add_scalars(
                             self.name + '/' + metric_name,
-                            data,
+                            data[metric_name],
                             self.trainer._epoch)
 
     def show(self, to_show, id):
