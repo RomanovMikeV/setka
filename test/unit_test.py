@@ -63,6 +63,12 @@ class DataSet(scorch.base.DataSet):
             'test' : torch.from_numpy(y_test).long()
         }
 
+    def getitem(self, subset, index):
+        return [self.data[subset][index]], [self.labels[subset][index]], subset + '_' + str(index)
+
+    def getlen(self, subset):
+        return len(self.labels[subset])
+
 
 class Network(scorch.base.Network):
     def __init__(self):

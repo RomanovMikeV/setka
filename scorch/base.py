@@ -18,6 +18,7 @@ import torch
 import shutil
 import gc
 import time
+import copy
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -72,94 +73,60 @@ class DataSet():
 
     The DataSet has the following methods:
         * __init__ -- constructor, where the index collection
-            is ususally performed. You need to redefine it.
+            is ususally performed. You need to define it.
             In the original constuctor the ```subset``` is set
             to ```train```.
 
+        * getlen -- function that gets the size of the subset of the dataset.
+            This function gets as argument the subset ID (hashable).
+            You need to define this function in your class.
+
+        * getitem -- function that retrieves the item form the dataset.
+            This function gets as arguments the subset ID (hashable) and the
+            ID of the element in the subset (index).
+            You need to define this function in your class.
+
+
+        * getitem -- function that selects
+
         * __len__ -- function that is called when the ```len()```
             operator is called and returns the volume of the
-            current subset. It is likely that you will need to
-            redefine it.
+            current subset. Predefined, you do not need to redefine it.
 
         * __getitem__ -- function that gets the item of the dataset
-            by its index. It is likely that you will need to
-            redefine it.
+            by its index. Predefined, you do not need to redefine it.
 
-        * select_subset(subset) -- function that selects the subset
-            specified in the argument.
+
     '''
 
     def __init__(self):
-        '''
-        Class constructor. Dataset index collection is usually
-        performed here. You need to overload it.
-        In the original constuctor the ```subset``` is set
-        to ```train```.
-        '''
-        self.subset = 'train'
+        pass
 
+    def getitem(self, subset, index):
+        pass
+
+    def getlen(self, subset):
+        pass
+
+    def __getitem__(self, *args):
+        args = args[0]
+        if type(args) is tuple:
+            assert(len(args) <= 2)
+            assert(len(args) > 0)
+
+            return self.getitem(args[0], args[1])
+        else:
+            if not hasattr(self, 'subset'):
+                sliced_dataset = copy.copy(self)
+                sliced_dataset.subset = args
+                return sliced_dataset
+
+            else:
+                return self.getitem(self.subset, args)
 
     def __len__(self):
-        '''
-        Function that gets length of dataset's subset specified
-        in ```subset```. By default is
-
-        ```
-        return len(self.inputs[mode])
-        ```
-
-        Returns:
-            int, number of elements in the selected subset.
-        '''
-
-        return len(self.data[self.subset])
-
-    def __getitem__(self, index):
-        '''
-        Function that gets the item from the dataset's subset
-        specified in ```subset```. Most likely you will redefine
-        it.
-
-        By default it is:
-        ```
-        datum = self.data[mode][index]
-        target = self.labels[mode][index]
-
-        id = mode + "_" + str(index)
-
-        return [datum], [target], id
-        ```
-
-        Args:
-            index (int): index of the item to be loaded.
-
-        Returns:
-            list of inputs to the neural network for the item.
-
-            list of targets for the item.
-
-            id (str is preferred) of the item.
-        '''
-
-        datum = self.data[self.subset][index]
-        target = self.labels[self.subset][index]
-
-        id = self.subset + "_" + str(index)
-
-        return [datum], [target], id
-
-    def select_subset(self, subset):
-        '''
-        Switches the current subset of the DataSet.
-
-        Args:
-            subset (str): subset identificator of the dataset
-
-        Returns:
-            self
-        '''
-        self.subset = subset
-        return self
+        assert(hasattr(self, 'subset'))
+        return self.getlen(self.subset)
 
 
 class Network(torch.nn.Module):
@@ -461,8 +428,7 @@ class Trainer():
         self._subset = subset
         self._dataset = dataset
 
-        self._dataset.select_subset(subset)
-        self._ds_wrapper = internal.DataSetWrapper(self._dataset)
+        self._ds_wrapper = internal.DataSetWrapper(self._dataset[subset])
 
         for callback in self._callbacks:
             callback.on_epoch_begin()
@@ -608,13 +574,13 @@ class Trainer():
         with torch.no_grad():
 
             # Creating test wrapper for the dataset
-            dataset.select_subset(subset)
-            self._ds_wrapper = internal.DataSetWrapper(dataset)
+            self._ds_wrapper = internal.DataSetWrapper(dataset[subset])
 
             for callback in self._callbacks:
                 callback.on_epoch_begin()
 
-            valid_sampler = torch.utils.data.sampler.SequentialSampler(self._ds_wrapper)
+            valid_sampler = torch.utils.data.sampler.SequentialSampler(
+                self._ds_wrapper)
 
             # Creating dataloader
             valid_loader = data.DataLoader(self._ds_wrapper,
@@ -723,9 +689,8 @@ class Trainer():
         with torch.no_grad():
 
             # Creating test wrapper for the dataset
-            dataset.select_subset(subset)
             self._ds_wrapper = internal.DataSetWrapper(
-                dataset)
+                dataset[subset])
 
             for callback in self._callbacks:
                 callback.on_epoch_begin()

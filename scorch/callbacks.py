@@ -457,6 +457,7 @@ class WriteToTensorboard(Callback):
                         data[metric_name][subset] = (
                             self.trainer._metrics[subset][metric_name])
 
+
                 for metric_name in data:
                     self.tb_writer.add_scalars(
                             self.name + '/' + metric_name,
@@ -597,8 +598,6 @@ class Logger(Callback):
 
     def on_epoch_begin(self):
         if self.trainer._mode == 'training':
-            if hasattr(self.trainer, '_metrics'):
-                print(self.trainer._metrics)
             with open(os.path.join(self.root_path, 'metrics.txt'), 'a+') as fout:
                 if hasattr(self.trainer, '_metrics'):
                     fout.write(

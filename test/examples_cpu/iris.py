@@ -4,8 +4,10 @@ import scorch.callbacks
 import sklearn.datasets
 import numpy
 
+name = 'iris_test'
+
 class Iris(scorch.base.DataSet):
-    def __init__(self, valid_split=0.1, test_split=0.1, mode='train'):
+    def __init__(self, valid_split=0.1, test_split=0.1):
         super()
         data = sklearn.datasets.load_iris()
 
@@ -20,8 +22,6 @@ class Iris(scorch.base.DataSet):
         X = X[order, :]
         y = y[order]
 
-        self.mode = mode
-
         self.data = {
             'valid': X[:n_valid, :],
             'test': X[n_valid:n_valid + n_test, :],
@@ -34,13 +34,13 @@ class Iris(scorch.base.DataSet):
             'train': y[n_valid + n_test:]
         }
 
-    def __len__(self):
-        return len(self.targets[self.mode])
+    def getlen(self, subset):
+        return len(self.targets[subset])
 
-    def __getitem__(self, idx):
-        features = torch.Tensor(self.data[self.mode][idx])
-        class_id = torch.Tensor(self.targets[self.mode][idx:idx+1])
-        return [features], [class_id], self.mode + "_" + str(idx)
+    def getitem(self, subset, index):
+        features = torch.Tensor(self.data[subset][index])
+        class_id = torch.Tensor(self.targets[subset][index:index+1])
+        return [features], [class_id], subset + "_" + str(index)
 
 
 class IrisNet(scorch.base.Network):
@@ -75,7 +75,8 @@ trainer = scorch.base.Trainer(model,
                                 scorch.callbacks.ComputeMetrics(metrics=[loss, accuracy]),
                                 scorch.callbacks.ReduceLROnPlateau(metric='loss'),
                                 scorch.callbacks.ExponentialWeightAveraging(),
-                                scorch.callbacks.WriteToTensorboard()
+                                scorch.callbacks.WriteToTensorboard(name=name),
+                                scorch.callbacks.Logger(name=name)
                               ])
 
 for index in range(100):
