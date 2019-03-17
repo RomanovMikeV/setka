@@ -1,11 +1,11 @@
 import torch
-import scorch
+import setka
 import torchvision.datasets
-import scorch.base
+import setka.base
 import os
 import numpy
 
-class MNIST(scorch.base.DataSet):
+class MNIST(setka.base.DataSet):
     def __init__(self, val_split=0.1):
         ds_path = '~/datasets/MNIST'
 

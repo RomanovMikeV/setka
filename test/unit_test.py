@@ -8,9 +8,9 @@ import numpy
 
 import torch
 
-import scorch.base
-import scorch.callbacks
-#import scorch.scripts
+import setka.base
+import setka.callbacks
+#import setka.scripts
 
 import matplotlib.pyplot as plt
 
@@ -46,9 +46,9 @@ labels_valid[numpy.arange(len(y_valid)), y_valid] = 1
 labels_test[numpy.arange(len(y_test)), y_test] = 1
 
 
-# Computing result with scorch
+# Computing result with setka
 
-class DataSet(scorch.base.DataSet):
+class DataSet(setka.base.DataSet):
     def __init__(self):
         super(DataSet, self).__init__()
         self.data = {
@@ -70,7 +70,7 @@ class DataSet(scorch.base.DataSet):
         return len(self.labels[subset])
 
 
-class Network(scorch.base.Network):
+class Network(setka.base.Network):
     def __init__(self):
         super(Network, self).__init__()
 
@@ -131,28 +131,28 @@ def cycle(progress):
     else:
         return 1.0
 
-trainer = scorch.base.Trainer(net,
+trainer = setka.base.Trainer(net,
                   criterion=criterion,
                   optimizers=[
-                    scorch.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
-                    scorch.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    scorch.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    scorch.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    scorch.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
+                    setka.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
+                    setka.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    setka.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    setka.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    setka.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
                   callbacks=[
-                             scorch.callbacks.ShuffleDataset(shuffle_valid=True),
-                             scorch.callbacks.ComputeMetrics(),
-                             scorch.callbacks.ComputeMetrics(
+                             setka.callbacks.ShuffleDataset(shuffle_valid=True),
+                             setka.callbacks.ComputeMetrics(),
+                             setka.callbacks.ComputeMetrics(
                                 metrics=[accuracy, loss],
                                 divide_first=[True, False]),
-                             scorch.callbacks.MakeCheckpoints('accuracy'),
-                             scorch.callbacks.SaveResult(),
-                             scorch.callbacks.SaveResult(f=processing_placeholder),
-                             scorch.callbacks.WriteToTensorboard(f=visualize),
-                             scorch.callbacks.Logger(f=visualize),
-                             scorch.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
-                             scorch.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
-                             scorch.callbacks.CyclicLR(cycle=cycle)],
+                             setka.callbacks.MakeCheckpoints('accuracy'),
+                             setka.callbacks.SaveResult(),
+                             setka.callbacks.SaveResult(f=processing_placeholder),
+                             setka.callbacks.WriteToTensorboard(f=visualize),
+                             setka.callbacks.Logger(f=visualize),
+                             setka.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
+                             setka.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
+                             setka.callbacks.CyclicLR(cycle=cycle)],
                   seed=1,
                   silent=False)
 dataset = DataSet()
@@ -170,23 +170,23 @@ for epoch in range(10):
                                batch_size=32)
 
 
-trainer = scorch.base.Trainer(net,
+trainer = setka.base.Trainer(net,
                   criterion=criterion,
                   optimizers=[
-                    scorch.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
-                    scorch.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    scorch.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    scorch.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    scorch.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
-                  callbacks=[scorch.callbacks.ComputeMetrics(
+                    setka.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
+                    setka.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    setka.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    setka.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                    setka.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
+                  callbacks=[setka.callbacks.ComputeMetrics(
                                 metrics=[accuracy, loss]),
-                             scorch.callbacks.MakeCheckpoints('accuracy'),
-                             scorch.callbacks.SaveResult(),
-                             scorch.callbacks.WriteToTensorboard(f=visualize),
-                             scorch.callbacks.Logger(f=visualize),
-                             scorch.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
-                             scorch.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
-                             scorch.callbacks.CyclicLR(cycle=cycle)],
+                             setka.callbacks.MakeCheckpoints('accuracy'),
+                             setka.callbacks.SaveResult(),
+                             setka.callbacks.WriteToTensorboard(f=visualize),
+                             setka.callbacks.Logger(f=visualize),
+                             setka.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
+                             setka.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
+                             setka.callbacks.CyclicLR(cycle=cycle)],
                   seed=1,
                   silent=False)
 

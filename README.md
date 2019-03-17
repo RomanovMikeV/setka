@@ -1,43 +1,26 @@
-[![Build Status](https://travis-ci.com/RomanovMikeV/scorch.svg?branch=master)](https://travis-ci.com/RomanovMikeV/scorch)
-[![codecov](https://codecov.io/gh/RomanovMikeV/scorch/branch/master/graph/badge.svg)](https://codecov.io/gh/RomanovMikeV/scorch)
+[![Build Status](https://travis-ci.com/RomanovMikeV/setka.svg?branch=master)](https://travis-ci.com/RomanovMikeV/setka)
+[![codecov](https://codecov.io/gh/RomanovMikeV/setka/branch/master/graph/badge.svg)](https://codecov.io/gh/RomanovMikeV/setka)
 
 
 
-# Scorch: utilities for network training with PyTorch
+# setka: utilities for network training with PyTorch
 
-Scorch is a powerful and flexible tool for neural network training and fast
+setka is a powerful and flexible tool for neural network training and fast
 prototyping.
-
-## Prerequisites
-
-Before using scorch, please install:
-
-[PyTorch](https://pytorch.org/) for your
-system.
-
-tensorflow  with
-```
-conda install tensorflow
-```
-
-tensorboardX with
-```
-pip install tensorboardX
-```
 
 ## Installation
 To install this package, use
 ```
-pip install git+http://github.com/RomanovMikeV/scorch
+pip install git+http://github.com/RomanovMikeV/setka
 ```
 
 ## Usage
 
 Below is comparison with Keras:
 
-Model training with Scorch:
+Model training with setka:
 ```python
-class DataSet(scorch.base.DataSet):
+class DataSet(setka.base.DataSet):
     def __init__(self):
         super(DataSet, self).__init__()
         self.data = {
@@ -53,7 +36,7 @@ class DataSet(scorch.base.DataSet):
         }
 
 
-class Network(scorch.base.Network):
+class Network(setka.base.Network):
     def __init__(self):
         super(Network, self).__init__()
 
@@ -99,15 +82,15 @@ def accuracy(preds, target):
     return (preds[0].argmax(dim=1) == target[0][:, 0]).float().mean()
 
 net = Network()
-trainer = scorch.base.Trainer(net,
+trainer = setka.base.Trainer(net,
                   optimizers=[
-                      scorch.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
+                      setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
                   callbacks=[
-                    scorch.callbacks.ComputeMetrics(
+                    setka.callbacks.ComputeMetrics(
                         metrics={'main': accuracy, 'loss': criterion}),
-                    scorch.callbacks.MakeCheckpoints(),
-                    scorch.callbacks.SaveResult(),
-                    scorch.callbacks.WriteToTensorboard()],
+                    setka.callbacks.MakeCheckpoints(),
+                    setka.callbacks.SaveResult(),
+                    setka.callbacks.WriteToTensorboard()],
                   criterion=criterion,
                   use_cuda=False, silent=False)
 dataset = DataSet()
@@ -190,7 +173,7 @@ Soon will be available
 Network should be defined as follows:
 
 ```python
-class Network(scorch.base.Network):
+class Network(setka.base.Network):
     def __init__(self):
         super().__init__()
 
@@ -208,7 +191,7 @@ class Network(scorch.base.Network):
 
 Dataset should be defined as follows:
 ```python
-class DataSet(scorch.base.DataSet):
+class DataSet(setka.base.DataSet):
     def __init__(self):
         '''
         Definition of your dataset elements

@@ -249,7 +249,7 @@ class Trainer():
         Args:
             model (base.Network): the model for the socket.
 
-            callbacks (list): List of scorch.callbacks to use
+            callbacks (list): List of setka.callbacks to use
                 during training.
 
             seed (int): seed to initialize the random value

@@ -1,12 +1,12 @@
 import torch
-import scorch.base
-import scorch.callbacks
+import setka.base
+import setka.callbacks
 import sklearn.datasets
 import numpy
 
 name = 'iris_test'
 
-class Iris(scorch.base.DataSet):
+class Iris(setka.base.DataSet):
     def __init__(self, valid_split=0.1, test_split=0.1):
         super()
         data = sklearn.datasets.load_iris()
@@ -43,7 +43,7 @@ class Iris(scorch.base.DataSet):
         return [features], [class_id], subset + "_" + str(index)
 
 
-class IrisNet(scorch.base.Network):
+class IrisNet(setka.base.Network):
     def __init__(self):
         super().__init__()
         self.fc1 = torch.nn.Linear(4, 100)
@@ -68,15 +68,15 @@ def accuracy(pred, targ):
     return (predicted == targ[0][:, 0].long()).sum(), predicted.numel()
 
 
-trainer = scorch.base.Trainer(model,
-                              optimizers=[scorch.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-3)],
+trainer = setka.base.Trainer(model,
+                              optimizers=[setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-3)],
                               criterion=loss,
                               callbacks=[
-                                scorch.callbacks.ComputeMetrics(metrics=[loss, accuracy]),
-                                scorch.callbacks.ReduceLROnPlateau(metric='loss'),
-                                scorch.callbacks.ExponentialWeightAveraging(),
-                                scorch.callbacks.WriteToTensorboard(name=name),
-                                scorch.callbacks.Logger(name=name)
+                                setka.callbacks.ComputeMetrics(metrics=[loss, accuracy]),
+                                setka.callbacks.ReduceLROnPlateau(metric='loss'),
+                                setka.callbacks.ExponentialWeightAveraging(),
+                                setka.callbacks.WriteToTensorboard(name=name),
+                                setka.callbacks.Logger(name=name)
                               ])
 
 for index in range(100):

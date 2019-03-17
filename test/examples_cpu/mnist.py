@@ -1,8 +1,8 @@
 import torch
-import scorch
+import setka
 import torchvision.datasets
-import scorch.base
-import scorch.callbacks
+import setka.base
+import setka.callbacks
 import os
 import numpy
 import sys
@@ -25,12 +25,12 @@ def loss(predictions, targets):
 def acc(predictions, targets):
     return (predictions[0].argmax(dim=-1) == targets[0]).sum(), targets[0].numel()
 
-trainer = scorch.base.Trainer(
+trainer = setka.base.Trainer(
     net,
     criterion=loss,
-    optimizers=[scorch.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
-    callbacks=[scorch.callbacks.ComputeMetrics([loss, acc]),
-               scorch.callbacks.ExponentialWeightAveraging(epoch_start=2)]
+    optimizers=[setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
+    callbacks=[setka.callbacks.ComputeMetrics([loss, acc]),
+               setka.callbacks.ExponentialWeightAveraging(epoch_start=2)]
 )
 
 for index in range(5):
@@ -49,12 +49,12 @@ def loss(predictions, targets):
 def acc(predictions, targets):
     return (predictions[0].argmax(dim=-1) == targets[0]).sum(), targets[0].numel()
 
-trainer = scorch.base.Trainer(
+trainer = setka.base.Trainer(
     net,
     criterion=loss,
-    optimizers=[scorch.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
-    callbacks=[scorch.callbacks.ComputeMetrics([loss, acc]),
-               scorch.callbacks.ExponentialWeightAveraging(epoch_start=2)]
+    optimizers=[setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
+    callbacks=[setka.callbacks.ComputeMetrics([loss, acc]),
+               setka.callbacks.ExponentialWeightAveraging(epoch_start=2)]
 )
 
 for index in range(5):
@@ -75,12 +75,12 @@ for index in range(5):
 # def acc(predictions, targets):
 #     return (predictions[0].argmax(dim=-1) == targets[0]).sum(), targets[0].numel()
 #
-# trainer = scorch.base.Trainer(
+# trainer = setka.base.Trainer(
 #     net,
 #     criterion=loss,
-#     optimizers=[scorch.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
-#     callbacks=[scorch.callbacks.ComputeMetrics([loss, acc]),
-#                scorch.callbacks.ExponentialWeightAveraging(epoch_start=2)]
+#     optimizers=[setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
+#     callbacks=[setka.callbacks.ComputeMetrics([loss, acc]),
+#                setka.callbacks.ExponentialWeightAveraging(epoch_start=2)]
 # )
 #
 # for index in range(5):
