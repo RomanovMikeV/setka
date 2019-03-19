@@ -16,157 +16,95 @@ pip install git+http://github.com/RomanovMikeV/setka
 
 ## Usage
 
-Below is comparison with Keras:
-
 Model training with setka:
 ```python
-class DataSet(setka.base.DataSet):
-    def __init__(self):
-        super(DataSet, self).__init__()
+
+# Define your dataset
+class Iris(setka.base.DataSet):
+    def __init__(self, valid_split=0.1, test_split=0.1):
+        super()
+        data = sklearn.datasets.load_iris()
+
+        X = data['data']
+        y = data['target']
+
+        n_valid = int(y.size * valid_split)
+        n_test =  int(y.size * test_split)
+
+        order = numpy.random.permutation(y.size)
+
+        X = X[order, :]
+        y = y[order]
+
         self.data = {
-            'train': torch.from_numpy(x_train).transpose(1, 3).float(),
-            'valid': torch.from_numpy(x_valid).transpose(1, 3).float(),
-            'test':  torch.from_numpy(x_test).transpose(1, 3).float()
+            'valid': X[:n_valid, :],
+            'test': X[n_valid:n_valid + n_test, :],
+            'train': X[n_valid + n_test:, :]
         }
 
-        self.labels = {
-            'train': torch.from_numpy(y_train).long(),
-            'valid': torch.from_numpy(y_valid).long(),
-            'test' : torch.from_numpy(y_test).long()
+        self.targets = {
+            'valid': y[:n_valid],
+            'test': y[n_valid:n_valid + n_test],
+            'train': y[n_valid + n_test:]
         }
 
+    # Define a method that gets the length of the subset by subset keyword
+    def getlen(self, subset):
+        return len(self.targets[subset])
 
-class Network(setka.base.Network):
+    # Define a method that gets the item by the subset keyword and index of the item
+    def getitem(self, subset, index):
+        features = torch.Tensor(self.data[subset][index])
+        class_id = torch.Tensor(self.targets[subset][index:index+1])
+	
+	# Method should return three items: list of features, list of targets and string ID of a sample
+        return [features], [class_id], subset + "_" + str(index)
+
+
+# Define your network (in the same way as it is done in PyTorch)
+class IrisNet(setka.base.Network):
     def __init__(self):
-        super(Network, self).__init__()
+        super().__init__()
+        self.fc1 = torch.nn.Linear(4, 100)
+        self.fc2 = torch.nn.Linear(100, 3)
 
-        self.conv1 = torch.nn.Conv2d(3, 64, 3, padding=2)
-        self.bn1 = torch.nn.BatchNorm2d(64)
-        self.pool1 = torch.nn.MaxPool2d(2)
-        self.conv2 = torch.nn.Conv2d(64, 128, 3, padding=2)
-        self.bn2 = torch.nn.BatchNorm2d(128)
-        self.pool2 = torch.nn.MaxPool2d(2)
-        self.conv3 = torch.nn.Conv2d(128, 256, 3, padding=2)
-        self.bn3 = torch.nn.BatchNorm2d(256)
-        self.pool3 = torch.nn.MaxPool2d(2)
-        self.conv4 = torch.nn.Conv2d(256, 512, 3, padding=2)
-        self.bn4 = torch.nn.BatchNorm2d(512)
-        self.pool4 = torch.nn.MaxPool2d(2)
-        self.conv5 = torch.nn.Conv2d(512, 1024, 3, padding=2)
-        self.bn5 = torch.nn.BatchNorm2d(1024)
-        self.pool5 = torch.nn.MaxPool2d(2)
-
-        self.bn_last = torch.nn.BatchNorm1d(1024)
-        self.fc = torch.nn.Linear(1024, 10)
-
-    def forward(self, input):
-        res = input[0]
-
-        res = self.pool1(self.bn1(torch.relu(self.conv1(res))))
-        res = self.pool2(self.bn2(torch.relu(self.conv2(res))))
-        res = self.pool3(self.bn3(torch.relu(self.conv3(res))))
-        res = self.pool4(self.bn4(torch.relu(self.conv4(res))))
-        res = self.pool5(self.bn5(torch.relu(self.conv5(res))))
-
-        res = res.mean(dim=3).mean(dim=2)
-
-        res = self.fc(self.bn_last(res))
-
-        return [res]
+    def forward(self, x):
+	# Network should return a list of outputs
+        return [self.fc2(self.fc1(x[0]))]
 
 
-def criterion(preds, target):
-    return torch.nn.CrossEntropyLoss()(preds[0], target[0][:, 0])
+ds = Iris()
+model = IrisNet()
 
-def accuracy(preds, target):
-    return (preds[0].argmax(dim=1) == target[0][:, 0]).float().mean()
+# Define your loss
+def loss(pred, targ):
+    return torch.nn.functional.cross_entropy(pred[0], targ[0][:, 0].long())
 
-net = Network()
-trainer = setka.base.Trainer(net,
-                  optimizers=[
-                      setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
-                  callbacks=[
-                    setka.callbacks.ComputeMetrics(
-                        metrics={'main': accuracy, 'loss': criterion}),
-                    setka.callbacks.MakeCheckpoints(),
-                    setka.callbacks.SaveResult(),
-                    setka.callbacks.WriteToTensorboard()],
-                  criterion=criterion,
-                  use_cuda=False, silent=False)
-dataset = DataSet()
+# Define your metrics
+def accuracy(pred, targ):
+    predicted = pred[0].argmax(dim=1)
+    return (predicted == targ[0][:, 0].long()).sum(), predicted.numel()
 
-start = time.time()
-trainer.train_one_epoch(dataset, batch_size=32, num_workers=4)
-print('One epoch time:', time.time() - start)
+# Define your trainer
+trainer = setka.base.Trainer(model,
+                              optimizers=[setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-3)],
+                              criterion=loss,
+                              callbacks=[
+                                setka.callbacks.ComputeMetrics(metrics=[loss, accuracy]),
+                                setka.callbacks.ReduceLROnPlateau(metric='loss'),
+                                setka.callbacks.ExponentialWeightAveraging(),
+                                setka.callbacks.WriteToTensorboard(name=name),
+                                setka.callbacks.Logger(name=name)
+                              ])
 
-trainer.validate_one_epoch(dataset, batch_size=32)
+# You are ready to train
+for index in range(100):
+    trainer.train_one_epoch(ds, subset='train')
+    trainer.validate_one_epoch(ds, subset='train')
+    trainer.validate_one_epoch(ds, subset='valid')
 
-print('One epoch loss:', trainer._loss.item())
-print('One epoch accuracy:', trainer._valid_metrics['main'].item())
-
-
-trainer.train(dataset, batch_size=32,
-             num_workers=4,
-             epochs=2)
-
-print('3 epochs loss:', trainer._loss.item())
-print('3 epochs accuracy:', trainer._valid_metrics['main'].item())
+trainer.predict_one_epoch(ds, subset='test')
 ```
-
-Keras model training:
-```python
-model = Sequential()
-
-model.add(Conv2D(64, 3, padding='same', activation='relu', input_shape=(32, 32, 3)))
-model.add(BatchNormalization())
-model.add(MaxPooling2D())
-model.add(Conv2D(128, 3, padding='same', activation='relu'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D())
-model.add(Conv2D(256, 3, padding='same', activation='relu'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D())
-model.add(Conv2D(512, 3, padding='same', activation='relu'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D())
-model.add(Conv2D(1024, 3, padding='same', activation='relu'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D())
-
-model.add(Flatten())
-model.add(BatchNormalization())
-model.add(Dense(10, activation='softmax'))
-
-model.compile(loss=keras.losses.categorical_crossentropy,
-              optimizer=keras.optimizers.Adam(lr=3.0e-4),
-              metrics=['accuracy'])
-
-start = time.time()
-
-model.fit(x_train, labels_train, epochs=1, batch_size=32, verbose=1)
-print("Epoch time:", time.time() - start)
-
-scores = model.evaluate(x_test, labels_test, verbose=0)
-print('One epoch loss:', scores[0])
-print('One epoch acc :', scores[1])
-
-keras_one_epoch_loss = scores[0]
-keras_one_epoch_acc = scores[1]
-
-res = model.fit(x_train, labels_train, epochs=2, batch_size=32, verbose=1)
-
-scores = model.evaluate(x_test, labels_test, verbose=1)
-keras_3_epochs_loss = scores[0]
-keras_3_epochs_acc = scores[1]
-print('3 epochs loss:', scores[0])
-print('3 epochs acc :', scores[1])
-```
-
-
-## Bash interfaces
-
-Soon will be available
-
 
 ## Defining the Model
 
@@ -198,13 +136,13 @@ class DataSet(setka.base.DataSet):
         '''
         pass
 
-    def get_len(self, mode='train'):
+    def getlen(self, subset):
         '''
         Function to get length of the subset specified with 'mode'.
         '''
-        return len(self.data[mode])
+        return len(self.data[subset])
 
-    def get_item(self, index, mode='train'):
+    def getitem(self, subset, index):
         '''
         Function to get an item from from the subset of the dataset specified
         with 'mode'.
