@@ -76,6 +76,93 @@ class Callback():
         self.trainer = trainer
 
 
+class LambdaCallback(Callback):
+    '''
+    This callback will help you to rapidly create simple callbacks.
+    You have to speciy a function that you want to use as a callback action in the constructor
+
+    TODO: better documentation
+    TODO: test it
+    '''
+    def __init__(self,
+                 on_init=None,
+                 on_train_begin=None,
+                 on_train_end=None,
+                 on_epoch_begin=None,
+                 on_epoch_end=None,
+                 on_batch_begin=None,
+                 on_batch_end=None):
+
+        self._on_init = on_init
+        self._on_train_begin = on_train_begin
+        self._on_train_end = on_train_end
+        self._on_epoch_begin = on_epoch_begin
+        self._on_epoch_end = on_epoch_end
+        self._on_batch_begin = on_batch_begin
+        self._on_batch_end = on_batch_end
+
+    def on_init(self):
+        if self._on_init is not None:
+            self._on_init()
+
+    def on_train_begin(self):
+        if self._on_train_begin is not None:
+            self._on_train_begin()
+
+    def on_train_end(self):
+        if self._on_train_end is not None:
+            self._on_train_end()
+
+    def on_epoch_begin(self):
+        if self._on_epoch_begin() is not None:
+            self._on_epoch_begin()
+
+    def on_epoch_end(self):
+        if self._on_epoch_end is not None:
+            self._on_epoch_end()
+
+    def on_batch_begin(self):
+        if self._on_batch_begin is not None:
+            self._on_batch_begin()
+
+    def on_batch_end(self):
+        if self._on_batch_end is not None:
+            self._on_batch_end()
+
+
+class RollbackOnNan(Callback):
+    '''
+    This callback will rollback your model one step back as soon as it encounters a NAN value in the end of the batch
+    (on_batch_end).
+
+    TODO: better documentation
+    TODO: testing
+    '''
+    def on_batch_end(self):
+        res = 0
+        for output in self.trainer._output:
+            res += output.sum()
+
+        if torch.isnan(res):
+            if hasattr(self, 'saved_params'):
+                self.trainer.net.load_state_dict(self.saved_params)
+                for index in range(len(self.trainer._optimizers)):
+                    self.trainer._optimizers[index].load_state_dict(self.optimizers_params[index])
+            else:
+                raise ValueError(
+                    "Detected a problem in training process: NAN encountered, but no parameters were saved.")
+        else:
+            self.saved_params = self.trainer.net.state_dict()
+            if not hasattr(self, 'optimizers_params'):
+                self.optimizers_params = []
+            else:
+                self.optimizers_params.clear()
+
+            for optimizer in self.trainer._optimizers:
+                self.optimizers_params.append(optimizer.state_dict())
+
+
+
 class SaveResult(Callback):
     '''
     Callback for saving predictions of the model. The results are
@@ -840,6 +927,81 @@ class ReduceLROnPlateau(Callback):
             self.since_best += 1
             self.since_last += 1
 
+
+class IncreaseMomentumOnPlateau(Callback):
+    '''
+    This callback performs Learning Rate reducing when the plateau
+    is reached.
+    '''
+    def __init__(self,
+                 metric,
+                 subset='valid',
+                 cooldown=5,
+                 limit=5,
+                 factor=0.5,
+                 max_mode=False):
+
+        '''
+        Constructor.
+
+        Args:
+            metric (str) : name of the metric to monitor.
+
+            cooldown (int) : minimal amount of epochs between two learning rate changes.
+
+            limit (int) : amount of epochs since the last improvement of maximum of
+                the monitored metric before the learning rate change.
+
+            max_mode (bool) : if True then the higher is the metric the better.
+                Otherwise the lower is the metric the better.
+        '''
+
+        self.cooldown = cooldown
+        self.limit = limit
+        self.factor = factor
+
+        self.since_last = 0
+        self.since_best = 0
+
+        self.best_metric = None
+        self.subset = subset
+        self.metric = metric
+        self.max_mode = max_mode
+
+        self.optimizer_index = 1
+
+
+    def on_init(self):
+        self.trainer._lr_reduce=True
+
+
+    def on_epoch_end(self):
+        if (self.trainer._mode == 'validating' and
+            self.trainer._subset == self.subset and
+            self.trainer._lr_reduce):
+
+            if self.best_metric is None:
+                self.best_metric = self.trainer._metrics[self.subset][self.metric]
+                self.since_best = 0
+
+            else:
+                new_metric = self.trainer._metrics[self.subset][self.metric]
+
+                if ((new_metric > self.best_metric and self.max_mode) or
+                    (new_metric < self.best_metric and not self.max_mode)):
+
+                    self.best_metric = new_metric
+                    self.since_best = 0
+
+            if self.since_last >= self.cooldown and self.since_best >= self.limit:
+                self.trainer._line += 'REDUCING lr'
+                for optimizer in self.trainer._optimizers:
+                    for g in optimizer.optimizer.param_groups:
+                        g['lr'] *= self.factor
+                self.since_last = 0
+
+            self.since_best += 1
+            self.since_last += 1
 
 
 class CyclicLR(Callback):
