@@ -79,9 +79,17 @@ class Callback():
 class LambdaCallback(Callback):
     '''
     This callback will help you to rapidly create simple callbacks.
-    You have to speciy a function that you want to use as a callback action in the constructor
+    You have to speciy a function that you want to use as a callback action in the constructor.
 
-    TODO: better documentation
+    Args:
+        on_init (callable) -- function to be executed when on_init is executed
+        on_train_begin (callable) -- function to be executed when on_train_begin is executed
+        on_train_end (callable) -- function to be executed when on_train_end is executed
+        on_epoch_begin (callable) -- function to be executed when on_epoch_begin is executed
+        on_epoch_end (callable) -- function to be executed when on_epoch_end is executed
+        on_batch_begin (callable) -- function to be executed when on_batch_begin is executed
+        on_batch_end (callable) -- function to be executed when on_batch_end is executed
+
     TODO: test it
     '''
     def __init__(self,
