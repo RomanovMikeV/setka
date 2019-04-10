@@ -140,18 +140,29 @@ class LambdaCallback(Callback):
 
 class RollbackOnNan(Callback):
     '''
-    This callback will rollback your model one step back as soon as it encounters a NAN value in the end of the batch
-    (on_batch_end).
+    This callback will rollback your model one step back as soon as it encounters a NAN value or a value that whose
+    absolute value is higher than ```threshold``` in the end of the batch (on_batch_end).
+
+    Args:
+        threshold (float) -- threshold for the model or optimizer parameter.
 
     TODO: better documentation
     TODO: testing
     '''
-    def on_batch_end(self):
-        res = 0
-        for output in self.trainer._output:
-            res += output.sum()
+    def __init__(self, threshold=1.0e8):
+        self.threshold = threshold
 
-        if torch.isnan(res):
+    def on_batch_end(self):
+        res = torch.tensor([0.0])
+        nan_detected = False
+
+        for output in self.trainer._output:
+            res = max(res, torch.abs(output).max())
+
+            if torch.isnan(res.sum()):
+                nan_detected = True
+
+        if res > self.threshold or nan_detected:
             if hasattr(self, 'saved_params'):
                 self.trainer.net.load_state_dict(self.saved_params)
                 for index in range(len(self.trainer._optimizers)):
@@ -633,7 +644,8 @@ class Logger(Callback):
     def __init__(self,
                  f=None,
                  write_flag=True,
-                 name='checkpoint'):
+                 name='checkpoint',
+                 ignore_list=('checkpoints', 'logs', 'predictions', 'runs')):
 
         '''
         Constructor.
@@ -671,10 +683,7 @@ class Logger(Callback):
         zip = zipfile.ZipFile(os.path.join(self.root_path, 'snapshot.zip'), 'w')
 
         for file in os.listdir(command_root_dir):
-            if (file != 'checkpoints' and
-                file != 'logs' and
-                file != 'predictions' and
-                file != 'runs' and
+            if (file not in ignore_list and
                 file[0] != '.'):
 
                 zip.write(os.path.join(command_root_dir, file))
@@ -776,8 +785,6 @@ class Logger(Callback):
             fout.write(line + '\n')
 
 
-
-
 class UnfreezeOnPlateau(Callback):
     '''
     This callback allows you to unfreeze optimizers one by one when the plateau
@@ -847,7 +854,7 @@ class UnfreezeOnPlateau(Callback):
 
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit and not self.complete:
-                self.trainer._line += ("UNFREEZING (optimizer " + str(self.optimizer_index) + ")")
+                self.trainer._line += (" *** UNFREEZING (optimizer " + str(self.optimizer_index) + ") *** ")
                 self.trainer._optimizers[self.optimizer_index].is_active = True
                 self.since_last = 0
                 self.optimizer_index += 1
@@ -926,7 +933,7 @@ class ReduceLROnPlateau(Callback):
                     self.since_best = 0
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
-                self.trainer._line += 'REDUCING lr'
+                self.trainer._line += ' *** REDUCING lr *** '
                 for optimizer in self.trainer._optimizers:
                     for g in optimizer.optimizer.param_groups:
                         g['lr'] *= self.factor
@@ -938,7 +945,7 @@ class ReduceLROnPlateau(Callback):
 
 class IncreaseMomentumOnPlateau(Callback):
     '''
-    This callback performs Learning Rate reducing when the plateau
+    This callback performs Momentum increase when the plateau
     is reached.
     '''
     def __init__(self,
@@ -1002,7 +1009,7 @@ class IncreaseMomentumOnPlateau(Callback):
                     self.since_best = 0
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
-                self.trainer._line += 'REDUCING lr'
+                self.trainer._line += ' *** INCREASING momentum *** '
                 for optimizer in self.trainer._optimizers:
                     for g in optimizer.optimizer.param_groups:
                         g['lr'] *= self.factor
