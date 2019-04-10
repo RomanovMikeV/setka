@@ -526,17 +526,20 @@ class Trainer():
             for callback in self._callbacks:
                 callback.on_batch_end()
 
-            del self._input, self._target, self._loss, self._output
-
-            pbar.set_description(self._line)
-
             for opt_index in range(len(self._optimizers)):
                 if self._optimizers[opt_index].active:
                     self._optimizers[opt_index].module.eval()
 
+            del self._input, self._target, self._loss, self._output
 
-        for callback in self._callbacks:
-            callback.on_epoch_end()
+            if i == len(pbar) - 1:
+                for callback in self._callbacks:
+                    callback.on_epoch_end()
+
+            pbar.set_description(self._line)
+
+
+
 
         gc.collect()
 
@@ -650,10 +653,13 @@ class Trainer():
 
                 del self._input, self._output, self._target
 
+                if i == len(pbar) - 1:
+                    for callback in self._callbacks:
+                        callback.on_epoch_end()
+
                 pbar.set_description(self._line)
 
-            for callback in self._callbacks:
-                callback.on_epoch_end()
+            pbar.set_description(self._line)
 
             gc.collect()
             gc.collect()
