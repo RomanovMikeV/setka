@@ -15,6 +15,7 @@ import numpy
 import os
 import random
 import torch
+import torch.utils.data
 import shutil
 import gc
 import time
@@ -23,7 +24,6 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
 from . import internal
-from . import data
 
 
 class OptimizerSwitch():
@@ -213,12 +213,39 @@ class Trainer():
     * load -- loads network's and optimizer's states from the file
 
     '''
+
+    @staticmethod
+    def setup_environment(seed=0,
+                          max_threads=4,
+                          deterministic_cuda=False,
+                          benchmark_cuda=True,
+                          silent=False):
+        numpy.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+
+        os.environ["OMP_NUM_THREADS"] = str(max_threads)
+        os.environ["OPENBLAS_NUM_THREADS"] = str(max_threads)
+        os.environ["MKL_NUM_THREADS"] = str(max_threads)
+        os.environ["VECLIB_MAXIMUM_THREADS"] = str(max_threads)
+        os.environ["NUMEXPR_NUM_THREADS"] = str(max_threads)
+
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed(seed)
+            torch.cuda.manual_seed_all(seed)
+
+            torch.backends.cudnn.deterministic = deterministic_cuda
+            torch.backennds.cudnn.benchmark = benchmark_cuda
+
+
     def __init__(self, model,
                  optimizers,
                  criterion,
                  callbacks=[],
                  seed=0,
+                 max_threads=4,
                  deterministic_cuda=False,
+                 benchmark_cuda=True,
                  silent=False):
         '''
         Class constructor.
@@ -265,18 +292,10 @@ class Trainer():
 
             silent (bool): no outputs if True.
         '''
-
-        numpy.random.seed(seed)
-        random.seed(seed)
-        torch.manual_seed(seed)
-
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed(seed)
-            torch.cuda.manual_seed_all(seed)
-            if deterministic_cuda:
-                torch.backends.cudnn.deterministic = True
-            else:
-                torch.backends.cudnn.deterministic = False
+        self.setup_environment(seed=seed,
+                               max_threads=max_threads,
+                               deterministic_cuda=deterministic_cuda,
+                               benchmark_cuda=benchmark_cuda)
 
         self._model = torch.nn.DataParallel(model)
 
@@ -417,7 +436,7 @@ class Trainer():
             batch_size (int): batch size to use during training.
 
             num_workers (int): number of workers to use in
-                torch.data.DataLoader.
+                torch.utils.data.DataLoader.
 
             max_iterations (int): maximum amount of iterations to
                 perform during one epoch. If None -- training
@@ -435,7 +454,7 @@ class Trainer():
 
         train_sampler = torch.utils.data.sampler.SequentialSampler(self._ds_wrapper)
 
-        train_loader = data.DataLoader(self._ds_wrapper,
+        train_loader = torch.utils.data.DataLoader(self._ds_wrapper,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
@@ -561,7 +580,7 @@ class Trainer():
             batch_size (int): batch size to use during training
 
             num_workers (int): number of workers to use in
-                torch.data.DataLoader
+                torch.utils.data.DataLoader
 
             max_iterations (int): maximum amount of iterations to
                 perform during one epoch. If None -- training
@@ -586,7 +605,7 @@ class Trainer():
                 self._ds_wrapper)
 
             # Creating dataloader
-            valid_loader = data.DataLoader(self._ds_wrapper,
+            valid_loader = torch.utils.data.DataLoader(self._ds_wrapper,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
@@ -683,7 +702,7 @@ class Trainer():
             batch_size (int): batch size to use during training
 
             num_workers (int): number of workers to use in
-                torch.data.DataLoader
+                torch.utils.data.DataLoader
 
             max_iterations (int): maximum amount of iterations to
                 perform during one epoch
@@ -705,7 +724,7 @@ class Trainer():
                 self._ds_wrapper)
 
             # Creating dataloader
-            test_loader = data.DataLoader(self._ds_wrapper,
+            test_loader = torch.utils.data.DataLoader(self._ds_wrapper,
                                        batch_size=batch_size,
                                        shuffle=False,
                                        num_workers=num_workers,
