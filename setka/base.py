@@ -235,7 +235,7 @@ class Trainer():
             torch.cuda.manual_seed_all(seed)
 
             torch.backends.cudnn.deterministic = deterministic_cuda
-            torch.backennds.cudnn.benchmark = benchmark_cuda
+            torch.backends.cudnn.benchmark = benchmark_cuda
 
 
     def __init__(self, model,
