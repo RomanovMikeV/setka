@@ -515,11 +515,11 @@ class Trainer():
                 for index in range(len(self._target)):
                     self._target[index] = self._target[index].cuda()
 
-            self._output = self._model.forward(self._input)
-            self._loss = self._criterion(self._output, self._target)
-
             for opt_index in range(len(self._optimizers)):
                 self._optimizers[opt_index].optimizer.zero_grad()
+                    
+            self._output = self._model.forward(self._input)
+            self._loss = self._criterion(self._output, self._target)
 
             self._loss.backward()
 
