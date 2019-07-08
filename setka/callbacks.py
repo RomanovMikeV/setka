@@ -215,12 +215,18 @@ class SaveResult(Callback):
             for index in range(len(self.trainer._ids)):
 
                 one_input = []
-                for input_index in range(len(self.trainer._input)):
-                    one_input.append(self.trainer._input[input_index][index])
+                if isinstance(self.trainer._input, torch.Tensor):
+                    one_input.append(self.trainer._input[index])
+                else:
+                    for input_index in range(len(self.trainer._input)):
+                        one_input.append(self.trainer._input[input_index][index])
 
                 one_output = []
-                for output_index in range(len(self.trainer._output)):
-                    one_output.append(self.trainer._output[output_index][index])
+                if isinstance(self.trainer._output, torch.Tensor):
+                    one_output.append(self.trainer._output[index])
+                else:
+                    for output_index in range(len(self.trainer._output)):
+                        one_output.append(self.trainer._output[output_index][index])
 
                 if self.f is not None:
                     res[self.trainer._ids[index]] = self.f(
@@ -350,22 +356,38 @@ class ComputeMetrics(Callback):
         if self.trainer._mode == 'training' or self.trainer._mode == 'validating':
             self.steps += 1
 
-            one_output = [x.detach() for x in self.trainer._output]
-            one_target = [x.detach() for x in self.trainer._target]
+
+            output_tensor_mode = isinstance(self.trainer._output, torch.Tensor)
+            target_tensor_mode = isinstance(self.trainer._target, torch.Tensor)
+
+            if output_tensor_mode:
+                one_output = self.trainer._output.detach()
+            else:
+                one_output = [x.detach() for x in self.trainer._output]
+
+            if target_tensor_mode:
+                one_target = self.trainer._target.detach()
+            else:
+                one_target = [x.detach() for x in self.trainer._target]
 
             self.outputs.append(one_output)
             self.targets.append(one_target)
 
             if self.steps >= self.steps_to_compute:
 
-                self.outputs = list(zip(*self.outputs))
-                self.targets = list(zip(*self.targets))
+                if output_tensor_mode:
+                    self.outputs = torch.cat(self.outputs, dim=0)
+                else:
+                    self.outputs = list(zip(*self.outputs))
+                    for index in range(len(self.outputs)):
+                        self.outputs[index] = torch.cat(self.outputs[index], dim=0)
 
-                for index in range(len(self.outputs)):
-                    self.outputs[index] = torch.cat(self.outputs[index], dim=0)
-
-                for index in range(len(self.targets)):
-                    self.targets[index] = torch.cat(self.targets[index], dim=0)
+                if target_tensor_mode:
+                    self.targets = torch.cat(self.targets, dim=0)
+                else:
+                    self.targets = list(zip(*self.targets))
+                    for index in range(len(self.targets)):
+                        self.targets[index] = torch.cat(self.targets[index], dim=0)
 
                 for index in range(len(self.metrics)):
                     res = self.metrics[index](self.outputs, self.targets)
@@ -396,8 +418,8 @@ class ComputeMetrics(Callback):
                             (self.denominators[index].sum() + 1.0e-12))
 
 
-                self.outputs.clear()
-                self.targets.clear()
+                self.outputs = []
+                self.targets = []
                 self.steps = 0
 
             self.trainer._line += " ".join(
@@ -408,8 +430,8 @@ class ComputeMetrics(Callback):
     def on_epoch_end(self):
         # finilize metrics
 
-        self.outputs.clear()
-        self.targets.clear()
+        self.outputs = []
+        self.targets = []
 
         if self.trainer._mode == 'validating':
             if not hasattr(self.trainer, '_metrics'):
@@ -591,16 +613,25 @@ class WriteToTensorboard(Callback):
             for index in range(len(self.trainer._ids)):
 
                 one_input = []
-                for input_index in range(len(self.trainer._input)):
-                    one_input.append(self.trainer._input[input_index][index])
+                if isinstance(self.trainer._input, torch.Tensor):
+                    one_input.append(self.trainer._input[index])
+                else:
+                    for input_index in range(len(self.trainer._input)):
+                        one_input.append(self.trainer._input[input_index][index])
 
                 one_target = []
-                for target_index in range(len(self.trainer._target)):
-                    one_target.append(self.trainer._target[target_index][index])
+                if isinstance(self.trainer._target, torch.Tensor):
+                    one_target.append(self.trainer._target[index])
+                else:
+                    for target_index in range(len(self.trainer._target)):
+                        one_target.append(self.trainer._target[target_index][index])
 
                 one_output = []
-                for output_index in range(len(self.trainer._output)):
-                    one_output.append(self.trainer._output[output_index][index])
+                if isinstance(self.trainer._output, torch.Tensor):
+                    one_output.append(self.trainer._output[index])
+                else:
+                    for output_index in range(len(self.trainer._output)):
+                        one_output.append(self.trainer._output[output_index][index])
 
                 res = self.f(one_input, one_target, one_output)
                 id = self.trainer._ids[index]
@@ -763,16 +794,25 @@ class Logger(Callback):
             for index in range(len(self.trainer._ids)):
 
                 one_input = []
-                for input_index in range(len(self.trainer._input)):
-                    one_input.append(self.trainer._input[input_index][index])
+                if isinstance(self.trainer._input, torch.Tensor):
+                    one_input.append(self.trainer._input[index])
+                else:
+                    for input_index in range(len(self.trainer._input)):
+                        one_input.append(self.trainer._input[input_index][index])
 
                 one_target = []
-                for target_index in range(len(self.trainer._target)):
-                    one_target.append(self.trainer._target[target_index][index])
+                if isinstance(self.trainer._target, torch.Tensor):
+                    one_target.append(self.trainer._target[index])
+                else:
+                    for target_index in range(len(self.trainer._target)):
+                        one_target.append(self.trainer._target[target_index][index])
 
                 one_output = []
-                for output_index in range(len(self.trainer._output)):
-                    one_output.append(self.trainer._output[output_index][index])
+                if isinstance(self.trainer._output, torch.Tensor):
+                    one_output.append(self.trainer._output[index])
+                else:
+                    for output_index in range(len(self.trainer._output)):
+                        one_output.append(self.trainer._output[output_index][index])
 
                 res = self.f(one_input, one_target, one_output)
                 id = self.trainer._ids[index]

@@ -64,7 +64,7 @@ class DataSet(setka.base.DataSet):
         }
 
     def getitem(self, subset, index):
-        return [self.data[subset][index]], [self.labels[subset][index]], subset + '_' + str(index)
+        return self.data[subset][index], self.labels[subset][index], subset + '_' + str(index)
 
     def getlen(self, subset):
         return len(self.labels[subset])
@@ -94,7 +94,7 @@ class Network(setka.base.Network):
         res = torch.relu(self.fc2(res))
         res = self.fc3(res)
 
-        return [res]
+        return res
 
 net = Network()
 
