@@ -347,8 +347,8 @@ class ComputeMetrics(Callback):
         # clear all cache
         self.reset()
 
+        self.inputs = []
         self.outputs = []
-        self.targets = []
         self.steps = 0
 
 
@@ -358,22 +358,30 @@ class ComputeMetrics(Callback):
 
 
             output_tensor_mode = isinstance(self.trainer._output, torch.Tensor)
-            target_tensor_mode = isinstance(self.trainer._target, torch.Tensor)
 
             if output_tensor_mode:
                 one_output = self.trainer._output.detach()
             else:
                 one_output = [x.detach() for x in self.trainer._output]
 
-            if target_tensor_mode:
-                one_target = self.trainer._target.detach()
-            else:
-                one_target = [x.detach() for x in self.trainer._target]
-
             self.outputs.append(one_output)
-            self.targets.append(one_target)
+
+            input_tensor_mode = isinstance(self.trainer._input, torch.Tensor)
+
+            if input_tensor_mode:
+                one_input = self.trainer._input.detach()
+            else:
+                one_input = [x.detach() for x in self.trainer._input]
+
+            self.inputs.append(one_input)
 
             if self.steps >= self.steps_to_compute:
+                if input_tensor_mode:
+                    self.inputs = torch.cat(self.inputs, dim=0)
+                else:
+                    self.inputs = list(zip(*self.inputs))
+                    for index in range(len(self.inputs)):
+                        self.inputs[index] = torch.cat(self.inputs[index], dim=0)
 
                 if output_tensor_mode:
                     self.outputs = torch.cat(self.outputs, dim=0)
@@ -382,15 +390,10 @@ class ComputeMetrics(Callback):
                     for index in range(len(self.outputs)):
                         self.outputs[index] = torch.cat(self.outputs[index], dim=0)
 
-                if target_tensor_mode:
-                    self.targets = torch.cat(self.targets, dim=0)
-                else:
-                    self.targets = list(zip(*self.targets))
-                    for index in range(len(self.targets)):
-                        self.targets[index] = torch.cat(self.targets[index], dim=0)
-
                 for index in range(len(self.metrics)):
-                    res = self.metrics[index](self.outputs, self.targets)
+                    # print(self.outputs.size(), self.inputs.size())
+                    # print(self.inputs[1].size())
+                    res = self.metrics[index](self.outputs, self.inputs)
                     if isinstance(res, (list, tuple)):
                         if len(res) == 2:
                             enumerators = numpy.array(res[0])
@@ -417,9 +420,8 @@ class ComputeMetrics(Callback):
                             self.enumerators[index].sum() /
                             (self.denominators[index].sum() + 1.0e-12))
 
-
+                self.inputs = []
                 self.outputs = []
-                self.targets = []
                 self.steps = 0
 
             self.trainer._line += " ".join(
@@ -430,8 +432,8 @@ class ComputeMetrics(Callback):
     def on_epoch_end(self):
         # finilize metrics
 
+        self.inputs = []
         self.outputs = []
-        self.targets = []
 
         if self.trainer._mode == 'validating':
             if not hasattr(self.trainer, '_metrics'):
@@ -619,12 +621,12 @@ class WriteToTensorboard(Callback):
                     for input_index in range(len(self.trainer._input)):
                         one_input.append(self.trainer._input[input_index][index])
 
-                one_target = []
-                if isinstance(self.trainer._target, torch.Tensor):
-                    one_target.append(self.trainer._target[index])
-                else:
-                    for target_index in range(len(self.trainer._target)):
-                        one_target.append(self.trainer._target[target_index][index])
+                # one_target = []
+                # if isinstance(self.trainer._target, torch.Tensor):
+                    # one_target.append(self.trainer._target[index])
+                # else:
+                #     for target_index in range(len(self.trainer._target)):
+                #         one_target.append(self.trainer._target[target_index][index])
 
                 one_output = []
                 if isinstance(self.trainer._output, torch.Tensor):
@@ -633,7 +635,7 @@ class WriteToTensorboard(Callback):
                     for output_index in range(len(self.trainer._output)):
                         one_output.append(self.trainer._output[output_index][index])
 
-                res = self.f(one_input, one_target, one_output)
+                res = self.f(one_input, one_output)
                 id = self.trainer._ids[index]
 
                 self.show(res, id)
@@ -744,20 +746,23 @@ class Logger(Callback):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
         if len(content.shape) == 3:
             content = content.swapaxes(0, 2).swapaxes(0, 1)
-        os.makedirs('/'.join(fname.split('/')[:-1]))
+        if not os.path.exists('/'.join(fname.split('/')[:-1])):
+            os.makedirs('/'.join(fname.split('/')[:-1]))
         skimage.io.imsave(
             fname,
             content)
 
     def save_text(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.txt')
-        os.makedirs('/'.join(fname.split('/')[:-1]))
+        if not os.path.exists('/'.join(fname.split('/')[:-1])):
+            os.makedirs('/'.join(fname.split('/')[:-1]))
         with open(fname, 'w+') as fout:
             fout.write(content)
 
     def save_audio(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.wav')
-        os.makedirs('/'.join(fname.split('/')[:-1]))
+        if not os.path.exists('/'.join(fname.split('/')[:-1])):
+            os.makedirs('/'.join(fname.split('/')[:-1]))
         scipy.io.wavfile.write(
             fname,
             44100,
@@ -765,7 +770,8 @@ class Logger(Callback):
 
     def save_figure(self, name, content, epoch):
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
-        os.makedirs('/'.join(fname.split('/')[:-1]))
+        if not os.path.exists('/'.join(fname.split('/')[:-1])):
+            os.makedirs('/'.join(fname.split('/')[:-1]))
         content.savefig(fname)
         # make pickle dump
 
@@ -800,13 +806,6 @@ class Logger(Callback):
                     for input_index in range(len(self.trainer._input)):
                         one_input.append(self.trainer._input[input_index][index])
 
-                one_target = []
-                if isinstance(self.trainer._target, torch.Tensor):
-                    one_target.append(self.trainer._target[index])
-                else:
-                    for target_index in range(len(self.trainer._target)):
-                        one_target.append(self.trainer._target[target_index][index])
-
                 one_output = []
                 if isinstance(self.trainer._output, torch.Tensor):
                     one_output.append(self.trainer._output[index])
@@ -814,7 +813,7 @@ class Logger(Callback):
                     for output_index in range(len(self.trainer._output)):
                         one_output.append(self.trainer._output[output_index][index])
 
-                res = self.f(one_input, one_target, one_output)
+                res = self.f(one_input, one_output)
                 id = self.trainer._ids[index]
 
                 self.show(res, id)

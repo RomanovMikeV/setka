@@ -218,8 +218,7 @@ class Trainer():
     def setup_environment(seed=0,
                           max_threads=4,
                           deterministic_cuda=False,
-                          benchmark_cuda=True,
-                          silent=False):
+                          benchmark_cuda=True):
         numpy.random.seed(seed)
         random.seed(seed)
         torch.manual_seed(seed)
@@ -315,108 +314,6 @@ class Trainer():
             callback.on_init()
 
 
-    # def train(self,
-    #           dataset,
-    #           batch_size=4,
-    #           num_workers=0,
-    #           epochs=1000,
-    #           validate_on_train=False,
-    #           max_train_iterations=None,
-    #           max_valid_iterations=None,
-    #           max_test_iterations=None,
-    #           solo_test=False):
-    #
-    #     '''
-    #     Train the model (full training procedure with validation and testing
-    #     stages).
-    #
-    #     Args:
-    #         dataset (base.DataSet)
-    #
-    #         batch_size (int): batch size for training and testing.
-    #
-    #         num_workers (int): number of workers to use with torch DataLoader.
-    #
-    #         epochs (int): number of epochs in training procedure
-    #
-    #         validate_on_train (bool): perform validation on training subset
-    #
-    #         max_train_iterations (int): number of iterations in training procedure
-    #
-    #         max_valid_iterations (int): number of iterations in validation procedure
-    #
-    #         max_test_iterations (int): number of iterations in testing procedure
-    #
-    #         solo_test (bool): if you need to feed the test inputs one-by-one.
-    #
-    #     '''
-    #
-    #     # Enabling garbage collector
-    #     gc.enable()
-    #
-    #     # Creating tensorboard writer
-    #     tb_writer = SummaryWriter()
-    #
-    #     # Validation on training subuset
-    #     if validate_on_train:
-    #         self.validate_one_epoch(dataset,
-    #                                 batch_size=batch_size,
-    #                                 num_workers=num_workers,
-    #                                 max_iterations=max_valid_iterations,
-    #                                 subset='train')
-    #         gc.collect()
-    #
-    #     # Validation on validation subset
-    #     self.validate_one_epoch(dataset,
-    #                             batch_size=batch_size,
-    #                             num_workers=num_workers,
-    #                             max_iterations=max_test_iterations,
-    #                             subset='valid')
-    #
-    #     gc.collect()
-    #
-    #     for callback in self._callbacks:
-    #         callback.on_train_begin()
-    #
-    #     # Training cycle
-    #     for epoch_index in range(epochs):
-    #
-    #         # Training
-    #         gc.enable()
-    #         self.train_one_epoch(dataset,
-    #                              batch_size=batch_size,
-    #                              num_workers=num_workers,
-    #                              max_iterations=max_train_iterations)
-    #         gc.collect()
-    #
-    #         # Validation on training subuset
-    #         if validate_on_train:
-    #             self.validate_one_epoch(dataset,
-    #                                     batch_size=batch_size,
-    #                                     num_workers=num_workers,
-    #                                     max_iterations=max_valid_iterations,
-    #                                     subset='train')
-    #             gc.collect()
-    #
-    #         # Validation on validation subset
-    #         self.validate_one_epoch(dataset,
-    #                                 batch_size=batch_size,
-    #                                 num_workers=num_workers,
-    #                                 max_iterations=max_valid_iterations,
-    #                                 subset='valid')
-    #
-    #         gc.collect()
-    #
-    #         self.predict(dataset,
-    #                       batch_size=batch_size,
-    #                       num_workers=num_workers,
-    #                       solo_test=solo_test,
-    #                       max_iterations=max_test_iterations)
-    #
-    #     for callback in self._callbacks:
-    #         callback.on_train_end()
-
-
     def train_one_epoch(self,
                         dataset,
                         subset='train',
@@ -497,7 +394,12 @@ class Trainer():
             self._progress = i / len(pbar)
 
             start = time.time()
-            self._input, self._target, self._ids = next(iterator)
+
+            self._input, self._ids = next(iterator)
+
+            for index in range(len(self._ids)):
+                self._ids[index] = subset + '_' + self._ids[index]
+
             data_time.update(time.time() - start)
 
             for opt_index in range(len(self._optimizers)):
@@ -512,14 +414,11 @@ class Trainer():
                 for index in range(len(self._input)):
                     self._input[index] = self._input[index].cuda()
 
-                for index in range(len(self._target)):
-                    self._target[index] = self._target[index].cuda()
-
             for opt_index in range(len(self._optimizers)):
                 self._optimizers[opt_index].optimizer.zero_grad()
                     
             self._output = self._model.forward(self._input)
-            self._loss = self._criterion(self._output, self._target)
+            self._loss = self._criterion(self._output, self._input)
 
             self._loss.backward()
 
@@ -549,7 +448,7 @@ class Trainer():
                 if self._optimizers[opt_index].active:
                     self._optimizers[opt_index].module.eval()
 
-            del self._input, self._target, self._loss, self._output
+            del self._input, self._loss, self._output
 
             if i == len(pbar) - 1:
                 for callback in self._callbacks:
@@ -592,7 +491,6 @@ class Trainer():
         self._subset = subset
         self._dataset = dataset
 
-        metrics = {}
         with torch.no_grad():
 
             # Creating test wrapper for the dataset
@@ -640,7 +538,7 @@ class Trainer():
                 self._progress = i / len(pbar)
 
                 start = time.time()
-                self._input, self._target, self._ids = next(iterator)
+                self._input, self._ids = next(iterator)
                 data_time.update(time.time() - start)
 
                 for callback in self._callbacks:
@@ -650,11 +548,8 @@ class Trainer():
                     for index in range(len(self._input)):
                         self._input[index] = self._input[index].cuda()
 
-                    for index in range(len(self._target)):
-                        self._target[index] = self._target[index].cuda()
-
                 self._output = self._model.forward(self._input)
-                self._loss = self._criterion(self._output, self._target)
+                self._loss = self._criterion(self._output, self._input)
 
                 losses.update(self._loss.data.item())
 
@@ -670,7 +565,7 @@ class Trainer():
                 for callback in self._callbacks:
                     callback.on_batch_end()
 
-                del self._input, self._output, self._target
+                del self._input, self._output
 
                 if i == len(pbar) - 1:
                     for callback in self._callbacks:
@@ -755,7 +650,7 @@ class Trainer():
                 for callback in self._callbacks:
                     callback.on_batch_begin()
 
-                self._input, self._target, self._ids = next(iterator)
+                self._input, self._ids = next(iterator)
 
                 if torch.cuda.is_available():
                     for index in range(len(self._input)):
@@ -768,7 +663,7 @@ class Trainer():
 
                 gc.collect()
 
-                del self._input, self._output, self._ids, self._target
+                del self._input, self._output, self._ids
 
         for callback in self._callbacks:
             callback.on_epoch_end()

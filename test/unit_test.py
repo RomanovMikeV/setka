@@ -1,7 +1,4 @@
 from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Conv2D, MaxPooling2D, Flatten
-import keras
 import random
 
 import numpy
@@ -64,7 +61,7 @@ class DataSet(setka.base.DataSet):
         }
 
     def getitem(self, subset, index):
-        return self.data[subset][index], self.labels[subset][index], subset + '_' + str(index)
+        return self.data[subset][index], self.labels[subset][index]
 
     def getlen(self, subset):
         return len(self.labels[subset])
@@ -98,16 +95,18 @@ class Network(setka.base.Network):
 
 net = Network()
 
-def criterion(input, target):
-    return torch.nn.functional.cross_entropy(input[0], target[0])
+def criterion(output, input):
+    # print(output.size(), input[1].size(), '<- sizes')
+    return torch.nn.functional.cross_entropy(output, input[1])
 
-def loss(input, target):
-    return criterion(input, target)
+def loss(output, input):
+    return criterion(output, input)
 
-def accuracy(preds, target):
-    return (preds[0].argmax(dim=1) == target[0]).float().sum(), len(preds[0])
+def accuracy(output, input):
 
-def visualize(one_input, one_target, one_output):
+    return (output.argmax(dim=1) == input[1]).float().sum(), len(output)
+
+def visualize(one_input, one_output):
     res = {'figures': []}
 
     fig = plt.figure(figsize=(10, 10))

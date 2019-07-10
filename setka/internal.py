@@ -76,7 +76,9 @@ class DataSetWrapper():
 
     def __getitem__(self, index):
         real_index = self.order[index]
-        return self.dataset[real_index]
+        dataset_res = self.dataset[real_index]
+
+        return dataset_res, str(index)
 
     def shuffle(self):
         self.order = numpy.random.permutation(len(self.dataset))
