@@ -361,23 +361,18 @@ class ComputeMetrics(Callback):
                     self.outputs[index] = torch.cat(self.outputs[index], dim=0)
 
                 for index in range(len(self.metrics)):
-                    # print(self.outputs.size(), self.inputs.size())
-                    # print(self.inputs[1].size())
                     res = self.metrics[index](self.outputs, self.inputs)
 
                     if isinstance(res, (list, tuple)):
                         if len(res) == 2:
-                            enum = res[0]
-                            denom = res[1]
+                            enum = torch.tensor(res[0])
+                            denom = torch.tensor(res[1])
                     else:
-                        enum = res
+                        enum = torch.tensor(res)
                         denom = torch.ones(enum.shape)
 
-
-                    if isinstance(enum, torch.Tensor):
-                        enum = enum.cpu().detach().numpy()
-                    if isinstance(denom, torch.Tensor):
-                        denom = denom.cpu().detach().numpy()
+                    enum = enum.cpu().detach().numpy()
+                    denom = denom.cpu().detach().numpy()
 
                     # if isinstance(res, torch.Tensor):
                     #     res = res.cpu().detach().numpy()
