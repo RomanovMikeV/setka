@@ -344,7 +344,7 @@ class Trainer():
         self._subset = subset
         self._dataset = dataset
 
-        self._ds_wrapper = internal.DataSetWrapper(self._dataset[subset])
+        self._ds_wrapper = internal.DataSetWrapper(self._dataset[subset], subset)
 
         for callback in self._callbacks:
             callback.on_epoch_begin()
@@ -357,7 +357,6 @@ class Trainer():
                                        num_workers=num_workers,
                                        drop_last=True,
                                        pin_memory=True,
-                                       collate_fn=internal.default_collate,
                                        sampler=train_sampler)
 
         gc.enable()
@@ -382,12 +381,10 @@ class Trainer():
             range(n_iterations), ascii=True, disable=self._silent, ncols=0)
 
         pbar.set_description(
-            "Train -  "
+            "Train ----"
             "D ----(----)  ")
 
         end = time.time()
-
-        avg_metrics = {}
 
         # Iterating through the batches
         for i in pbar:
@@ -397,8 +394,8 @@ class Trainer():
 
             self._input, self._ids = next(iterator)
 
-            for index in range(len(self._ids)):
-                self._ids[index] = subset + '_' + self._ids[index]
+            if not isinstance(self._input, list):
+                self._input = [self._input,]
 
             data_time.update(time.time() - start)
 
@@ -418,6 +415,9 @@ class Trainer():
                 self._optimizers[opt_index].optimizer.zero_grad()
                     
             self._output = self._model.forward(self._input)
+            if not isinstance(self._output, tuple):
+                self._output = (self._output, )
+
             self._loss = self._criterion(self._output, self._input)
 
             self._loss.backward()
@@ -434,7 +434,7 @@ class Trainer():
             end = time.time()
 
             # Print status
-            self._line = ("Train {0}  "
+            self._line = ("Train {0:4d}  "
                          "D {data.avg:.2f}({data.val:.2f}) ".format(
                             self._epoch,
                             time=batch_time,
@@ -494,7 +494,7 @@ class Trainer():
         with torch.no_grad():
 
             # Creating test wrapper for the dataset
-            self._ds_wrapper = internal.DataSetWrapper(dataset[subset])
+            self._ds_wrapper = internal.DataSetWrapper(dataset[subset], subset)
 
             for callback in self._callbacks:
                 callback.on_epoch_begin()
@@ -509,7 +509,6 @@ class Trainer():
                                        num_workers=num_workers,
                                        drop_last=False,
                                        pin_memory=True,
-                                       collate_fn=internal.default_collate,
                                        sampler=valid_sampler)
 
             gc.enable()
@@ -531,7 +530,7 @@ class Trainer():
 
             end = time.time()
             pbar.set_description(
-                "Valid -  "
+                "Valid ----"
                 "D ----(----)")
 
             for i in pbar:
@@ -539,6 +538,10 @@ class Trainer():
 
                 start = time.time()
                 self._input, self._ids = next(iterator)
+
+                if not isinstance(self._input, list):
+                    self._input = [self._input,]
+
                 data_time.update(time.time() - start)
 
                 for callback in self._callbacks:
@@ -549,6 +552,10 @@ class Trainer():
                         self._input[index] = self._input[index].cuda()
 
                 self._output = self._model.forward(self._input)
+
+                if not isinstance(self._output, tuple):
+                    self._output = (self._output, )
+
                 self._loss = self._criterion(self._output, self._input)
 
                 losses.update(self._loss.data.item())
@@ -556,7 +563,7 @@ class Trainer():
                 batch_time.update(time.time() - end)
                 end = time.time()
 
-                self._line = ("Valid {0}  "
+                self._line = ("Valid {0:4d}  "
                         "D {data.avg:.2f}({data.val:.2f}) ".format(
                             self._epoch,
                             data=data_time,
@@ -610,7 +617,7 @@ class Trainer():
 
             # Creating test wrapper for the dataset
             self._ds_wrapper = internal.DataSetWrapper(
-                dataset[subset])
+                dataset[subset], subset)
 
             for callback in self._callbacks:
                 callback.on_epoch_begin()
@@ -625,7 +632,6 @@ class Trainer():
                                        num_workers=num_workers,
                                        drop_last=False,
                                        pin_memory=True,
-                                       collate_fn=internal.default_collate,
                                        sampler=test_sampler)
 
             gc.enable()
@@ -651,12 +657,17 @@ class Trainer():
                     callback.on_batch_begin()
 
                 self._input, self._ids = next(iterator)
+                if not isinstance(self._input, list):
+                    self._input = [self._input,]
 
                 if torch.cuda.is_available():
                     for index in range(len(self._input)):
                         self._input[index] = self._input[index].cuda()
 
                 self._output = self._model(self._input)
+
+                if not isinstance(self._output, tuple):
+                    self._output = (self._output, )
 
                 for callback in self._callbacks:
                     callback.on_batch_end()

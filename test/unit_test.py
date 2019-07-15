@@ -7,7 +7,6 @@ import torch
 
 import setka.base
 import setka.callbacks
-#import setka.scripts
 
 import matplotlib.pyplot as plt
 
@@ -61,6 +60,7 @@ class DataSet(setka.base.DataSet):
         }
 
     def getitem(self, subset, index):
+        # print(self.data[subset][index])
         return self.data[subset][index], self.labels[subset][index]
 
     def getlen(self, subset):
@@ -82,6 +82,7 @@ class Network(setka.base.Network):
 
     def forward(self, input):
         res = input[0]
+
         res = self.pool1(torch.relu(self.conv1(res)))
         res = self.pool2(torch.relu(self.conv2(res)))
 
@@ -91,20 +92,20 @@ class Network(setka.base.Network):
         res = torch.relu(self.fc2(res))
         res = self.fc3(res)
 
-        return res
+        return res, res * 2
 
 net = Network()
 
 def criterion(output, input):
     # print(output.size(), input[1].size(), '<- sizes')
-    return torch.nn.functional.cross_entropy(output, input[1])
+    return torch.nn.functional.cross_entropy(output[0], input[1])
 
 def loss(output, input):
     return criterion(output, input)
 
 def accuracy(output, input):
 
-    return (output.argmax(dim=1) == input[1]).float().sum(), len(output)
+    return (output[0].argmax(dim=1) == input[1]).float().sum(), len(output[0])
 
 def visualize(one_input, one_output):
     res = {'figures': []}
@@ -151,7 +152,8 @@ trainer = setka.base.Trainer(net,
                              setka.callbacks.Logger(f=visualize),
                              setka.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
                              setka.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
-                             setka.callbacks.CyclicLR(cycle=cycle)],
+                             setka.callbacks.CyclicLR(cycle=cycle)
+                      ],
                   seed=1,
                   silent=False)
 dataset = DataSet()
@@ -167,7 +169,6 @@ for epoch in range(10):
                                num_workers=2,
                                max_iterations=10,
                                batch_size=32)
-
 
 trainer = setka.base.Trainer(net,
                   criterion=criterion,

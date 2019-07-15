@@ -1,19 +1,13 @@
 import os
-import shutil
 import torch
 import tensorboardX
 import numpy
 import datetime
 import sys
-import shutil
 import zipfile
 import scipy.io.wavfile
 import skimage
-import types
-import pickle
 import copy
-
-from . import internal
 
 class Callback():
     '''
@@ -215,18 +209,12 @@ class SaveResult(Callback):
             for index in range(len(self.trainer._ids)):
 
                 one_input = []
-                if isinstance(self.trainer._input, torch.Tensor):
-                    one_input.append(self.trainer._input[index])
-                else:
-                    for input_index in range(len(self.trainer._input)):
-                        one_input.append(self.trainer._input[input_index][index])
+                for input_index in range(len(self.trainer._input)):
+                    one_input.append(self.trainer._input[input_index][index])
 
                 one_output = []
-                if isinstance(self.trainer._output, torch.Tensor):
-                    one_output.append(self.trainer._output[index])
-                else:
-                    for output_index in range(len(self.trainer._output)):
-                        one_output.append(self.trainer._output[output_index][index])
+                for output_index in range(len(self.trainer._output)):
+                    one_output.append(self.trainer._output[output_index][index])
 
                 if self.f is not None:
                     res[self.trainer._ids[index]] = self.f(
@@ -235,7 +223,6 @@ class SaveResult(Callback):
                 else:
                     res[self.trainer._ids[index]] = one_output
 
-            #print("Saving result")
             torch.save(res, os.path.join('./predictions', str(self.index) + '.pth.tar'))
 
             if hasattr(self.trainer, "_predictions_dir"):
@@ -356,39 +343,22 @@ class ComputeMetrics(Callback):
         if self.trainer._mode == 'training' or self.trainer._mode == 'validating':
             self.steps += 1
 
-
-            output_tensor_mode = isinstance(self.trainer._output, torch.Tensor)
-
-            if output_tensor_mode:
-                one_output = self.trainer._output.detach()
-            else:
-                one_output = [x.detach() for x in self.trainer._output]
+            one_output = [x.detach() for x in self.trainer._output]
 
             self.outputs.append(one_output)
 
-            input_tensor_mode = isinstance(self.trainer._input, torch.Tensor)
-
-            if input_tensor_mode:
-                one_input = self.trainer._input.detach()
-            else:
-                one_input = [x.detach() for x in self.trainer._input]
+            one_input = [x.detach() for x in self.trainer._input]
 
             self.inputs.append(one_input)
 
             if self.steps >= self.steps_to_compute:
-                if input_tensor_mode:
-                    self.inputs = torch.cat(self.inputs, dim=0)
-                else:
-                    self.inputs = list(zip(*self.inputs))
-                    for index in range(len(self.inputs)):
-                        self.inputs[index] = torch.cat(self.inputs[index], dim=0)
+                self.inputs = list(zip(*self.inputs))
+                for index in range(len(self.inputs)):
+                    self.inputs[index] = torch.cat(self.inputs[index], dim=0)
 
-                if output_tensor_mode:
-                    self.outputs = torch.cat(self.outputs, dim=0)
-                else:
-                    self.outputs = list(zip(*self.outputs))
-                    for index in range(len(self.outputs)):
-                        self.outputs[index] = torch.cat(self.outputs[index], dim=0)
+                self.outputs = list(zip(*self.outputs))
+                for index in range(len(self.outputs)):
+                    self.outputs[index] = torch.cat(self.outputs[index], dim=0)
 
                 for index in range(len(self.metrics)):
                     # print(self.outputs.size(), self.inputs.size())
@@ -424,7 +394,7 @@ class ComputeMetrics(Callback):
                 self.outputs = []
                 self.steps = 0
 
-            self.trainer._line += " ".join(
+            self.trainer._line += " " + " ".join(
                ["{}: {:.2e}".format(x, self.avg_values[x])
                 for x in self.avg_values])
 
@@ -615,25 +585,12 @@ class WriteToTensorboard(Callback):
             for index in range(len(self.trainer._ids)):
 
                 one_input = []
-                if isinstance(self.trainer._input, torch.Tensor):
-                    one_input.append(self.trainer._input[index])
-                else:
-                    for input_index in range(len(self.trainer._input)):
-                        one_input.append(self.trainer._input[input_index][index])
-
-                # one_target = []
-                # if isinstance(self.trainer._target, torch.Tensor):
-                    # one_target.append(self.trainer._target[index])
-                # else:
-                #     for target_index in range(len(self.trainer._target)):
-                #         one_target.append(self.trainer._target[target_index][index])
+                for input_index in range(len(self.trainer._input)):
+                    one_input.append(self.trainer._input[input_index][index])
 
                 one_output = []
-                if isinstance(self.trainer._output, torch.Tensor):
-                    one_output.append(self.trainer._output[index])
-                else:
-                    for output_index in range(len(self.trainer._output)):
-                        one_output.append(self.trainer._output[output_index][index])
+                for output_index in range(len(self.trainer._output)):
+                    one_output.append(self.trainer._output[output_index][index])
 
                 res = self.f(one_input, one_output)
                 id = self.trainer._ids[index]
@@ -800,18 +757,12 @@ class Logger(Callback):
             for index in range(len(self.trainer._ids)):
 
                 one_input = []
-                if isinstance(self.trainer._input, torch.Tensor):
-                    one_input.append(self.trainer._input[index])
-                else:
-                    for input_index in range(len(self.trainer._input)):
-                        one_input.append(self.trainer._input[input_index][index])
+                for input_index in range(len(self.trainer._input)):
+                    one_input.append(self.trainer._input[input_index][index])
 
                 one_output = []
-                if isinstance(self.trainer._output, torch.Tensor):
-                    one_output.append(self.trainer._output[index])
-                else:
-                    for output_index in range(len(self.trainer._output)):
-                        one_output.append(self.trainer._output[output_index][index])
+                for output_index in range(len(self.trainer._output)):
+                    one_output.append(self.trainer._output[output_index][index])
 
                 res = self.f(one_input, one_output)
                 id = self.trainer._ids[index]
