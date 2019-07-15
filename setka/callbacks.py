@@ -929,7 +929,9 @@ class ReduceLROnPlateau(Callback):
                     self.since_best = 0
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
-                self.trainer._line += ' *** REDUCING lr *** '
+                if "action" not in self.trainer._status:
+                    self.trainer._status["action"] = ""
+                self.trainer._status["action"] += ' *** REDUCING lr *** '
                 for optimizer in self.trainer._optimizers:
                     for g in optimizer.optimizer.param_groups:
                         g['lr'] *= self.factor
@@ -1005,7 +1007,9 @@ class IncreaseMomentumOnPlateau(Callback):
                     self.since_best = 0
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
-                self.trainer._line += ' *** INCREASING momentum *** '
+                if "action" not in self.trainer._status:
+                    self.trainer._status["action"] = ""
+                self.trainer._status["action"] += ' *** INCREASING momentum *** '
                 for optimizer in self.trainer._optimizers:
                     for g in optimizer.optimizer.param_groups:
                         g['lr'] *= self.factor

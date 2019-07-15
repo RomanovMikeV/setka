@@ -438,7 +438,7 @@ class Trainer():
             # Print status
             self._status = {
                 "Train": "{0:4d}".format(self._epoch),
-                "time": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
+                "D": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
 
             for callback in self._callbacks:
                 callback.on_batch_end()
@@ -563,7 +563,7 @@ class Trainer():
 
                 self._status = {
                     "Valid": "{0:4d}".format(self._epoch),
-                    "time": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
+                    "D": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
 
                 for callback in self._callbacks:
                     callback.on_batch_end()
