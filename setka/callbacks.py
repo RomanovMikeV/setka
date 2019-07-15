@@ -364,20 +364,30 @@ class ComputeMetrics(Callback):
                     # print(self.outputs.size(), self.inputs.size())
                     # print(self.inputs[1].size())
                     res = self.metrics[index](self.outputs, self.inputs)
+
                     if isinstance(res, (list, tuple)):
                         if len(res) == 2:
-                            enumerators = numpy.array(res[0])
-                            denominators = numpy.array(res[1])
+                            enum = res[0]
+                            denom = res[1]
                     else:
-                        enumerators = numpy.array(res)
-                        denominators = numpy.ones(enumerators.shape)
+                        enum = res
+                        denom = torch.ones(enum.shape)
+
+
+                    if isinstance(enum, torch.Tensor):
+                        enum = enum.cpu().detach().numpy()
+                    if isinstance(denom, torch.Tensor):
+                        denom = denom.cpu().detach().numpy()
+
+                    # if isinstance(res, torch.Tensor):
+                    #     res = res.cpu().detach().numpy()
 
                     if self.enumerators[index] is None:
-                        self.enumerators[index] = enumerators
-                        self.denominators[index] = denominators
+                        self.enumerators[index] = enum
+                        self.denominators[index] = denom
                     else:
-                        self.enumerators[index] += enumerators
-                        self.denominators[index] += denominators
+                        self.enumerators[index] += enum
+                        self.denominators[index] += denom
 
                 self.avg_values = {}
                 for index in range(len(self.enumerators)):

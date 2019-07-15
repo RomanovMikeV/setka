@@ -104,8 +104,7 @@ def loss(output, input):
     return criterion(output, input)
 
 def accuracy(output, input):
-
-    return (output[0].argmax(dim=1) == input[1]).float().sum(), len(output[0])
+    return (output[0].argmax(dim=1) == input[1]).float().sum(), len(input[1])
 
 def visualize(one_input, one_output):
     res = {'figures': []}
