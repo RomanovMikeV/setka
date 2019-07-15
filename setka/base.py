@@ -386,10 +386,6 @@ class Trainer():
                 range(n_iterations), ascii=True,
                 disable=self._silent, ncols=0)
 
-        pbar.set_description(
-            "Train ----"
-            "D ----(----)  ")
-
         end = time.time()
 
         # Iterating through the batches
@@ -440,12 +436,9 @@ class Trainer():
             end = time.time()
 
             # Print status
-            self._line = ("Train {0:4d}  "
-                         "D {data.avg:.2f}({data.val:.2f}) ".format(
-                            self._epoch,
-                            time=batch_time,
-                            data=data_time,
-                            loss=losses))
+            self._status = {
+                "Train": "{0:4d}".format(self._epoch),
+                "time": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
 
             for callback in self._callbacks:
                 callback.on_batch_end()
@@ -460,7 +453,7 @@ class Trainer():
                 for callback in self._callbacks:
                     callback.on_epoch_end()
 
-            pbar.set_description(self._line)
+            pbar.set_postfix(self._status)
 
         gc.collect()
 
@@ -537,9 +530,6 @@ class Trainer():
                     disable=self._silent, ncols=0)
 
             end = time.time()
-            pbar.set_description(
-                "Valid ----"
-                "D ----(----)")
 
             for i in pbar:
                 self._progress = i / len(pbar)
@@ -571,11 +561,9 @@ class Trainer():
                 batch_time.update(time.time() - end)
                 end = time.time()
 
-                self._line = ("Valid {0:4d}  "
-                        "D {data.avg:.2f}({data.val:.2f}) ".format(
-                            self._epoch,
-                            data=data_time,
-                            loss=losses))
+                self._status = {
+                    "Valid": "{0:4d}".format(self._epoch),
+                    "time": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
 
                 for callback in self._callbacks:
                     callback.on_batch_end()
@@ -586,9 +574,9 @@ class Trainer():
                     for callback in self._callbacks:
                         callback.on_epoch_end()
 
-                pbar.set_description(self._line)
+                pbar.set_postfix(self._status)
 
-            pbar.set_description(self._line)
+            pbar.set_postfix(self._status)
 
             gc.collect()
             gc.collect()
@@ -663,7 +651,7 @@ class Trainer():
                     range(n_iterations), ascii=True,
                     disable=self._silent, ncols=0)
 
-            pbar.set_description("Test  ")
+            pbar.set_postfix({"Test ": str(self._epoch)})
 
             for i in pbar:
                 self._progress = i / len(pbar)

@@ -399,9 +399,8 @@ class ComputeMetrics(Callback):
                 self.outputs = []
                 self.steps = 0
 
-            self.trainer._line += " " + " ".join(
-               ["{}: {:.2e}".format(x, self.avg_values[x])
-                for x in self.avg_values])
+            for x in self.avg_values:
+                self.trainer._status[x] = self.avg_values[x]
 
 
     def on_epoch_end(self):
@@ -775,7 +774,7 @@ class Logger(Callback):
                 self.show(res, id)
 
     def on_epoch_end(self):
-        line = 'MODE: ' + self.trainer._mode + '\tSUBSET: ' + self.trainer._subset + '\tINFO: ' + self.trainer._line
+        line = 'MODE: ' + self.trainer._mode + '\tSUBSET: ' + self.trainer._subset + '\tINFO: ' + str(self.trainer._status)
         with open(os.path.join(self.root_path, 'log.txt'), 'a+') as fout:
             fout.write(line + '\n')
 
@@ -849,7 +848,9 @@ class UnfreezeOnPlateau(Callback):
 
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit and not self.complete:
-                self.trainer._line += (" *** UNFREEZING (optimizer " + str(self.optimizer_index) + ") *** ")
+                if "action" not in self.trainer._status:
+                    self.trainer._status["action"] = ""
+                self.trainer._status["action"] += " *** UNFREEZING (optimizer " + str(self.optimizer_index) + ") *** "
                 self.trainer._optimizers[self.optimizer_index].is_active = True
                 self.since_last = 0
                 self.optimizer_index += 1

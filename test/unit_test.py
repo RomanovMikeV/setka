@@ -140,7 +140,7 @@ trainer = setka.base.Trainer(net,
                     setka.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
                   callbacks=[
                              setka.callbacks.ShuffleDataset(shuffle_valid=True),
-                             setka.callbacks.ComputeMetrics(),
+                             # setka.callbacks.ComputeMetrics(),
                              setka.callbacks.ComputeMetrics(
                                 metrics=[accuracy, loss],
                                 divide_first=[True, False]),
