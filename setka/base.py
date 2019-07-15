@@ -379,8 +379,8 @@ class Trainer():
         # Progress bar
         try:
             pbar = tqdm_notebook(
-                range(n_iterations), ascii=True,
-                disable=self._silent, ncols=0)
+                range(n_iterations),
+                disable=self._silent)
         except:
             pbar = tqdm(
                 range(n_iterations), ascii=True,
@@ -529,8 +529,8 @@ class Trainer():
 
             try:
                 pbar = tqdm_notebook(
-                    range(n_iterations), ascii=True,
-                    disable=self._silent, ncols=0)
+                    range(n_iterations),
+                    disable=self._silent)
             except:
                 pbar = tqdm(
                     range(n_iterations), ascii=True,
@@ -656,8 +656,8 @@ class Trainer():
 
             try:
                 pbar = tqdm_notebook(
-                    range(n_iterations), ascii=True,
-                    disable=self._silent, ncols=0)
+                    range(n_iterations),
+                    disable=self._silent)
             except:
                 pbar = tqdm(
                     range(n_iterations), ascii=True,
