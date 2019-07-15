@@ -21,7 +21,7 @@ import gc
 import time
 import copy
 from tensorboardX import SummaryWriter
-from tqdm import tqdm
+from tqdm import tqdm, tqdm_notebook
 
 from . import internal
 
@@ -372,13 +372,19 @@ class Trainer():
         if max_iterations is not None:
             n_iterations = min(len(train_loader), max_iterations)
 
-        self._model.eval()
+        self._model.train()
 
         gc.collect()
 
         # Progress bar
-        pbar = tqdm(
-            range(n_iterations), ascii=True, disable=self._silent, ncols=0)
+        try:
+            pbar = tqdm_notebook(
+                range(n_iterations), ascii=True,
+                disable=self._silent, ncols=0)
+        except:
+            pbar = tqdm(
+                range(n_iterations), ascii=True,
+                disable=self._silent, ncols=0)
 
         pbar.set_description(
             "Train ----"
@@ -456,9 +462,6 @@ class Trainer():
 
             pbar.set_description(self._line)
 
-
-
-
         gc.collect()
 
 
@@ -524,9 +527,14 @@ class Trainer():
 
             self._model.eval()
 
-            pbar = tqdm(
-                range(n_iterations), ascii=True,
-                disable=self._silent, ncols=0)
+            try:
+                pbar = tqdm_notebook(
+                    range(n_iterations), ascii=True,
+                    disable=self._silent, ncols=0)
+            except:
+                pbar = tqdm(
+                    range(n_iterations), ascii=True,
+                    disable=self._silent, ncols=0)
 
             end = time.time()
             pbar.set_description(
@@ -646,8 +654,15 @@ class Trainer():
 
             gc.collect()
 
-            pbar = tqdm(range(n_iterations), ascii=True,
-                        disable=self._silent, ncols=0)
+            try:
+                pbar = tqdm_notebook(
+                    range(n_iterations), ascii=True,
+                    disable=self._silent, ncols=0)
+            except:
+                pbar = tqdm(
+                    range(n_iterations), ascii=True,
+                    disable=self._silent, ncols=0)
+
             pbar.set_description("Test  ")
 
             for i in pbar:
