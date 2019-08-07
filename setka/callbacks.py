@@ -903,6 +903,8 @@ class ReduceLROnPlateau(Callback):
         self.metric = metric
         self.max_mode = max_mode
 
+        self.best_model = None
+
         self.optimizer_index = 1
 
 
@@ -918,6 +920,7 @@ class ReduceLROnPlateau(Callback):
             if self.best_metric is None:
                 self.best_metric = self.trainer._metrics[self.subset][self.metric]
                 self.since_best = 0
+                self.best_state = self.trainer._model.state_dict()
 
             else:
                 new_metric = self.trainer._metrics[self.subset][self.metric]
@@ -927,6 +930,7 @@ class ReduceLROnPlateau(Callback):
 
                     self.best_metric = new_metric
                     self.since_best = 0
+                    self.best_state = self.trainer._mode.state_dict()
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
                 if "action" not in self.trainer._status:
@@ -936,6 +940,7 @@ class ReduceLROnPlateau(Callback):
                     for g in optimizer.optimizer.param_groups:
                         g['lr'] *= self.factor
                 self.since_last = 0
+                self.trainer._model.load_state_dict(self.best_state)
 
             self.since_best += 1
             self.since_last += 1
