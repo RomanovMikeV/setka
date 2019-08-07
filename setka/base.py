@@ -692,7 +692,7 @@ class Trainer():
 
     def set_optimizers_states(self, states):
         for opt_index in range(len(states)):
-            self._optimizers[opt_index].load_state_dict(states[opt_index])
+            self._optimizers[opt_index].optimizer.load_state_dict(states[opt_index])
 
 
     def get_optimizers_flags(self):
@@ -760,12 +760,12 @@ class Trainer():
         self.set_optimizers_flags(checkpoint['optimizers_flags'])
         self.set_optimizers_states(checkpoint['optimizers_states'])
         # if not new_optimizer:
-        for opt_index in range(len(self._optimizers)):
-            try:
-                self._optimizers[opt_index].optimizer.load_state_dict(
-                    checkpoint["optimizer_state_" + str(opt_index)])
-                self._optimizers[opt_index].active = checkpoint[
-                    "optimizer_switch_" + str(opt_index)]
-            except:
-                print('Failed to load optimizer ' +
-                    str(opt_index) + '.')
+        # for opt_index in range(len(self._optimizers)):
+        #     try:
+        #         self._optimizers[opt_index].optimizer.load_state_dict(
+        #             checkpoint["optimizer_state_" + str(opt_index)])
+        #         self._optimizers[opt_index].active = checkpoint[
+        #             "optimizer_switch_" + str(opt_index)]
+        #     except:
+        #         print('Failed to load optimizer ' +
+        #             str(opt_index) + '.')
