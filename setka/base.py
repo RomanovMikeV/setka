@@ -683,6 +683,30 @@ class Trainer():
             callback.on_epoch_end()
 
 
+    def get_optimizers_states(self):
+        res = []
+        for optimizer in self._optimizers:
+            res.append(optimizer.optimizer.state_dict())
+        return res
+
+
+    def set_optimizers_states(self, states):
+        for opt_index in range(len(states)):
+            self._optimizers[opt_index].load_state_dict(states[opt_index])
+
+
+    def get_optimizers_flags(self):
+        res = []
+        for optimizer in self._optimizers:
+            res.append(optimizer.active)
+        return res
+
+
+    def set_optimizers_flags(self, flags):
+        for opt_index in range(len(flags)):
+            self._optimizers[opt_index].active = flags[opt_index]
+
+
     def save(self, name='./checkpoint'):
 
         '''
@@ -700,11 +724,14 @@ class Trainer():
         if hasattr(self, '_metrics'):
             checkpoint['metrics'] = self._metrics
 
-        for opt_index in range(len(self._optimizers)):
-            checkpoint['optimizer_state_' + str(opt_index)] = (
-                self._optimizers[opt_index].optimizer.state_dict())
-            checkpoint['optimizer_switch_' + str(opt_index)] = (
-                self._optimizers[opt_index].active)
+        checkpoint['optimizers_states'] = self.get_optimizers_states()
+        checkpoint['optimizers_flags'] = self.get_optimizers_flags()
+
+        # for opt_index in range(len(self._optimizers)):
+        #     checkpoint['optimizer_state_' + str(opt_index)] = (
+        #         self._optimizers[opt_index].optimizer.state_dict())
+        #     checkpoint['optimizer_switch_' + str(opt_index)] = (
+        #         self._optimizers[opt_index].active)
 
         torch.save(checkpoint,
                    name)
@@ -730,6 +757,8 @@ class Trainer():
         if 'metrics' in checkpoint:
             self._metrics = checkpoint['metrics']
 
+        self.set_optimizers_flags(checkpoint['optimizers_flags'])
+        self.set_optimizers_states(checkpoint['optimizers_states'])
         # if not new_optimizer:
         for opt_index in range(len(self._optimizers)):
             try:
