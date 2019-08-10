@@ -309,6 +309,8 @@ class Trainer():
 
         self._silent = silent
 
+        self._stop_epoch = False
+
         for callback in self._callbacks:
             callback.set_trainer(self)
             callback.on_init()
@@ -454,6 +456,10 @@ class Trainer():
                     callback.on_epoch_end()
 
             pbar.set_postfix(self._status)
+
+            if self._stop_epoch:
+                self._stop_epoch = False
+                break
 
         gc.collect()
 
