@@ -873,7 +873,7 @@ class UnfreezeOnPlateau(Callback):
             self.since_last += 1
 
 
-class ReduceLROnPlateau(setka.callbacks.Callback):
+class ReduceLROnPlateau(Callback):
     '''
     This callback performs Learning Rate reducing when the plateau
     is reached.
