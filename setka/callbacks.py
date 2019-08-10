@@ -365,10 +365,20 @@ class ComputeMetrics(Callback):
 
                     if isinstance(res, (list, tuple)):
                         if len(res) == 2:
-                            enum = torch.tensor(res[0])
-                            denom = torch.tensor(res[1])
+                            if isinstance(res[0], torch.Tensor):
+                                enum = res[0].detach()
+                            else:
+                                enum = torch.tensor(res[0])
+
+                            if isinstance(res[1], torch.Tensor):
+                                denom = res[1].detach()
+                            else:
+                                denom = torch.tensor(res[1])
                     else:
-                        enum = torch.tensor(res)
+                        if isinstance(res, torch.Tensor):
+                            enum = res.detach()
+                        else:
+                            enum = torch.tensor(res)
                         denom = torch.ones(enum.shape)
 
                     enum = enum.cpu().detach().numpy()
@@ -863,11 +873,29 @@ class UnfreezeOnPlateau(Callback):
             self.since_last += 1
 
 
-class ReduceLROnPlateau(Callback):
+class ReduceLROnPlateau(setka.callbacks.Callback):
     '''
     This callback performs Learning Rate reducing when the plateau
     is reached.
+
+    Args:
+        metric (str) : name of the metric to monitor.
+
+        subset (hashable) : key of the subset of training set on which metric
+            will be monotored.
+
+        cooldown (int) : minimal amount of epochs between two learning rate changes.
+
+        limit (int) : amount of epochs since the last improvement of maximum of
+            the monitored metric before the learning rate change.
+
+        factor (float): learning rate reduction factor. New learning rate will
+            be a product of an old one and the reduction factor.
+
+        max_mode (bool) : if True then the higher is the metric the better.
+            Otherwise the lower is the metric the better.
     '''
+
     def __init__(self,
                  metric,
                  subset='valid',
@@ -875,21 +903,6 @@ class ReduceLROnPlateau(Callback):
                  limit=5,
                  factor=0.5,
                  max_mode=False):
-
-        '''
-        Constructor.
-
-        Args:
-            metric (str) : name of the metric to monitor.
-
-            cooldown (int) : minimal amount of epochs between two learning rate changes.
-
-            limit (int) : amount of epochs since the last improvement of maximum of
-                the monitored metric before the learning rate change.
-
-            max_mode (bool) : if True then the higher is the metric the better.
-                Otherwise the lower is the metric the better.
-        '''
 
         self.cooldown = cooldown
         self.limit = limit
@@ -907,32 +920,35 @@ class ReduceLROnPlateau(Callback):
 
         self.optimizer_index = 1
 
-
     def on_init(self):
-        self.trainer._lr_reduce=True
-
+        self.trainer._lr_reduce = True
 
     def on_epoch_end(self):
         if (self.trainer._mode == 'validating' and
-            self.trainer._subset == self.subset and
-            self.trainer._lr_reduce):
+                self.trainer._subset == self.subset and
+                self.trainer._lr_reduce):
 
             if self.best_metric is None:
                 self.best_metric = self.trainer._metrics[self.subset][self.metric]
                 self.since_best = 0
-                self.best_state = self.trainer._model.state_dict()
+                self.best_model_state = self.trainer._model.state_dict()
+                self.best_optimizers_state = self.trainer.get_optimizers_states()
 
             else:
                 new_metric = self.trainer._metrics[self.subset][self.metric]
 
                 if ((new_metric > self.best_metric and self.max_mode) or
-                    (new_metric < self.best_metric and not self.max_mode)):
-
+                        (new_metric < self.best_metric and not self.max_mode)):
                     self.best_metric = new_metric
                     self.since_best = 0
-                    self.best_state = self.trainer._mode.state_dict()
+                    self.best_model_state = self.trainer._model.state_dict()
+                    self.best_optimizers_state = self.trainer.get_optimizers_states()
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
+
+                self.trainer._model.load_state_dict(self.best_model_state)
+                self.trainer.set_optimizers_states(self.best_optimizers_state)
+
                 if "action" not in self.trainer._status:
                     self.trainer._status["action"] = ""
                 self.trainer._status["action"] += ' *** REDUCING lr *** '
@@ -940,7 +956,9 @@ class ReduceLROnPlateau(Callback):
                     for g in optimizer.optimizer.param_groups:
                         g['lr'] *= self.factor
                 self.since_last = 0
-                self.trainer._model.load_state_dict(self.best_state)
+
+                self.best_model_state = self.trainer._model.state_dict()
+                self.best_optimizers_state = self.trainer.get_optimizers_states()
 
             self.since_best += 1
             self.since_last += 1

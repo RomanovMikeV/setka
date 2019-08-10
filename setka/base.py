@@ -684,6 +684,12 @@ class Trainer():
 
 
     def get_optimizers_states(self):
+        '''
+        Gets the optimizers states.
+
+        Returns:
+            list with optimizers states
+        '''
         res = []
         for optimizer in self._optimizers:
             res.append(optimizer.optimizer.state_dict())
@@ -691,11 +697,23 @@ class Trainer():
 
 
     def set_optimizers_states(self, states):
+        '''
+        Sets the optimizers states.
+
+        Args:
+            states: list of states for each of the optimizer.
+        '''
         for opt_index in range(len(states)):
             self._optimizers[opt_index].optimizer.load_state_dict(states[opt_index])
 
 
     def get_optimizers_flags(self):
+        '''
+        Gets optimizers active flags.
+
+        Returns:
+            list with optimizer active flags.
+        '''
         res = []
         for optimizer in self._optimizers:
             res.append(optimizer.active)
@@ -703,6 +721,12 @@ class Trainer():
 
 
     def set_optimizers_flags(self, flags):
+        '''
+        Sets optimizers active flags.
+
+        Args:
+             flags (list): list with optimizers active flags.
+        '''
         for opt_index in range(len(flags)):
             self._optimizers[opt_index].active = flags[opt_index]
 
