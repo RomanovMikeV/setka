@@ -316,16 +316,16 @@ class Trainer():
             callback.on_init()
 
     @staticmethod
-    def create_pbar(silent):
+    def create_pbar(n_iterations, silent=True):
         try:
             pbar = tqdm_notebook(
                 range(n_iterations),
-                disable=self._silent,
+                disable=silent,
                 leave=False)
         except:
             pbar = tqdm(
                 range(n_iterations), ascii=True,
-                disable=self._silent, ncols=0,
+                disable=silent, ncols=0,
                 leave=False)
 
         return pbar
@@ -394,7 +394,7 @@ class Trainer():
 
         gc.collect()
 
-        pbar = self.create_pbar(self._silent)
+        pbar = self.create_pbar(n_iterations, silent=self._silent)
 
         end = time.time()
 
@@ -534,7 +534,7 @@ class Trainer():
 
             self._model.eval()
 
-            pbar = self.create_pbar(self._silent)
+            pbar = self.create_pbar(n_iterations, silent=self._silent)
 
             end = time.time()
 
@@ -649,7 +649,7 @@ class Trainer():
 
             gc.collect()
 
-            pbar = self.create_pbar(self._silent)
+            pbar = self.create_pbar(n_iterations, silent=self._silent)
 
             pbar.set_postfix({"Test ": str(self._epoch)})
 
