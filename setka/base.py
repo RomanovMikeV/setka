@@ -465,6 +465,8 @@ class Trainer():
 
             pbar.set_postfix(self._status)
 
+            pbar.close()
+
             if self._stop_epoch:
                 self._stop_epoch = False
                 break
@@ -585,6 +587,8 @@ class Trainer():
 
             pbar.set_postfix(self._status)
 
+            pbar.close()
+
             gc.collect()
             gc.collect()
 
@@ -678,6 +682,8 @@ class Trainer():
                 gc.collect()
 
                 del self._input, self._output, self._ids
+
+            pbar.close()
 
         for callback in self._callbacks:
             callback.on_epoch_end()
