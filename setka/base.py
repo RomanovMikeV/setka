@@ -317,13 +317,13 @@ class Trainer():
 
     @staticmethod
     def create_pbar(n_iterations, silent=True):
-        try:
-            pbar = tqdm_notebook(
-                range(n_iterations),
-                disable=silent,
-                leave=False)
-        except:
-            pbar = tqdm(
+        # try:
+        #     pbar = tqdm_notebook(
+        #         range(n_iterations),
+        #         disable=silent,
+        #         leave=False)
+        # except:
+        pbar = tqdm(
                 range(n_iterations), ascii=True,
                 disable=silent, ncols=0,
                 leave=False)
