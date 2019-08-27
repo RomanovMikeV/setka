@@ -16,15 +16,8 @@ import os
 import random
 import torch
 import torch.utils.data
-import shutil
-import gc
-import time
 import copy
-from tensorboardX import SummaryWriter
-from tqdm import tqdm, tqdm_notebook
-
-from . import internal
-
+import collections
 
 class OptimizerSwitch():
     '''
@@ -237,9 +230,7 @@ class Trainer():
             torch.backends.cudnn.benchmark = benchmark_cuda
 
 
-    def __init__(self, model,
-                 optimizers,
-                 criterion,
+    def __init__(self,
                  callbacks=[],
                  seed=0,
                  max_threads=4,
@@ -291,19 +282,20 @@ class Trainer():
 
             silent (bool): no outputs if True.
         '''
-        self.setup_environment(seed=seed,
-                               max_threads=max_threads,
-                               deterministic_cuda=deterministic_cuda,
-                               benchmark_cuda=benchmark_cuda)
+        # self.setup_environment(seed=seed,
+        #                        max_threads=max_threads,
+        #                        deterministic_cuda=deterministic_cuda,
+        #                        benchmark_cuda=benchmark_cuda)
 
-        self._model = torch.nn.DataParallel(model)
-
-        self._optimizers = optimizers
-        self._criterion = criterion
         self._callbacks = callbacks
 
-        self._epoch = 0
-        self._iteration = 0
+        for callback in self._callbacks:
+            callback.trainer = self
+
+        self.status = collections.OrderedDict()
+
+        self.status['epoch'] = 0
+        self.status['iteration'] = 0
 
         self._best_metrics = None
 
@@ -311,33 +303,59 @@ class Trainer():
 
         self._stop_epoch = False
 
+        self.run_callbacks('on_init')
+
+
+    def run_callbacks(self, stage):
+        priorities = []
         for callback in self._callbacks:
-            callback.set_trainer(self)
-            callback.on_init()
 
-    @staticmethod
-    def create_pbar(n_iterations, silent=True):
-        # try:
-        #     pbar = tqdm_notebook(
-        #         range(n_iterations),
-        #         disable=silent,
-        #         leave=False)
-        # except:
-        pbar = tqdm(
-                range(n_iterations), ascii=True,
-                disable=silent, ncols=0,
-                leave=False)
+            if hasattr(callback, 'priority'):
+                if isinstance(callback.priority, dict):
+                    if stage in callback.priority:
+                        priorities.append(-callback.priority[stage])
+                    else:
+                        priorities.append(0)
+                else:
+                    priorities.append(-callback.priority)
+            else:
+                priorities.append(0)
+        priorities = numpy.array(priorities)
 
-        return pbar
+        order = priorities.argsort(kind='stable')
+
+        for index in order:
+            getattr(self._callbacks[index], stage)()
+
+
+    def train_mode(self):
+        for opt_index in range(len(self._optimizers)):
+            if self._optimizers[opt_index].active:
+                self._optimizers[opt_index].module.train()
+
+
+    def one_step(self):
+        pass
+
+
+    def new_epoch(self):
+        self.status['mode'] = mode
+        self.status['subset'] = subset
+
+        if mode == 'train':
+            self.status['epoch'] += 1
+
+        self.run_callbacks('on_epoch_begin')
+
+
+    def one_iteration(self):
+        self.status
 
 
 
-    def train_one_epoch(self,
-                        dataset,
-                        subset='train',
-                        batch_size=4,
-                        num_workers=0,
-                        max_iterations=None):
+    def one_epoch(self,
+                  mode='valid',
+                  subset='valid'):
 
         '''
         Trains a model for one epoch.
@@ -358,335 +376,244 @@ class Trainer():
                 will be performed until the end of the subset.
         '''
 
-        self._mode = 'training'
-        self._subset = subset
-        self._dataset = dataset
+        self.status['mode'] = mode
+        self.status['subset'] = subset
 
-        self._ds_wrapper = internal.DataSetWrapper(self._dataset[subset], subset)
+        if mode == 'train':
+            self.status['epoch'] += 1
 
-        for callback in self._callbacks:
-            callback.on_epoch_begin()
+        self.run_callbacks('on_epoch_begin')
+        for i in range(self.status['n_iterations']):
+            self.status['epoch_iteration'] = i
+            self.status['iteration'] += 1
 
-        train_sampler = torch.utils.data.sampler.SequentialSampler(self._ds_wrapper)
-
-        train_loader = torch.utils.data.DataLoader(self._ds_wrapper,
-                                       batch_size=batch_size,
-                                       shuffle=False,
-                                       num_workers=num_workers,
-                                       drop_last=True,
-                                       pin_memory=True,
-                                       sampler=train_sampler)
-
-        gc.enable()
-
-        self._epoch += 1
-
-        batch_time = internal.AverageMeter()
-        data_time = internal.AverageMeter()
-        losses = internal.AverageMeter()
-
-        iterator = iter(train_loader)
-        n_iterations = len(train_loader)
-        if max_iterations is not None:
-            n_iterations = min(len(train_loader), max_iterations)
-
-        self._model.train()
-
-        gc.collect()
-
-        pbar = self.create_pbar(n_iterations, silent=self._silent)
-
-        end = time.time()
-
-        # Iterating through the batches
-        for i in pbar:
-            self._progress = i / len(pbar)
-
-            start = time.time()
-
-            self._input, self._ids = next(iterator)
-
-            if not isinstance(self._input, list):
-                self._input = [self._input,]
-
-            data_time.update(time.time() - start)
-
-            for opt_index in range(len(self._optimizers)):
-                if self._optimizers[opt_index].active:
-                    self._optimizers[opt_index].module.train()
-
-            for callback in self._callbacks:
-                callback.on_batch_begin()
-
-            # Moving tensors to CUDA device
-            if torch.cuda.is_available():
-                for index in range(len(self._input)):
-                    self._input[index] = self._input[index].cuda()
-
-            for opt_index in range(len(self._optimizers)):
-                self._optimizers[opt_index].optimizer.zero_grad()
-                    
-            self._output = self._model.forward(self._input)
-            if not isinstance(self._output, tuple):
-                self._output = (self._output, )
-
-            self._loss = self._criterion(self._output, self._input)
-
-            self._loss.backward()
-
-            for opt_index in range(len(self._optimizers)):
-                if self._optimizers[opt_index].active:
-                    self._optimizers[opt_index].optimizer.step()
-
-            self._iteration += 1
-
-            losses.update(self._loss.data.item())
-
-            batch_time.update(time.time() - end)
-            end = time.time()
-
-            # Print status
-            self._status = {
-                "Train": "{0:4d}".format(self._epoch),
-                "D": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
-
-            for callback in self._callbacks:
-                callback.on_batch_end()
-
-            for opt_index in range(len(self._optimizers)):
-                if self._optimizers[opt_index].active:
-                    self._optimizers[opt_index].module.eval()
-
-            del self._input, self._loss, self._output
-
-            if i == len(pbar) - 1:
-                for callback in self._callbacks:
-                    callback.on_epoch_end()
-
-            pbar.set_postfix(self._status)
-
-            pbar.close()
+            self.run_callbacks('on_batch_begin')
+            self.run_callbacks('on_batch_run')
+            self.run_callbacks("on_batch_end")
 
             if self._stop_epoch:
                 self._stop_epoch = False
                 break
 
-        gc.collect()
-
-
-    def validate_one_epoch(self,
-                           dataset,
-                           subset='valid',
-                           batch_size=4,
-                           num_workers=0,
-                           max_iterations=None):
-        '''
-        Validates a model for one epoch.
-
-        Args:
-            dataset (base.DataSet): dataset instance
-
-            subset (hashable): which subset of the dataset to use
-
-            batch_size (int): batch size to use during training
-
-            num_workers (int): number of workers to use in
-                torch.utils.data.DataLoader
-
-            max_iterations (int): maximum amount of iterations to
-                perform during one epoch. If None -- training
-                will be performed until the end of the subset.
-
-        '''
-
-        self._mode = 'validating'
-        self._subset = subset
-        self._dataset = dataset
-
-        with torch.no_grad():
-
-            # Creating test wrapper for the dataset
-            self._ds_wrapper = internal.DataSetWrapper(dataset[subset], subset)
-
-            for callback in self._callbacks:
-                callback.on_epoch_begin()
-
-            valid_sampler = torch.utils.data.sampler.SequentialSampler(
-                self._ds_wrapper)
-
-            # Creating dataloader
-            valid_loader = torch.utils.data.DataLoader(self._ds_wrapper,
-                                       batch_size=batch_size,
-                                       shuffle=False,
-                                       num_workers=num_workers,
-                                       drop_last=False,
-                                       pin_memory=True,
-                                       sampler=valid_sampler)
-
-            gc.enable()
-
-            batch_time = internal.AverageMeter()
-            data_time = internal.AverageMeter()
-            losses = internal.AverageMeter()
-
-            iterator = iter(valid_loader)
-            n_iterations = len(valid_loader)
-            if max_iterations is not None:
-                n_iterations = min(len(valid_loader), max_iterations)
-
-            self._model.eval()
-
-            pbar = self.create_pbar(n_iterations, silent=self._silent)
-
-            end = time.time()
-
-            for i in pbar:
-                self._progress = i / len(pbar)
-
-                start = time.time()
-                self._input, self._ids = next(iterator)
-
-                if not isinstance(self._input, list):
-                    self._input = [self._input,]
-
-                data_time.update(time.time() - start)
-
-                for callback in self._callbacks:
-                    callback.on_batch_begin()
-
-                if torch.cuda.is_available():
-                    for index in range(len(self._input)):
-                        self._input[index] = self._input[index].cuda()
-
-                self._output = self._model.forward(self._input)
-
-                if not isinstance(self._output, tuple):
-                    self._output = (self._output, )
-
-                self._loss = self._criterion(self._output, self._input)
-
-                losses.update(self._loss.data.item())
-
-                batch_time.update(time.time() - end)
-                end = time.time()
-
-                self._status = {
-                    "Valid": "{0:4d}".format(self._epoch),
-                    "D": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
-
-                for callback in self._callbacks:
-                    callback.on_batch_end()
-
-                del self._input, self._output
-
-                if i == len(pbar) - 1:
-                    for callback in self._callbacks:
-                        callback.on_epoch_end()
-
-                pbar.set_postfix(self._status)
-
-            pbar.set_postfix(self._status)
-
-            pbar.close()
-
-            gc.collect()
-            gc.collect()
-
-
-    def predict(self,
-                dataset,
-                subset='test',
-                batch_size=4,
-                num_workers=0,
-                max_iterations=None):
-
-        '''
-        Validates a model for one epoch.
-
-        Args:
-            dataset (base.DataSet): dataset instance
-
-            subset (hashable): which subset of the dataset to use
-
-            batch_size (int): batch size to use during training
-
-            num_workers (int): number of workers to use in
-                torch.utils.data.DataLoader
-
-            max_iterations (int): maximum amount of iterations to
-                perform during one epoch
-        '''
-        self._mode = 'predicting'
-        self._dataset = dataset
-        self._subset = subset
-
-        with torch.no_grad():
-
-            # Creating test wrapper for the dataset
-            self._ds_wrapper = internal.DataSetWrapper(
-                dataset[subset], subset)
-
-            for callback in self._callbacks:
-                callback.on_epoch_begin()
-
-            test_sampler = torch.utils.data.sampler.SequentialSampler(
-                self._ds_wrapper)
-
-            # Creating dataloader
-            test_loader = torch.utils.data.DataLoader(self._ds_wrapper,
-                                       batch_size=batch_size,
-                                       shuffle=False,
-                                       num_workers=num_workers,
-                                       drop_last=False,
-                                       pin_memory=True,
-                                       sampler=test_sampler)
-
-            gc.enable()
-
-            iterator = iter(test_loader)
-            n_iterations = len(test_loader)
-
-            if max_iterations is not None:
-                n_iterations = min(max_iterations, n_iterations)
-
-            self._model.eval()
-
-            gc.collect()
-
-            pbar = self.create_pbar(n_iterations, silent=self._silent)
-
-            pbar.set_postfix({"Test ": str(self._epoch)})
-
-            for i in pbar:
-                self._progress = i / len(pbar)
-
-                for callback in self._callbacks:
-                    callback.on_batch_begin()
-
-                self._input, self._ids = next(iterator)
-                if not isinstance(self._input, list):
-                    self._input = [self._input,]
-
-                if torch.cuda.is_available():
-                    for index in range(len(self._input)):
-                        self._input[index] = self._input[index].cuda()
-
-                self._output = self._model(self._input)
-
-                if not isinstance(self._output, tuple):
-                    self._output = (self._output, )
-
-                for callback in self._callbacks:
-                    callback.on_batch_end()
-
-                gc.collect()
-
-                del self._input, self._output, self._ids
-
-            pbar.close()
-
-        for callback in self._callbacks:
-            callback.on_epoch_end()
+        self.run_callbacks("on_epoch_end")
+
+
+    # def one_iteration(self):
+
+
+    # def validate_one_epoch(self,
+    #                        dataset,
+    #                        subset='valid',
+    #                        batch_size=4,
+    #                        num_workers=0,
+    #                        max_iterations=None):
+    #     '''
+    #     Validates a model for one epoch.
+    #
+    #     Args:
+    #         dataset (base.DataSet): dataset instance
+    #
+    #         subset (hashable): which subset of the dataset to use
+    #
+    #         batch_size (int): batch size to use during training
+    #
+    #         num_workers (int): number of workers to use in
+    #             torch.utils.data.DataLoader
+    #
+    #         max_iterations (int): maximum amount of iterations to
+    #             perform during one epoch. If None -- training
+    #             will be performed until the end of the subset.
+    #
+    #     '''
+    #
+    #     self._mode = 'validating'
+    #     self._subset = subset
+    #     self._dataset = dataset
+    #
+    #     with torch.no_grad():
+    #
+    #         # Creating test wrapper for the dataset
+    #         self._ds_wrapper = internal.DataSetWrapper(dataset[subset], subset)
+    #
+    #         for callback in self._callbacks:
+    #             callback.on_epoch_begin()
+    #
+    #         valid_sampler = torch.utils.data.sampler.SequentialSampler(
+    #             self._ds_wrapper)
+    #
+    #         # Creating dataloader
+    #         valid_loader = torch.utils.data.DataLoader(self._ds_wrapper,
+    #                                    batch_size=batch_size,
+    #                                    shuffle=False,
+    #                                    num_workers=num_workers,
+    #                                    drop_last=False,
+    #                                    pin_memory=True,
+    #                                    sampler=valid_sampler)
+    #
+    #         gc.enable()
+    #
+    #         batch_time = internal.AverageMeter()
+    #         data_time = internal.AverageMeter()
+    #         losses = internal.AverageMeter()
+    #
+    #         iterator = iter(valid_loader)
+    #         n_iterations = len(valid_loader)
+    #         if max_iterations is not None:
+    #             n_iterations = min(len(valid_loader), max_iterations)
+    #
+    #         self._model.eval()
+    #
+    #         pbar = self.create_pbar(n_iterations, silent=self._silent)
+    #
+    #         end = time.time()
+    #
+    #         for i in pbar:
+    #             self._progress = i / len(pbar)
+    #
+    #             start = time.time()
+    #             self._input, self._ids = next(iterator)
+    #
+    #             if not isinstance(self._input, list):
+    #                 self._input = [self._input,]
+    #
+    #             data_time.update(time.time() - start)
+    #
+    #             for callback in self._callbacks:
+    #                 callback.on_batch_begin()
+    #
+    #             if torch.cuda.is_available():
+    #                 for index in range(len(self._input)):
+    #                     self._input[index] = self._input[index].cuda()
+    #
+    #             self._output = self._model.forward(self._input)
+    #
+    #             if not isinstance(self._output, tuple):
+    #                 self._output = (self._output, )
+    #
+    #             self._loss = self._criterion(self._output, self._input)
+    #
+    #             losses.update(self._loss.data.item())
+    #
+    #             batch_time.update(time.time() - end)
+    #             end = time.time()
+    #
+    #             self._status = {
+    #                 "Valid": "{0:4d}".format(self._epoch),
+    #                 "D": "{data.avg:.2f}({data.val:.2f})".format(data=data_time)}
+    #
+    #             for callback in self._callbacks:
+    #                 callback.on_batch_end()
+    #
+    #             del self._input, self._output
+    #
+    #             if i == len(pbar) - 1:
+    #                 for callback in self._callbacks:
+    #                     callback.on_epoch_end()
+    #
+    #             pbar.set_postfix(self._status)
+    #
+    #         pbar.set_postfix(self._status)
+    #
+    #         pbar.close()
+    #
+    #         gc.collect()
+    #         gc.collect()
+    #
+    #
+    # def predict(self,
+    #             dataset,
+    #             subset='test',
+    #             batch_size=4,
+    #             num_workers=0,
+    #             max_iterations=None):
+    #
+    #     '''
+    #     Validates a model for one epoch.
+    #
+    #     Args:
+    #         dataset (base.DataSet): dataset instance
+    #
+    #         subset (hashable): which subset of the dataset to use
+    #
+    #         batch_size (int): batch size to use during training
+    #
+    #         num_workers (int): number of workers to use in
+    #             torch.utils.data.DataLoader
+    #
+    #         max_iterations (int): maximum amount of iterations to
+    #             perform during one epoch
+    #     '''
+    #     self._mode = 'predicting'
+    #     self._dataset = dataset
+    #     self._subset = subset
+    #
+    #     with torch.no_grad():
+    #
+    #         # Creating test wrapper for the dataset
+    #         self._ds_wrapper = internal.DataSetWrapper(
+    #             dataset[subset], subset)
+    #
+    #         for callback in self._callbacks:
+    #             callback.on_epoch_begin()
+    #
+    #         test_sampler = torch.utils.data.sampler.SequentialSampler(
+    #             self._ds_wrapper)
+    #
+    #         # Creating dataloader
+    #         test_loader = torch.utils.data.DataLoader(self._ds_wrapper,
+    #                                    batch_size=batch_size,
+    #                                    shuffle=False,
+    #                                    num_workers=num_workers,
+    #                                    drop_last=False,
+    #                                    pin_memory=True,
+    #                                    sampler=test_sampler)
+    #
+    #         gc.enable()
+    #
+    #         iterator = iter(test_loader)
+    #         n_iterations = len(test_loader)
+    #
+    #         if max_iterations is not None:
+    #             n_iterations = min(max_iterations, n_iterations)
+    #
+    #         self._model.eval()
+    #
+    #         gc.collect()
+    #
+    #         pbar = self.create_pbar(n_iterations, silent=self._silent)
+    #
+    #         pbar.set_postfix({"Test ": str(self._epoch)})
+    #
+    #         for i in pbar:
+    #             self._progress = i / len(pbar)
+    #
+    #             for callback in self._callbacks:
+    #                 callback.on_batch_begin()
+    #
+    #             self._input, self._ids = next(iterator)
+    #             if not isinstance(self._input, list):
+    #                 self._input = [self._input,]
+    #
+    #             if torch.cuda.is_available():
+    #                 for index in range(len(self._input)):
+    #                     self._input[index] = self._input[index].cuda()
+    #
+    #             self._output = self._model(self._input)
+    #
+    #             if not isinstance(self._output, tuple):
+    #                 self._output = (self._output, )
+    #
+    #             for callback in self._callbacks:
+    #                 callback.on_batch_end()
+    #
+    #             gc.collect()
+    #
+    #             del self._input, self._output, self._ids
+    #
+    #         pbar.close()
+    #
+    #     for callback in self._callbacks:
+    #         callback.on_epoch_end()
 
 
     def get_optimizers_states(self):

@@ -130,44 +130,70 @@ def cycle(progress):
     else:
         return 1.0
 
-trainer = setka.base.Trainer(net,
-                  criterion=criterion,
-                  optimizers=[
-                    setka.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
-                    setka.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    setka.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    setka.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
-                    setka.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
+trainer = setka.base.Trainer(#net,
+                  # criterion=criterion,
+                  # optimizers=[
+                  #   setka.base.OptimizerSwitch(net.fc3, torch.optim.Adam, lr=3.0e-5, is_active=True),
+                  #   setka.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                  #   setka.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                  #   setka.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                  #   setka.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)],
                   callbacks=[
-                             setka.callbacks.ShuffleDataset(shuffle_valid=True),
-                             # setka.callbacks.ComputeMetrics(),
+                             setka.callbacks.DataSetHandler(DataSet(), batch_size=32, workers=2,
+                                                            limits={'train': 100}),
+                             setka.callbacks.ModelHandler(net),
+                             setka.callbacks.LossHandler(criterion),
+                             setka.callbacks.OneStepOptimizers([
+                                 setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-5, is_active=True),
+                                 # setka.base.OptimizerSwitch(net.fc2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                                 # setka.base.OptimizerSwitch(net.fc1, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                                 # setka.base.OptimizerSwitch(net.conv2, torch.optim.Adam, lr=3.0e-5, is_active=False),
+                                 # setka.base.OptimizerSwitch(net.conv1, torch.optim.Adam, lr=3.0e-5, is_active=False)
+                             ]),
                              setka.callbacks.ComputeMetrics(
                                 metrics=[accuracy, loss],
                                 divide_first=[True, False]),
-                             setka.callbacks.MakeCheckpoints('accuracy'),
-                             setka.callbacks.SaveResult(),
-                             setka.callbacks.SaveResult(f=processing_placeholder),
-                             setka.callbacks.WriteToTensorboard(f=visualize),
-                             setka.callbacks.Logger(f=visualize),
-                             setka.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
-                             setka.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
-                             setka.callbacks.CyclicLR(cycle=cycle)
+                             setka.callbacks.ProgressBar(),
+                             setka.callbacks.GarbageCollector(),
+                             setka.callbacks.CyclicLR(cycle=cycle),
+                             # setka.callbacks.LimitIterations(100)
+
+                      #setka.callbacks.MakeCheckpoints('accuracy'),
+                             #setka.callbacks.SaveResult(),
+                             #setka.callbacks.SaveResult(f=processing_placeholder),
+                             #setka.callbacks.WriteToTensorboard(f=visualize),
+                             #setka.callbacks.Logger(f=visualize),
+                             #setka.callbacks.ReduceLROnPlateau('accuracy', max_mode=True),
+                             #setka.callbacks.UnfreezeOnPlateau('accuracy', max_mode=True),
+                             #setka.callbacks.CyclicLR(cycle=cycle)
                       ],
                   seed=1,
                   silent=False)
 dataset = DataSet()
 
 for epoch in range(10):
-    trainer.train_one_epoch(dataset,
-                            num_workers=2,
-                            max_iterations=10,
-                            batch_size=32)
+    trainer.one_epoch(#dataset,
+                      mode='train',
+                      subset='train')
+                      # num_workers=2,
+                      # batch_size=32
 
-    trainer.validate_one_epoch(dataset,
-                               subset='valid',
-                               num_workers=2,
-                               max_iterations=10,
-                               batch_size=32)
+
+    trainer.one_epoch(#dataset,
+                      mode='valid',
+                      subset='test')
+
+    trainer.one_epoch(#dataset,
+                      mode='valid',
+                      subset='valid')
+
+    # trainer.validate_one_epoch(dataset,
+    #                            subset='valid',
+    #                            num_workers=2,
+    #                            max_iterations=10,
+    #                            batch_size=32)
+
+exit()
 
 trainer = setka.base.Trainer(net,
                   criterion=criterion,
