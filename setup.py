@@ -25,7 +25,8 @@ setuptools.setup(
         # 'tb-nightly',
         'tqdm',
         'matplotlib',
-        'scikit-image'
+        'scikit-image',
+        'termcolor'
     ],
     classifiers=(
         "Programming Language :: Python :: 3",
