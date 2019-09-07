@@ -49,7 +49,7 @@ class CyclicLR(Callback):
             for group_index in range(len(self.trainer._optimizers[optim_index].optimizer.param_groups)):
                 self.trainer._optimizers[optim_index].optimizer.param_groups[group_index]['lr'] = (
                     self.lrs[optim_index][group_index] * self.cycle(
-                        self.trainer.status['epoch_iteration'] / self.trainer.status['n_iterations']))
+                        self.trainer._epoch_iteration / self.trainer._n_iterations))
 
     def on_epoch_end(self):
         for optim_index in range(len(self.lrs)):

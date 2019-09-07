@@ -294,7 +294,9 @@ class Trainer():
 
         self.status = collections.OrderedDict()
 
+        self._epoch = 0
         self.status['epoch'] = 0
+        self._iteration = 0
         self.status['iteration'] = 0
 
         self._best_metrics = None
@@ -339,10 +341,14 @@ class Trainer():
 
 
     def new_epoch(self):
+        self._mode = mode
+        self._subset = subset
+
         self.status['mode'] = mode
         self.status['subset'] = subset
 
         if mode == 'train':
+            self._epoch += 1
             self.status['epoch'] += 1
 
         self.run_callbacks('on_epoch_begin')
@@ -377,23 +383,29 @@ class Trainer():
         '''
 
         self.status['mode'] = mode
+        self._mode = mode
         self.status['subset'] = subset
+        self._subset = subset
 
         if mode == 'train':
             self.status['epoch'] += 1
+            self._epoch += 1
+
+        self._epoch_iteration = 0
 
         self.run_callbacks('on_epoch_begin')
-        for i in range(self.status['n_iterations']):
-            self.status['epoch_iteration'] = i
-            self.status['iteration'] += 1
+        for i in range(self._n_iterations):
+            self._epoch_iteration += 1
+            self._iteration += 1
 
             self.run_callbacks('on_batch_begin')
             self.run_callbacks('on_batch_run')
             self.run_callbacks("on_batch_end")
 
-            if self._stop_epoch:
-                self._stop_epoch = False
-                break
+            if hasattr(self, "_stop_epoch"):
+                if self._stop_epoch:
+                    self._stop_epoch = False
+                    return
 
         self.run_callbacks("on_epoch_end")
 

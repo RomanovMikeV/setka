@@ -4,6 +4,7 @@ from .Callback import Callback
 
 class ProgressBar(Callback):
     def __init__(self, filter=None):
+        self.set_priority(-100)
         try:
             self.pbar = tqdm.tqdm_notebook(leave=False)
         except:
@@ -23,14 +24,16 @@ class ProgressBar(Callback):
 
 
     def on_epoch_end(self):
+        self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
         if hasattr(self, 'status_string'):
             self.pbar.write(self.status_string)
 
         self.pbar.reset()
 
+
     def on_batch_end(self):
 
-        self.pbar.total = self.trainer.status['n_iterations']
+        self.pbar.total = self.trainer._n_iterations
         self.pbar.update()
 
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])

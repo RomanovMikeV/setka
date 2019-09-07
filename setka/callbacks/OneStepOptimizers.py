@@ -15,7 +15,6 @@ class OneStepOptimizers(Callback):
         for optimizer in self.trainer._optimizers:
             optimizer.module.train()
 
-
     def on_batch_end(self):
         for optimizer in self.trainer._optimizers:
             optimizer.optimizer.step()

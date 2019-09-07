@@ -58,8 +58,15 @@ class TuneOptimizersOnPlateau(Callback):
     def on_init(self):
         self.trainer._lr_reduce = True
 
+
+    def on_epoch_begin(self):
+        # print(self.trainer.status)
+        if 'OnPlateau' in self.trainer.status:
+            del(self.trainer.status["OnPlateau"])
+
+
     def on_epoch_end(self):
-        if (self.trainer._mode == 'validating' and
+        if (self.trainer._mode == 'valid' and
                 self.trainer._subset == self.subset and
                 self.trainer._lr_reduce):
 
@@ -87,11 +94,12 @@ class TuneOptimizersOnPlateau(Callback):
                 self.trainer._model.load_state_dict(self.best_model_state)
                 self.trainer.set_optimizers_states(self.best_optimizers_state)
 
-                if "action" not in self.trainer._status:
-                    self.trainer._status["action"] = ""
-                self.trainer._status["action"] += (
-                        ' LR factor: ' + str(self._lr_mult) +
+                if "OnPlateau" not in self.trainer.status:
+                    self.trainer.status["OnPlateau"] = ''
+
+                self.trainer.status["OnPlateau"] += (' LR factor: ' + str(self._lr_mult) +
                         ' Momentum power: ' + str(self._m_power))
+
                 for optimizer in self.trainer._optimizers:
                     for g in optimizer.optimizer.param_groups:
                         if 'lr' in g:

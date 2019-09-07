@@ -1,5 +1,7 @@
 from .Callback import Callback
 
+import copy
+
 class WeightAveraging(Callback):
     '''
     This callback performs weight averaging during the training. The callback
@@ -19,12 +21,12 @@ class WeightAveraging(Callback):
                  interval=10):
         self.gamma = gamma
         self.epoch_start = epoch_start
-        self.interval = 10
+        self.interval = interval
 
     def on_epoch_begin(self):
         if (self.trainer._epoch >= self.epoch_start and
             not hasattr(self, 'averaged_model') and
-            self.trainer._mode == 'training'):
+            self.trainer._mode == 'train'):
 
             self.averaged_model = copy.deepcopy(self.trainer._model)
 
@@ -44,11 +46,11 @@ class WeightAveraging(Callback):
 
     def on_batch_end(self):
         if (hasattr(self, 'averaged_model') and
-            self.trainer._mode == 'training'):
+            self.trainer._mode == 'train'):
 
             avg_pars = self.averaged_model.parameters()
             trn_pars = self.trainer._model.parameters()
 
-            if self.trainer.stauts['iterations'] % self.interval ==0:
+            if self.trainer.status['iteration'] % self.interval ==0:
                 for avg_par, trn_par in zip(avg_pars, trn_pars):
                     avg_par = avg_par * (1.0 - self.gamma) + trn_par * self.gamma

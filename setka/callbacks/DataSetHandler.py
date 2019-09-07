@@ -24,8 +24,8 @@ class DataSetHandler(Callback):
 
     def on_epoch_begin(self):
         ds_wrapper = internal.DataSetWrapper(
-            self.dataset[self.trainer.status["subset"]],
-            self.trainer.status["subset"])
+            self.dataset[self.trainer._subset],
+            self.trainer._subset)
 
         drop_last = False
         if self.trainer.status["mode"] == 'train':
@@ -53,15 +53,15 @@ class DataSetHandler(Callback):
 
         self.iterator = iter(self.loader)
 
-        self.trainer.status['n_iterations'] = len(self.loader)
+        self.trainer._n_iterations = len(self.loader)
         if isinstance(self.limits, dict):
-            if self.trainer.status["mode"] in self.limits:
-                self.trainer.status['n_iterations'] = min(
-                    self.trainer.status['n_iterations'],
-                    self.limits[self.trainer.status["mode"]])
+            if self.trainer._mode in self.limits:
+                self.trainer._n_iterations = min(
+                    self.trainer._n_iterations,
+                    self.limits[self.trainer._mode])
         else:
-            self.trainer.status['n_iterations'] = min(
-                self.trainer.status['n_iterations'],
+            self.trainer._n_iterations = min(
+                self.trainer._n_iterations,
                 self.limits)
 
 
