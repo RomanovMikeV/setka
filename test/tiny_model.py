@@ -3,12 +3,12 @@ import torch
 class TensorNet(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.layer1 = torch.nn.Conv2d(3, 3, kernel_size=(3, 3), padding=1)
-        self.layer2 = torch.nn.Conv2d(3, 3, kernel_size=(3, 3), padding=1)
-        self.layer3 = torch.nn.Conv2d(3, 3, kernel_size=(3, 3), padding=1)
-        self.layer4 = torch.nn.Conv2d(3, 3, kernel_size=(3, 3), padding=1)
+        self.layer1 = torch.nn.Conv2d(3, 1, kernel_size=(1, 1), padding=1)
+        self.layer2 = torch.nn.Conv2d(1, 1, kernel_size=(1, 1), padding=1)
+        self.layer3 = torch.nn.Conv2d(1, 1, kernel_size=(1, 1), padding=1)
+        self.layer4 = torch.nn.Conv2d(1, 1, kernel_size=(1, 1), padding=1)
 
-        self.fc = torch.nn.Linear(3, 10)
+        self.fc = torch.nn.Linear(1, 10)
 
     def __call__(self, input):
         x = input[0]
