@@ -3,6 +3,7 @@ import setka.base
 import setka.callbacks
 
 import torch
+import numpy
 
 import os
 import sys
@@ -30,7 +31,13 @@ def view_result(one_input, one_output):
     fig = plt.figure()
     plt.imshow(img.permute(2, 1, 0))
     plt.close()
-    return {'figures': {'img': fig}}
+
+    signal = numpy.sin(numpy.linspace(0, 1000, 40000))
+
+    return {'figures': {'img': fig},
+            'text': {'img': 'Sample'},
+            'image': {'img': img},
+            'audio': {'img': signal}}
 
 
 

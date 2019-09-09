@@ -31,8 +31,8 @@ trainer = setka.base.Trainer(callbacks=[
                                     ]
                                  ),
                                  setka.callbacks.ComputeMetrics([loss, acc]),
-                                 setka.callbacks.MakeCheckpoints('acc', max_mode=True, name='acc'),
-                                 setka.callbacks.MakeCheckpoints('loss', max_mode=False, name='loss')
+                                 setka.callbacks.MakeCheckpoints('tensor_acc', max_mode=True, name='acc'),
+                                 setka.callbacks.MakeCheckpoints('tensor_loss', max_mode=False, name='loss')
                              ])
 
 for index in range(10):
