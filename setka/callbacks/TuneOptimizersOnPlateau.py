@@ -76,15 +76,16 @@ class TuneOptimizersOnPlateau(Callback):
                 self.best_model_state = self.trainer._model.state_dict()
                 self.best_optimizers_state = self.trainer.get_optimizers_states()
 
-            else:
-                new_metric = self.trainer._metrics[self.subset][self.metric]
+            # else:
+            new_metric = self.trainer._metrics[self.subset][self.metric]
 
-                if ((new_metric > self.best_metric and self.max_mode) or
-                        (new_metric < self.best_metric and not self.max_mode)):
-                    self.best_metric = new_metric
-                    self.since_best = 0
-                    self.best_model_state = self.trainer._model.state_dict()
-                    self.best_optimizers_state = self.trainer.get_optimizers_states()
+            if ((new_metric >= self.best_metric and self.max_mode) or
+                (new_metric <= self.best_metric and not self.max_mode)):
+
+                self.best_metric = new_metric
+                self.since_best = 0
+                self.best_model_state = self.trainer._model.state_dict()
+                self.best_optimizers_state = self.trainer.get_optimizers_states()
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
 
