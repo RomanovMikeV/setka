@@ -4,6 +4,8 @@ import os
 import datetime
 import sys
 import zipfile
+import skimage.io
+import scipy.io.wavfile
 
 class Logger(Callback):
     '''

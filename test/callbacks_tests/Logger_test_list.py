@@ -35,9 +35,9 @@ def view_result(one_input, one_output):
     signal = numpy.sin(numpy.linspace(0, 1000, 40000))
 
     return {'figures': {'img': fig},
-            'text': {'img': 'Sample'},
-            'image': {'img': img},
-            'audio': {'img': signal}}
+            'texts': {'img': 'Sample'},
+            'images': {'img': img.numpy()},
+            'audios': {'img': signal}}
 
 
 
