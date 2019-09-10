@@ -10,8 +10,8 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),  '..')
 import tiny_model
 import test_dataset
 
-from test_metrics import list_loss as loss
-from test_metrics import list_acc as acc
+from test_metrics import tensor_loss as loss
+from test_metrics import tensor_acc as acc
 
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()

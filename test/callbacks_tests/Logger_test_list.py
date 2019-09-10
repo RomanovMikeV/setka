@@ -36,7 +36,7 @@ def view_result(one_input, one_output):
 
     return {'figures': {'img': fig},
             'texts': {'img': 'Sample'},
-            'images': {'img': (img * 255.0).uint8().numpy()},
+            'images': {'img': (img * 255.0).int().numpy().astype('uint8')},
             'audios': {'img': signal}}
 
 
