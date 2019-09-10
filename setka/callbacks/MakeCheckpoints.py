@@ -83,13 +83,3 @@ class MakeCheckpoints(Callback):
                 self.trainer.save(os.path.join(
                     './checkpoints',
                     self.name + '_best.pth.tar'))
-
-            if hasattr(self.trainer, '_checkpoints_dir'):
-                self.trainer.save(os.path.join(
-                    self.trainer._checkpoints_dir,
-                    self.name + '_latest.pth.tar'))
-
-                if is_best:
-                    self.trainer.save(os.path.join(
-                        self.trainer._checkpoints_dir,
-                        self.name + '_best.pth.tar'))
