@@ -65,27 +65,28 @@ class TuneOptimizersOnPlateau(Callback):
             del(self.trainer.status["OnPlateau"])
 
 
+    def update_best(self):
+        self.best_metric = self.trainer._metrics[self.subset][self.metric]
+        self.since_best = 0
+        self.best_model_state = self.trainer._model.state_dict()
+        self.best_optimizers_state = self.trainer.get_optimizers_states()
+
+
     def on_epoch_end(self):
         if (self.trainer._mode == 'valid' and
                 self.trainer._subset == self.subset and
                 self.trainer._lr_reduce):
 
             if self.best_metric is None:
-                self.best_metric = self.trainer._metrics[self.subset][self.metric]
-                self.since_best = 0
-                self.best_model_state = self.trainer._model.state_dict()
-                self.best_optimizers_state = self.trainer.get_optimizers_states()
+                self.update_best()
 
-            # else:
-            new_metric = self.trainer._metrics[self.subset][self.metric]
+            else:
+                new_metric = self.trainer._metrics[self.subset][self.metric]
 
-            if ((new_metric >= self.best_metric and self.max_mode) or
-                (new_metric <= self.best_metric and not self.max_mode)):
+                if ((new_metric >= self.best_metric and self.max_mode) or
+                    (new_metric <= self.best_metric and not self.max_mode)):
 
-                self.best_metric = new_metric
-                self.since_best = 0
-                self.best_model_state = self.trainer._model.state_dict()
-                self.best_optimizers_state = self.trainer.get_optimizers_states()
+                    self.update_best()
 
             if self.since_last >= self.cooldown and self.since_best >= self.limit:
 
