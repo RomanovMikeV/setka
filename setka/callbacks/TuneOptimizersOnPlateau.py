@@ -106,8 +106,6 @@ class TuneOptimizersOnPlateau(Callback):
                             g['lr'] *= self.lr_factor
                         if 'momentum' in g:
                             g['momentum'] **= self.m_power
-                        if 'beta' in g:
-                            g['beta'] **= self.m_power
                         if 'betas' in g:
                             for index in range(len(g['betas'])):
                                 g['betas'][index] **= self.m_power
