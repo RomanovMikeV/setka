@@ -10,12 +10,14 @@ sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),  '..')
 import tiny_model
 import test_dataset
 
-from test_metrics import list_loss as loss
-from test_metrics import list_acc as acc
+from test_metrics import tensor_loss as loss
+from test_metrics import tensor_acc as acc
 
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()
 
+def print_message():
+    print("Message")
 
 trainer = setka.base.Trainer(callbacks=[
                                  setka.callbacks.DataSetHandler(ds, batch_size=32, limits=2),
@@ -31,7 +33,7 @@ trainer = setka.base.Trainer(callbacks=[
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.callbacks.ProgressBar()
+                                 setka.callbacks.Lambda(on_batch_begin=print_message)
                              ])
 
 trainer.one_epoch('train', 'train')
