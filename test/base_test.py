@@ -11,6 +11,7 @@ from test_metrics import tensor_loss as loss
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()
 
+input, target = ds['train', 0]
 
 trainer = setka.base.Trainer(callbacks=[
                                  setka.callbacks.DataSetHandler(ds, batch_size=32, limits=2, shuffle=True),
