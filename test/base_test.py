@@ -13,7 +13,7 @@ model = tiny_model.TensorNet()
 
 
 trainer = setka.base.Trainer(callbacks=[
-                                 setka.callbacks.DataSetHandler(ds, batch_size=32, limits=2),
+                                 setka.callbacks.DataSetHandler(ds, batch_size=32, limits=2, shuffle=True),
                                  setka.callbacks.ModelHandler(model),
                                  setka.callbacks.LossHandler(loss),
                                  setka.callbacks.OneStepOptimizers(
