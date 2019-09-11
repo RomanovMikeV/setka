@@ -16,6 +16,9 @@ from test_metrics import tensor_acc as acc
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()
 
+def f(input, output):
+    return input, output
+
 trainer = setka.base.Trainer(callbacks=[
                                  setka.callbacks.DataSetHandler(ds, batch_size=32, limits=2),
                                  setka.callbacks.ModelHandler(model),
@@ -31,7 +34,7 @@ trainer = setka.base.Trainer(callbacks=[
                                     ]
                                  ),
                                  # setka.callbacks.ProgressBar(),
-                                 setka.callbacks.SaveResult()
+                                 setka.callbacks.SaveResult(f=f)
                              ])
 
 trainer.one_epoch('train', 'train')

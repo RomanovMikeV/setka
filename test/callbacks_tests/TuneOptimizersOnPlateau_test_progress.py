@@ -33,13 +33,16 @@ trainer = setka.base.Trainer(callbacks=[
                                         setka.base.OptimizerSwitch(
                                             model,
                                             torch.optim.SGD,
-                                            lr=0.01,
+                                            lr=1.0,
                                             momentum=0.9,
                                             weight_decay=5e-4)
                                     ]
                                  ),
                                  setka.callbacks.ComputeMetrics([loss, acc]),
-                                 setka.callbacks.TuneOptimizersOnPlateau('tensor_acc', max_mode=True)
+                                 setka.callbacks.TuneOptimizersOnPlateau('tensor_acc',
+                                                                         cooldown=2,
+                                                                         timeout=2,
+                                                                         max_mode=True)
                              ])
 
 for index in range(10):
