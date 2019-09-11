@@ -58,7 +58,8 @@ trainer = setka.base.Trainer(callbacks=[
                                     ]
                                  ),
                                  setka.callbacks.ComputeMetrics([loss, acc]),
-                                 setka.callbacks.Logger(f=view_result)
+                                 setka.callbacks.Logger(f=view_result),
+                                 setka.callbacks.GarbageCollector()
                              ])
 
 for index in range(2):

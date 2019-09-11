@@ -39,7 +39,8 @@ trainer = setka.base.Trainer(callbacks=[
                                     ]
                                  ),
                                  setka.callbacks.ComputeMetrics([loss, acc]),
-                                 setka.callbacks.TuneOptimizersOnPlateau('tensor_acc', max_mode=True)
+                                 setka.callbacks.TuneOptimizersOnPlateau('tensor_acc', max_mode=True),
+                                 setka.callbacks.GarbageCollector()
                              ])
 
 for index in range(10):

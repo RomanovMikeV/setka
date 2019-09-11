@@ -38,7 +38,8 @@ trainer = setka.base.Trainer(
             weight_decay=5e-4)]),
          setka.callbacks.WeightAveraging(
              epoch_start=0,
-             interval=1)
+             interval=1),
+         setka.callbacks.GarbageCollector()
     ])
 
 for index in range(3):

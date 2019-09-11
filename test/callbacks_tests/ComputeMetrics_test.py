@@ -32,7 +32,8 @@ trainer = setka.base.Trainer(callbacks=[
                                  ),
                                  setka.callbacks.ComputeMetrics([loss, acc],
                                                                 divide_first=[True, False],
-                                                                steps_to_compute=2)
+                                                                steps_to_compute=2),
+                                 setka.callbacks.GarbageCollector()
                              ])
 
 trainer.one_epoch('train', 'train')

@@ -47,7 +47,8 @@ trainer = setka.base.Trainer(callbacks=[
                                     ]
                                  ),
                                  setka.callbacks.ComputeMetrics([loss, acc]),
-                                 setka.callbacks.TensorBoard(f=view_result)
+                                 setka.callbacks.TensorBoard(f=view_result),
+                                 setka.callbacks.GarbageCollector()
                              ])
 
 for index in range(2):

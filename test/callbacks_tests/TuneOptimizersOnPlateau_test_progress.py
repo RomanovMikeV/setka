@@ -42,7 +42,8 @@ trainer = setka.base.Trainer(callbacks=[
                                  setka.callbacks.TuneOptimizersOnPlateau('tensor_acc',
                                                                          cooldown=2,
                                                                          limit=2,
-                                                                         max_mode=True)
+                                                                         max_mode=True),
+                                 setka.callbacks.GarbageCollector()
                              ])
 
 for index in range(10):

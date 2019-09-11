@@ -31,7 +31,8 @@ trainer = setka.base.Trainer(callbacks=[
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.callbacks.ProgressBar()
+                                 setka.callbacks.ProgressBar(),
+                                 setka.callbacks.GarbageCollector()
                              ])
 
 trainer.one_epoch('train', 'train')

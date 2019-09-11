@@ -21,7 +21,7 @@ class CIFAR10(setka.base.DataSet):
 
         train_data = torchvision.datasets.CIFAR10(
             './cifar10_data',
-            train=True,
+            train=False,
             download=True,
             transform=train_transforms)
 

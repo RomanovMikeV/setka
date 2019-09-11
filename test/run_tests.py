@@ -2,6 +2,7 @@
 
 import os
 import sys
+import gc
 import subprocess
 
 from termcolor import colored
@@ -18,9 +19,11 @@ def run_python_script(script_path):
     sys.stdout = open(os.devnull, 'w')
     exit_code = 0
     try:
-        __import__(script_name)
+        test = __import__(script_name)
+        del test
     except:
         exit_code = 1
+    gc.collect()
     sys.stdout = sys.__stdout__
     return exit_code
 

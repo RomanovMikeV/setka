@@ -30,7 +30,8 @@ trainer = setka.base.Trainer(callbacks=[
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.callbacks.SaveResult()
+                                 setka.callbacks.SaveResult(),
+                                 setka.callbacks.GarbageCollector()
                              ])
 
 trainer.one_epoch('train', 'train')

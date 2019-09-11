@@ -1,4 +1,6 @@
 import os
+import pickle
+import time
 
 from .Callback import Callback
 
@@ -41,6 +43,7 @@ class MakeCheckpoints(Callback):
         self.max_mode = max_mode
         self.name = name
         self.subset = subset
+        self.set_priority(1000)
 
         if not os.path.exists('./checkpoints'):
             os.makedirs('./checkpoints')
@@ -74,12 +77,15 @@ class MakeCheckpoints(Callback):
                              self.best_metric = self.trainer._metrics[self.subset][self.metric]
                              is_best = True
 
+            with open(os.path.join(
+                    './checkpoints',
+                    self.name + '_latest.pth.tar'), 'wb+') as fout:
 
-            self.trainer.save(os.path.join(
-                './checkpoints',
-                self.name + '_latest.pth.tar'))
+                pickle.dump(self, fout)
 
             if is_best:
-                self.trainer.save(os.path.join(
-                    './checkpoints',
-                    self.name + '_best.pth.tar'))
+                with open(os.path.join(
+                        './checkpoints',
+                        self.name + '_best.pth.tar'), 'wb+') as fout:
+
+                    pickle.dump(self, fout)
