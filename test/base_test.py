@@ -8,6 +8,8 @@ import tiny_model
 import test_dataset
 from test_metrics import tensor_loss as loss
 
+setka.base.environment_setup()
+
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()
 
