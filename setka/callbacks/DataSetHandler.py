@@ -1,6 +1,6 @@
 from .Callback import Callback
 
-import setka.internal as internal
+import setka.base
 import torch
 import time
 
@@ -23,7 +23,7 @@ class DataSetHandler(Callback):
 
 
     def on_epoch_begin(self):
-        ds_wrapper = internal.DataSetWrapper(
+        ds_wrapper = setka.base.DataSetWrapper(
             self.dataset[self.trainer._subset],
             self.trainer._subset)
 

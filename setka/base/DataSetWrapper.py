@@ -1,8 +1,4 @@
 import numpy
-import torch
-from torch._six import string_classes, int_classes
-import collections
-import re
 
 class DataSetWrapper():
     '''
