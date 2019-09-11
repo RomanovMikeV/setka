@@ -52,10 +52,8 @@ class ComputeMetrics(Callback):
         self.names = []
 
         if self.metrics is None:
-            def loss(inp, targ):
-                return self.trainer._criterion(inp, targ), 1.0
-            self.names = ['loss']
-            self.metrics = [loss]
+            self.names = []
+            self.metrics = []
 
         else:
             for index in range(len(self.metrics)):

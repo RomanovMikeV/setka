@@ -37,11 +37,11 @@ class Callback():
     def on_init(self):
         pass
 
-    def on_train_begin(self):
-        pass
+    # def on_train_begin(self):
+    #     pass
 
-    def on_train_end(self):
-        pass
+    # def on_train_end(self):
+    #     pass
 
     def on_epoch_begin(self):
         pass
@@ -61,11 +61,8 @@ class Callback():
     # def on_dataloader_ready(self):
     #     pass
 
-    def __str__(self):
-        pass
-
-    def set_trainer(self, trainer):
-        self.trainer = trainer
+    # def __str__(self):
+        # pass
 
     def set_priority(self, priority):
         self.priority = priority
