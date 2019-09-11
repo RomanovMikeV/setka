@@ -41,7 +41,7 @@ trainer = setka.base.Trainer(callbacks=[
                                  setka.callbacks.ComputeMetrics([loss, acc]),
                                  setka.callbacks.TuneOptimizersOnPlateau('tensor_acc',
                                                                          cooldown=2,
-                                                                         timeout=2,
+                                                                         limit=2,
                                                                          max_mode=True)
                              ])
 
