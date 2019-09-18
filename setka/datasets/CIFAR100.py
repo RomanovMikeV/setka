@@ -37,8 +37,11 @@ class CIFAR100(setka.base.DataSet):
 
     def getitem(self, subset, index):
         if subset == 'train':
-            return self.train_data[self.n_valid + index]
+            image, label = self.train_data[self.n_valid + index]
+            return {'image': image, 'label': label}
         elif subset == 'valid':
-            return self.train_data[index]
+            image, label = self.train_data[index]
+            return {'image': image, 'label': label}
         elif subset == 'test':
-            return self.test_data[index]
+            image, label = self.test_data[index]
+            return {'image': image, 'label': label}
