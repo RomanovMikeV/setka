@@ -5,10 +5,10 @@ from .Callback import Callback
 class ProgressBar(Callback):
     def __init__(self, filter=None):
         self.set_priority(-100)
-        try:
-            self.pbar = tqdm.tqdm_notebook(leave=False)
-        except:
-            self.pbar = tqdm.tqdm(leave=False, ascii=True, )
+        # try:
+        #     self.pbar = tqdm.tqdm_notebook(leave=False)
+        # except:
+        self.pbar = tqdm.tqdm(leave=False, ascii=True, )
 
 
     @staticmethod
@@ -38,7 +38,7 @@ class ProgressBar(Callback):
 
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
 
-        self.pbar.set_description(self.status_string)
+        self.pbar.set_postfix_str(self.status_string)
 
     def on_train_end(self):
         self.pbar.close()
