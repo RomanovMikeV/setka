@@ -1,3 +1,4 @@
+import time
 import tqdm
 
 from .Callback import Callback
@@ -5,10 +6,18 @@ from .Callback import Callback
 class ProgressBar(Callback):
     def __init__(self, filter=None):
         self.set_priority(-100)
-        # try:
-        #     self.pbar = tqdm.tqdm_notebook(leave=False)
-        # except:
-        self.pbar = tqdm.tqdm(leave=False, ascii=True, )
+        try:
+            self.pbar = tqdm.tqdm_notebook(
+                range(1000),
+                leave=False,
+                bar_format='{n}/|/{percentage:3.0f}% [{elapsed}>{remaining}] {rate_fmt}{postfix}')
+        except:
+            self.pbar = tqdm.tqdm(
+                range(1000),
+                ascii=True,
+                leave=False,
+                ncols=0,
+                bar_format='{bar}{percentage:3.0f}% [{elapsed}>{remaining}] {rate_fmt}{postfix}')
 
 
     @staticmethod
@@ -22,19 +31,19 @@ class ProgressBar(Callback):
             res = '{0:5s}'.format(val)
         return res
 
+    def on_epoch_begin(self):
+        self.pbar.n = 0
+        self.pbar.start_t = time.time()
 
     def on_epoch_end(self):
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
         if hasattr(self, 'status_string'):
             self.pbar.write(self.status_string)
 
-        self.pbar.reset()
-
-
     def on_batch_end(self):
 
-        self.pbar.total = self.trainer._n_iterations
-        self.pbar.update()
+        self.pbar.n = int(float(self.trainer._epoch_iteration) / float(self.trainer._n_iterations) * 1000.0)
+        self.pbar.refresh()
 
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
 
