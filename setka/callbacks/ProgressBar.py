@@ -10,14 +10,14 @@ class ProgressBar(Callback):
             self.pbar = tqdm.tqdm_notebook(
                 range(100),
                 leave=False,
-                bar_format='{n}/|/{percentage:3.0f}% [{elapsed}>{remaining}] {rate_fmt}%/sec')
+                bar_format='{n}/|/{percentage:3.0f}% [{elapsed}>{remaining}] {rate} {postfix}')
         except:
             self.pbar = tqdm.tqdm(
                 range(100),
                 ascii=True,
                 leave=False,
                 ncols=0,
-                bar_format='{bar}{percentage:3.0f}% [{elapsed}>{remaining}] {rate_fmt}%/sec')
+                bar_format='{bar}{percentage:3.0f}% [{elapsed}>{remaining}] {rate} {postfix}')
 
 
     @staticmethod
