@@ -1,4 +1,6 @@
 import torchvision.datasets
+import setka
+import setka.base
 
 class CIFAR100(setka.base.DataSet):
     def __init__(self,
