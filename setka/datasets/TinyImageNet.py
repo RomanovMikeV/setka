@@ -7,6 +7,7 @@ import numpy
 import imgaug as ia
 import imgaug.augmenters as iaa
 import torch
+import setka
 
 
 class TinyImageNet(setka.base.DataSet):
