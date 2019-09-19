@@ -13,7 +13,7 @@ class TuneOptimizersOnPlateau(Callback):
 
         cooldown (int) : minimal amount of epochs between two learning rate changes.
 
-        limit (int) : amount of epochs since the last improvement of maximum of
+        patience (int) : amount of epochs since the last improvement of maximum of
             the monitored metric before the learning rate change.
 
         lr_factor (float): learning rate factor. New learning rate will
@@ -30,14 +30,14 @@ class TuneOptimizersOnPlateau(Callback):
                  metric,
                  subset='valid',
                  cooldown=5,
-                 limit=5,
+                 patience=5,
                  lr_factor=1.0,
                  m_power=1.0,
                  max_mode=False,
                  reset_optimizer=False):
 
         self.cooldown = cooldown
-        self.limit = limit
+        self.patience = patience
         self.lr_factor = lr_factor
         self.m_power = m_power
 
@@ -88,7 +88,7 @@ class TuneOptimizersOnPlateau(Callback):
 
                     self.update_best()
 
-            if self.since_last >= self.cooldown and self.since_best >= self.limit:
+            if self.since_last >= self.cooldown and self.since_best >= self.patience:
 
                 self._lr_mult *= self.lr_factor
                 self._m_power *= self.m_power
