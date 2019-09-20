@@ -88,6 +88,9 @@ class TinyImageNet(setka.base.DataSet):
         for image in os.listdir(os.path.join(test_path, 'images')):
             self.test_images.append(image)
 
+        self.subsets = ['train', 'valid', 'test']
+
+
     def getlen(self, subset):
         if subset == 'train':
             return len(self.train_images)

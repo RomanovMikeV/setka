@@ -27,6 +27,8 @@ class CIFAR100(setka.base.DataSet):
 
         self.n_valid = int(0.05 * len(self.train_data))
 
+        self.subsets = ['train', 'valid', 'test']
+
     def getlen(self, subset):
         if subset == 'train':
             return len(self.train_data) - self.n_valid
