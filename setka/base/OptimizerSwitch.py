@@ -7,7 +7,7 @@ class OptimizerSwitch():
     this module's parameters.
     '''
 
-    def __init__(self, train_module, optimizer, is_active=True, **kwargs):
+    def __init__(self, train_module, optimizer, is_active=True, recurse=True, **kwargs):
         '''
         Constructs the OptimizerSwitch instance.
 
@@ -30,6 +30,6 @@ class OptimizerSwitch():
         ```
         '''
 
-        self.optimizer = optimizer(train_module.parameters(), **kwargs)
+        self.optimizer = optimizer(train_module.parameters(recurse=recurse), **kwargs)
         self.module = train_module
         self.active = is_active
