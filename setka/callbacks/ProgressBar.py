@@ -41,7 +41,10 @@ class ProgressBar(Callback):
     def on_epoch_end(self):
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
         if hasattr(self, 'status_string'):
-            self.pbar.write(self.status_string)
+            if isinstance(self.pbar, tqdm.tqdm_notebook):
+                print(self.status_string)
+            else:
+                self.pbar.write(self.status_string)
 
     def on_batch_end(self):
 
