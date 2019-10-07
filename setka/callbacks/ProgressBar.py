@@ -4,14 +4,15 @@ import tqdm
 from .Callback import Callback
 
 class ProgressBar(Callback):
-    def __init__(self, filter=None):
+    def __init__(self, mode='bash'):
         self.set_priority(-100)
-        try:
+        self.mode = mode
+        if mode == 'notebook':
             self.pbar = tqdm.tqdm_notebook(
                 range(100),
                 leave=False,
                 bar_format='{n}/|/{percentage:3.0f}% [{elapsed}>{remaining}] {rate_fmt} {postfix}')
-        except:
+        elif mode == 'bash':
             self.pbar = tqdm.tqdm(
                 range(100),
                 ascii=True,
@@ -41,10 +42,7 @@ class ProgressBar(Callback):
     def on_epoch_end(self):
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
         if hasattr(self, 'status_string'):
-            if isinstance(self.pbar, tqdm._tqdm_notebook.tqdm_notebook):
-                print(self.status_string)
-            else:
-                self.pbar.write(self.status_string)
+            self.pbar.write(self.status_string)
 
     def on_batch_end(self):
 
