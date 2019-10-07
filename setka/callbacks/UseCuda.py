@@ -1,7 +1,7 @@
 from .Callback import Callback
 import torch
 
-class UseCuda(setka.callbacks.Callback):
+class UseCuda(Callback):
     @staticmethod
     def move2cuda(coll):
         if isinstance(coll, dict):
