@@ -15,7 +15,7 @@ from .SaveResult import SaveResult
 from .TensorBoard import TensorBoard
 from .TuneOptimizersOnPlateau import TuneOptimizersOnPlateau
 from .UnfreezeOnPlateau import UnfreezeOnPlateau ## Check if works correctly
-from .UseCuda import UseCUDA
+from .UseCuda import UseCuda
 
 # Here
 
