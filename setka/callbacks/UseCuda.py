@@ -1,4 +1,5 @@
 from .Callback import Callback
+import torch
 
 class UseCUDA(Callback):
     def __init__(self):
