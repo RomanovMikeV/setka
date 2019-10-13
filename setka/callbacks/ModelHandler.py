@@ -17,6 +17,7 @@ class ModelHandler(Callback):
         
     def on_batch_run(self):
         if self.trainer._mode != 'train':
+            print("Switching to eval mode")
             self.trainer._model.eval()
         self.trainer._output = self.trainer._model(self.trainer._input)
         
