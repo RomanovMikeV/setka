@@ -9,6 +9,7 @@ class OneStepOptimizers(Callback):
 
     def on_batch_begin(self):
         if self.trainer._mode == 'train':
+            print("Switching to train mode")
             for optimizer in self.trainer._optimizers:
                 optimizer.optimizer.zero_grad()
 
