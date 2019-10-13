@@ -22,7 +22,8 @@ class MakeCheckpoints(Callback):
                  metric,
                  subset='valid',
                  max_mode=False,
-                 name='checkpoint'):
+                 name='checkpoint',
+                 log_dir='./'):
 
         '''
         Constructor.
@@ -44,9 +45,10 @@ class MakeCheckpoints(Callback):
         self.name = name
         self.subset = subset
         self.set_priority(1000)
+        self.log_dir = log_dir
 
-        if not os.path.exists('./checkpoints'):
-            os.makedirs('./checkpoints')
+        if not os.path.exists(os.path.join(log_dir, 'checkpoints'):
+            os.makedirs(log_dir, 'checkpoints')
 
 
     # @staticmethod
@@ -78,14 +80,16 @@ class MakeCheckpoints(Callback):
                              is_best = True
 
             with open(os.path.join(
-                    './checkpoints',
+                    self.log_dir,
+                    'checkpoints',
                     self.name + '_latest.pth.tar'), 'wb+') as fout:
 
                 pickle.dump(self, fout)
 
             if is_best:
                 with open(os.path.join(
-                        './checkpoints',
+                        self.log_dir,
+                        'checkpoints',
                         self.name + '_best.pth.tar'), 'wb+') as fout:
 
                     pickle.dump(self, fout)
