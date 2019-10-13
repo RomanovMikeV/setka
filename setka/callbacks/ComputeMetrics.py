@@ -220,3 +220,4 @@ class ComputeMetrics(Callback):
                 self.trainer._metrics = {}
             self.trainer._metrics[self.trainer._subset] = copy.deepcopy(self.avg_values)
         self.avg_values.clear()
+        self.reset()
