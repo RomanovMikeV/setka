@@ -37,8 +37,9 @@ class TensorBoard(Callback):
     def __init__(self,
                  f=None,
                  write_flag=True,
-                 name='checkpoint'):
-        self.tb_writer = TB.SummaryWriter()
+                 name='checkpoint',
+                 log_dir='./'):
+        self.tb_writer = TB.SummaryWriter(log_dir=log_dir)
         self.f = f
         self.write_flag = write_flag
         self.name = name
