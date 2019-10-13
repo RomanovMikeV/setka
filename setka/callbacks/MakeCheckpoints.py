@@ -47,8 +47,8 @@ class MakeCheckpoints(Callback):
         self.set_priority(1000)
         self.log_dir = log_dir
 
-        if not os.path.exists(os.path.join(log_dir, 'checkpoints'):
-            os.makedirs(log_dir, 'checkpoints')
+        if not os.path.exists(os.path.join(self.log_dir, 'checkpoints')):
+            os.makedirs(self.log_dir, 'checkpoints')
 
 
     # @staticmethod
