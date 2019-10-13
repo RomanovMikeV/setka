@@ -7,6 +7,7 @@ class LossHandler(Callback):
         self.set_priority({'on_batch_run': 9, 'on_batch_end': -9})
 
     def on_batch_run(self):
+        print(self.trainer._mode)
         if self.trainer._mode in ["train", "valid"]:
             self.trainer._loss = self.criterion(self.trainer._output, self.trainer._input)
             if self.trainer._mode == "train":
