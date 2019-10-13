@@ -18,9 +18,7 @@ class ModelHandler(Callback):
     def on_batch_run(self):
         if self.trainer._mode != 'train':
             self.trainer._model.eval()
-        print(self.trainer._input['image'].mean(), '<- input !!')
         self.trainer._output = self.trainer._model({'image': torch.zeros_like(self.trainer._input['image'])})
-        print(self.trainer._output.mean(), '<- output !!')
         
     def on_batch_end(self):
         del self.trainer._output
