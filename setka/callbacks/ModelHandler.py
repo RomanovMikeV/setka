@@ -12,6 +12,9 @@ class ModelHandler(Callback):
         self.trainer._model = torch.nn.DataParallel(self.model)
         self.trainer._model.eval()
 
+    def on_epoch_begin(self):
+        self.trainer._model.eval()
+        
     def on_batch_run(self):
         self.trainer._output = self.trainer._model(self.trainer._input)
 
