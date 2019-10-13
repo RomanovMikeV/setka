@@ -22,6 +22,8 @@ class ModelHandler(Callback):
             for module in self.trainer._model.modules():
                 if module.training:
                     print("FOUND MODULE IN TRAINING MODE!!!")
+                else:
+                    print("Module in valid mode")
         self.trainer._output = self.trainer._model(self.trainer._input)
         
     def on_batch_end(self):
