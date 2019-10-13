@@ -18,7 +18,9 @@ class ModelHandler(Callback):
     def on_batch_run(self):
         if self.trainer._mode != 'train':
             self.trainer._model.eval()
+        print(self.trainer._input['image'][0, 0, 0, 0], '<- input !!')
         self.trainer._output = self.trainer._model(self.trainer._input)
+        print(self.trainer._output[0, 0, 0, 0], '<- output !!')
         
     def on_batch_end(self):
         del self.trainer._output
