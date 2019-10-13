@@ -16,9 +16,7 @@ class ModelHandler(Callback):
         self.trainer._model.eval()
         
     def on_batch_run(self):
-#         print(self.trainer._input, '<- input')
         self.trainer._output = self.trainer._model(self.trainer._input)
-        print(self.trainer._output, '<- output min max')
-
+        
     def on_batch_end(self):
         del self.trainer._output
