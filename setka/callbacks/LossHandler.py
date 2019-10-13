@@ -9,7 +9,6 @@ class LossHandler(Callback):
     def on_batch_run(self):
         if self.trainer._mode in ["train", "valid"]:
             self.trainer._loss = self.criterion(self.trainer._output, self.trainer._input)
-            print(self.trainer._loss)
             if self.trainer._mode == "train":
                 self.trainer._loss.backward()
 
