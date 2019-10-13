@@ -19,7 +19,7 @@ class ModelHandler(Callback):
         if self.trainer._mode != 'train':
             print("Switching to eval mode")
             self.trainer._model.eval()
-            for module in self.trainer.modules():
+            for module in self.trainer._model.modules():
                 if module.training:
                     print("FOUND MODULE IN TRAINING MODE!!!")
         self.trainer._output = self.trainer._model(self.trainer._input)
