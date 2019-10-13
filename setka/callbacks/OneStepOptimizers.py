@@ -20,5 +20,5 @@ class OneStepOptimizers(Callback):
             optimizer.optimizer.step()
             
         for optimizer in self.trainer._optimizers:
-            optimizer.optimizer.eval()
+            optimizer.module.eval()
 
