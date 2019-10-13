@@ -122,7 +122,8 @@ class Trainer():
 
     def one_epoch(self,
                   mode='valid',
-                  subset='valid'):
+                  subset='valid',
+                  n_iterations=None):
 
         '''
         Trains a model for one epoch.
@@ -156,7 +157,13 @@ class Trainer():
         self._epoch_iteration = 0
 
         self.run_callbacks('on_epoch_begin')
-        for i in range(self._n_iterations):
+        
+        if n_iterations is not None:
+            n_iterations = min(self._n_iterations, n_iterations)
+        else:
+            n_iterations = self._n_iterations
+        
+        for i in range(n_iterations):
 
             if mode == 'train':
                 self._iteration += 1
