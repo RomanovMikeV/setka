@@ -18,4 +18,7 @@ class OneStepOptimizers(Callback):
     def on_batch_end(self):
         for optimizer in self.trainer._optimizers:
             optimizer.optimizer.step()
+            
+        for optimizer in self.trainer._optimizers:
+            optimizer.optimizer.eval()
 
