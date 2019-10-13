@@ -16,6 +16,8 @@ class ModelHandler(Callback):
         self.trainer._model.eval()
         
     def on_batch_run(self):
+        if self.trainer._mode != 'train':
+            self.trainer._model.eval()
         self.trainer._output = self.trainer._model(self.trainer._input)
         
     def on_batch_end(self):
