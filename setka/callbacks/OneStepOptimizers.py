@@ -10,7 +10,7 @@ class OneStepOptimizers(Callback):
     def on_batch_begin(self):
         if self.trainer._mode == 'train':
             for optimizer in self.trainer._optimizers:
-                if self.optimizer.is_active:
+                if optimizer.is_active:
                     optimizer.optimizer.zero_grad()
                     optimizer.module.train()
 
