@@ -46,6 +46,7 @@ class TensorBoard(Callback):
         self.name = name
 
     def on_epoch_begin(self):
+        print("Starting TensorBoard")
         self.tb_writer = TB.SummaryWriter(log_dir=self.log_dir)
         
         if self.trainer._mode == 'train' and self.write_flag:
