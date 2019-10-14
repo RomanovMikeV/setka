@@ -36,13 +36,13 @@ class ProgressBar(Callback):
         self.pbar.clear()
         self.pbar.n = 0
         self.pbar.start_t = time.time()
-        del self.pbar
 
         
     def on_epoch_end(self):
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
         self.pbar.close()
         print(self.status_string)
+        del self.pbar
         #if hasattr(self, 'status_string'):
         #    self.pbar.write(self.status_string)
 
