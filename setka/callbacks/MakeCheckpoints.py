@@ -1,6 +1,7 @@
 import os
 import pickle
 import time
+import torch
 
 from .Callback import Callback
 
