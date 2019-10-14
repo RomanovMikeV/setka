@@ -21,12 +21,12 @@ class ProgressBar(Callback):
         return res
 
     def on_epoch_begin(self):
-        if mode == 'notebook':
+        if self.mode == 'notebook':
             self.pbar = tqdm.tqdm_notebook(
                 range(100),
                 leave=False,
                 bar_format='{n}/|/{percentage:3.0f}% [{elapsed}>{remaining}] {rate_fmt} {postfix}')
-        elif mode == 'bash':
+        elif self.mode == 'bash':
             self.pbar = tqdm.tqdm(
                 range(100),
                 ascii=True,
