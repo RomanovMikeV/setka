@@ -59,7 +59,7 @@ class MakeCheckpoints(Callback):
 
 
     def on_epoch_begin(self):
-
+        print("Making checkpoints")
         is_best = False
 
         if self.trainer.status["mode"] == 'train':
