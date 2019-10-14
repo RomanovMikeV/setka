@@ -39,7 +39,7 @@ class TensorBoard(Callback):
                  write_flag=True,
                  name='checkpoint',
                  log_dir='./'):
-        self.log_dir = log_dir
+        self.log_dir = os.path.join(log_dir, 'runs')
         self.f = f
         self.write_flag = write_flag
         self.name = name
