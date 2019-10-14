@@ -36,6 +36,7 @@ class ProgressBar(Callback):
         self.pbar.clear()
         self.pbar.n = 0
         self.pbar.start_t = time.time()
+        del self.pbar
 
         
     def on_epoch_end(self):
