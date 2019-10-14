@@ -44,6 +44,7 @@ class Logger(Callback):
                  f=None,
                  write_flag=True,
                  name='checkpoint',
+                 log_dir='./',
                  ignore_list=('checkpoints', 'logs', 'predictions', 'runs')):
 
         # '''
@@ -63,7 +64,8 @@ class Logger(Callback):
         self.name = name
 
         self.root_path = os.path.join(
-            './logs',
+            self.log_dir,
+            'logs',
             self.name,
             str(datetime.datetime.now()).replace('\s', '-')
         )
