@@ -77,18 +77,21 @@ class MakeCheckpoints(Callback):
 
                              self.best_metric = self.trainer._metrics[self.subset][self.metric]
                              is_best = True
+            torch.save({'trainer': self.trainer}, 
+                       os.path.join(
+                            self.log_dir,
+                            'checkpoints',
+                            self.name + '_latest.pth.tar'))
+#             with open(os.path.join(
+#                     self.log_dir,
+#                     'checkpoints',
+#                     self.name + '_latest.pth.tar'), 'wb+') as fout:
 
-            with open(os.path.join(
-                    self.log_dir,
-                    'checkpoints',
-                    self.name + '_latest.pth.tar'), 'wb+') as fout:
-
-                pickle.dump(self.trainer, fout)
+#                 pickle.dump(self.trainer, fout)
 
             if is_best:
-                with open(os.path.join(
+                torch.save({'trainer': self.trainer},
+                        os.path.join(
                         self.log_dir,
                         'checkpoints',
-                        self.name + '_best.pth.tar'), 'wb+') as fout:
-
-                    pickle.dump(self.trainer, fout)
+                        self.name + '_best.pth.tar'))
