@@ -39,12 +39,14 @@ class TensorBoard(Callback):
                  write_flag=True,
                  name='checkpoint',
                  log_dir='./'):
-        self.tb_writer = TB.SummaryWriter(log_dir=log_dir)
+        self.log_dir = log_dir
         self.f = f
         self.write_flag = write_flag
         self.name = name
 
     def on_epoch_begin(self):
+        self.tb_writer = TB.SummaryWriter(log_dir=self.log_dir)
+        
         if self.trainer._mode == 'train' and self.write_flag:
 
             if hasattr(self.trainer, '_metrics'):
@@ -62,6 +64,11 @@ class TensorBoard(Callback):
                             self.name + '/' + metric_name,
                             data[metric_name],
                             self.trainer._epoch)
+                    
+    
+    def on_epoch_end(self):
+        self.tb_writer.close()
+        
 
     def show(self, to_show, id):
 
