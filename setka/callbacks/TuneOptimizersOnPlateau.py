@@ -109,8 +109,10 @@ class TuneOptimizersOnPlateau(Callback):
                         if 'momentum' in g:
                             g['momentum'] **= self.m_power
                         if 'betas' in g:
+                            new_betas = []
                             for index in range(len(g['betas'])):
-                                g['betas'][index] **= self.m_power
+                                new_betas.append(g['betas'][index] ** self.m_power)
+                            g['betas'] = new_betas
 
                     if self.reset_optimizer:
                         optimizer.state = {}
