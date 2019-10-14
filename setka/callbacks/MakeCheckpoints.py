@@ -83,7 +83,7 @@ class MakeCheckpoints(Callback):
                     'checkpoints',
                     self.name + '_latest.pth.tar'), 'wb+') as fout:
 
-                pickle.dump(self, fout)
+                pickle.dump(self.trainer, fout)
 
             if is_best:
                 with open(os.path.join(
@@ -91,4 +91,4 @@ class MakeCheckpoints(Callback):
                         'checkpoints',
                         self.name + '_best.pth.tar'), 'wb+') as fout:
 
-                    pickle.dump(self, fout)
+                    pickle.dump(self.trainer, fout)
