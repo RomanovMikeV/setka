@@ -62,6 +62,7 @@ class Logger(Callback):
         self.f = f
         self.write_flag = write_flag
         self.name = name
+        self.log_dir = log_dir
 
         self.root_path = os.path.join(
             self.log_dir,
