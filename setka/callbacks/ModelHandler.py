@@ -18,7 +18,7 @@ class ModelHandler(Callback):
     def on_batch_run(self):
         if self.trainer._mode != 'train':
             self.trainer._model.eval()
-        self.trainer._output = self.trainer._model({'image': torch.zeros_like(self.trainer._input['image'])})
+        self.trainer._output = self.trainer._model(self.trainer._input)
         
     def on_batch_end(self):
         del self.trainer._output
