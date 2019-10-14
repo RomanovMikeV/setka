@@ -69,6 +69,7 @@ class TensorBoard(Callback):
     
     def on_epoch_end(self):
         self.tb_writer.close()
+        del self.tb_writer
         
 
     def show(self, to_show, id):
