@@ -155,7 +155,7 @@ class Logger(Callback):
         elif isinstance(input, dict):
             one = {}
             for key, value in input.items():
-                one[key] = value
+                one[key] = value[item_index]
             return one
 
         else:
