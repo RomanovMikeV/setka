@@ -28,12 +28,12 @@ class DataSetHandler(Callback):
             self.trainer._subset)
 
         drop_last = False
-        if self.trainer.status._mode == 'train':
+        if self.trainer._mode == 'train':
             drop_last = True
 
         shuffle = False
         if isinstance(self.shuffle, dict):
-            if self.trainer.status._mode in self.shuffle:
+            if self.trainer._mode in self.shuffle:
                 shuffle = shuffle
 
         else:
