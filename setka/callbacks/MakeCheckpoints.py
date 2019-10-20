@@ -105,7 +105,7 @@ class MakeCheckpoints(Callback):
                         'checkpoints',
                         self.name + '_best.pth.tar'))
             
-                torch.save(self.trainer._model.state_dict()
+                torch.save(self.trainer._model.state_dict(),
                         os.path.join(
                         self.log_dir,
                         'checkpoints',
