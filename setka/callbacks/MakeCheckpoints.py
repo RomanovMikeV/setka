@@ -48,7 +48,7 @@ class MakeCheckpoints(Callback):
         self.subset = subset
         self.set_priority(1000)
         self.log_dir = log_dir
-        self.keep_best_only=True
+        self.keep_best_only=keep_best_only
 
         if not os.path.exists(os.path.join(self.log_dir, 'checkpoints')):
             os.makedirs(os.path.join(self.log_dir, 'checkpoints'))
