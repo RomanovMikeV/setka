@@ -117,11 +117,11 @@ class MakeCheckpoints(Callback):
                         os.path.join(
                         self.log_dir,
                         'checkpoints',
-                        self.name + '_' + str(self.trainer._epoch) + '.pth.tar'))
+                        self.name + '_' + str(self.trainer._epoch - 1) + '.pth.tar'))
                 
                 torch.save(self.trainer._model.state_dict(),
                         os.path.join(
                         self.log_dir,
                         'checkpoints',
-                        self.name + '_weights_' + str(self.trainer._epoch) + '.pth.tar'))
+                        self.name + '_weights_' + str(self.trainer._epoch - 1) + '.pth.tar'))
             
