@@ -47,18 +47,6 @@ class Logger(Callback):
                  log_dir='./',
                  ignore_list=('checkpoints', 'logs', 'predictions', 'runs')):
 
-        # '''
-        # Constructor.
-        #
-        # Args:
-        #     f (callable): processing function to be used during prediction
-        #         process.
-        #
-        #     write_flag (bool): if False -- the visualization is not performed.
-        #
-        #     name (str): name of the experiment
-        # '''
-
         self.f = f
         self.write_flag = write_flag
         self.name = name
@@ -111,37 +99,48 @@ class Logger(Callback):
                         str(self.trainer._metrics) + '\n')
 
 
-    def save_image(self, name, content, epoch):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
+    @staticmethod
+    def make_dirs(fname):
+        dir_name = '/'.join(fname.split('/')[:-1])
+        if not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+
+
+    def save_image(self, name, content, epoch, ext='png'):
+        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.' + ext)
         if len(content.shape) == 3:
             content = content.swapaxes(0, 2).swapaxes(0, 1)
-        if not os.path.exists('/'.join(fname.split('/')[:-1])):
-            os.makedirs('/'.join(fname.split('/')[:-1]))
+        self.make_dirs(fname)
         skimage.io.imsave(
             fname,
             content)
 
-    def save_text(self, name, content, epoch):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.txt')
-        if not os.path.exists('/'.join(fname.split('/')[:-1])):
-            os.makedirs('/'.join(fname.split('/')[:-1]))
+    def save_text(self, name, content, epoch, ext='txt'):
+        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.' + ext)
+        self.make_dirs(fname)
         with open(fname, 'w+') as fout:
             fout.write(content)
 
-    def save_audio(self, name, content, epoch):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.wav')
-        if not os.path.exists('/'.join(fname.split('/')[:-1])):
-            os.makedirs('/'.join(fname.split('/')[:-1]))
+    def save_audio(self, name, content, epoch, ext='wav'):
+        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.' + ext)
+        self.make_dirs(fname)
         scipy.io.wavfile.write(
             fname,
             44100,
             content)
 
-    def save_figure(self, name, content, epoch):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.png')
-        if not os.path.exists('/'.join(fname.split('/')[:-1])):
-            os.makedirs('/'.join(fname.split('/')[:-1]))
+    def save_figure(self, name, content, epoch, ext='png'):
+        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.' + ext)
+        self.make_dirs(fname)
         content.savefig(fname)
+
+
+    def save_file(self, name, content, epoch, ext='bin'):
+        fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.' + ext)
+        self.make_dirs(fname)
+        with open(fname, 'wb+') as fout:
+            content.seek(0)
+            fout.write(content.read())
 
 
     @staticmethod
@@ -168,13 +167,21 @@ class Logger(Callback):
             'images': self.save_image,
             'texts': self.save_text,
             'audios': self.save_audio,
-            'figures': self.save_figure}
+            'figures': self.save_figure,
+            'files': self.save_file}
 
         for type in type_writers:
             if type in to_show:
                 for desc in to_show[type]:
-                    type_writers[type](type + '/' + str(id) + '/' + desc,
-                        to_show[type][desc], str(self.trainer._epoch))
+                    kwargs = {
+                        'name': type + '/' + str(id) + '/' + desc,
+                        'content': to_show[type][desc],
+                        'epoch': str(self.trainer._epoch)
+                    }
+                    if 'ext' in to_show[type]:
+                        kwargs['ext'] = to_show[type]['ext']
+
+                    type_writers[type](**kwargs)
 
     def on_batch_end(self):
 

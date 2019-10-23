@@ -10,6 +10,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),  '..'))
 import tiny_model
 import test_dataset
+import tempfile
 
 import matplotlib.pyplot as plt
 
@@ -34,10 +35,14 @@ def view_result(one_input, one_output):
 
     signal = numpy.sin(numpy.linspace(0, 1000, 40000))
 
+    file = tempfile.SpooledTemporaryFile()
+    file.write(b'something')
+
     return {'figures': {'img': fig},
             'texts': {'img': 'Sample'},
             'images': {'img': (img * 255.0).int().numpy().astype('uint8')},
-            'audios': {'img': signal}}
+            'audios': {'img': signal},
+            'files': file}
 
 
 
