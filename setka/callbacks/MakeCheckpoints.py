@@ -24,7 +24,8 @@ class MakeCheckpoints(Callback):
                  subset='valid',
                  max_mode=False,
                  name='checkpoint',
-                 log_dir='./'):
+                 log_dir='./',
+                 keep_best_only=True):
 
         '''
         Constructor.
@@ -47,6 +48,7 @@ class MakeCheckpoints(Callback):
         self.subset = subset
         self.set_priority(1000)
         self.log_dir = log_dir
+        self.keep_best_only=keep_best_only
 
         if not os.path.exists(os.path.join(self.log_dir, 'checkpoints')):
             os.makedirs(os.path.join(self.log_dir, 'checkpoints'))
@@ -83,6 +85,12 @@ class MakeCheckpoints(Callback):
                             self.log_dir,
                             'checkpoints',
                             self.name + '_latest.pth.tar'))
+            
+            torch.save(self.trainer._model.state_dict(),
+                       os.path.join(
+                            self.log_dir,
+                            'checkpoints',
+                            self.name + '_weights_latest.pth.tar'))
 #             with open(os.path.join(
 #                     self.log_dir,
 #                     'checkpoints',
@@ -96,3 +104,24 @@ class MakeCheckpoints(Callback):
                         self.log_dir,
                         'checkpoints',
                         self.name + '_best.pth.tar'))
+            
+                torch.save(self.trainer._model.state_dict(),
+                        os.path.join(
+                        self.log_dir,
+                        'checkpoints',
+                        self.name + '_weights_best.pth.tar'))
+            
+            
+            if not self.keep_best_only:
+                torch.save({'trainer': self.trainer},
+                        os.path.join(
+                        self.log_dir,
+                        'checkpoints',
+                        self.name + '_' + str(self.trainer._epoch - 1) + '.pth.tar'))
+                
+                torch.save(self.trainer._model.state_dict(),
+                        os.path.join(
+                        self.log_dir,
+                        'checkpoints',
+                        self.name + '_weights_' + str(self.trainer._epoch - 1) + '.pth.tar'))
+            
