@@ -1,5 +1,10 @@
+Master branch:
 [![Build Status](https://travis-ci.com/RomanovMikeV/setka.svg?branch=master)](https://travis-ci.com/RomanovMikeV/setka)
 [![codecov](https://codecov.io/gh/RomanovMikeV/setka/branch/master/graph/badge.svg)](https://codecov.io/gh/RomanovMikeV/setka)
+
+Dev branch:
+[![Build Status](https://travis-ci.com/RomanovMikeV/setka.svg?branch=dev)](https://travis-ci.com/RomanovMikeV/setka)
+[![codecov](https://codecov.io/gh/RomanovMikeV/setka/branch/dev/graph/badge.svg)](https://codecov.io/gh/RomanovMikeV/setka)
 
 
 
