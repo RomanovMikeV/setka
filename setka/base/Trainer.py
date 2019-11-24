@@ -1,231 +1,180 @@
 import collections
 import numpy
+import pandas
 
 class Trainer():
     '''
-    Trainer can train and validate your network. It can also
-    predict results.
 
-    It contains the following methods:
+    Trainer is a class that takes control over the training procedure. It is the main module of the whole Setka.
 
-    * __init__ -- class constructor, where you specify everything
-        that you will need during the training procedure.
-
-    * train_one_epoch -- performs training for one epoch
-
-    * validate_one_epoch -- performs validation for one epoch
-
-    * predict -- predicts results
-
-    * save -- dumps network's and optimizer's states to the file
-
-    * load -- loads network's and optimizer's states from the file
-
+    :param pipes: list or tuple of pipes for a pipeline.
+    :param train_flow: callbacks in the order in which they are called when the trainer.run_training is called
     '''
 
     def __init__(self,
-                 callbacks=[],
-                 seed=0,
-                 max_threads=4,
-                 deterministic_cuda=False,
-                 benchmark_cuda=True,
-                 silent=False):
-        '''
-        Class constructor.
+                 pipes=[],
+                 train_flow=['before_train', 'on_train', 'after_train'],
+                 epoch_flow=['before_epoch', 'on_epoch', 'after_epoch'],
+                 batch_flow=['before_batch', 'on_batch', 'after_batch']):
 
-        Args:
-            model (base.Network) -- model to train
+        self._train_flow = train_flow
+        self._batch_flow = batch_flow
+        self._epoch_flow = epoch_flow
 
-            optimizers (list of base.OptimizerSwitch) -- optimizer
-                to use during training. The optimisers whose
-                is_active flag is set to True will be used in the
-                optimization procedure (there may be many of them)
+        self._pipes = pipes
 
-            criterion (function) -- criterion (loss) function that
-                needs to be optimized
-
-            callbacks (list of callbacks.Callback) -- callbacks
-                that extend functionality of the trainer.
-
-            seed (int) -- seed for random number generators to use.
-
-            deterministic_cuda (bool) -- flag that specifies if
-                the cuda should behave deterministically
-                (takes more time to perform computations)
-
-            silent (bool) -- do not show output
-
-
-        Args:
-            model (base.Network): the model for the socket.
-
-            callbacks (list): List of setka.callbacks to use
-                during training.
-
-            seed (int): seed to initialize the random value
-                generators. 0 by default.
-
-            deterministic_cuda (bool): whether to use deterministic
-                CUDA backend. If True, the computations are slower,
-                but deterministic.
-
-            batch_to_metrics (int): how many batches to accumulate before
-            metrics computation. Default is 1. If None -- use all batches for
-            metrics computation.
-
-            silent (bool): no outputs if True.
-        '''
-        # self.setup_environment(seed=seed,
-        #                        max_threads=max_threads,
-        #                        deterministic_cuda=deterministic_cuda,
-        #                        benchmark_cuda=benchmark_cuda)
-
-        self._callbacks = callbacks
-
-        for callback in self._callbacks:
-            callback.trainer = self
+        for pipe in self._pipes:
+            pipe.trainer = self
 
         self.status = collections.OrderedDict()
 
         self._epoch = 0
-        self.status['epoch'] = 0
+        self.status["epoch"] = 0
         self._iteration = 0
-        self.status['iteration'] = 0
+        self.status["iteration"] = 0
 
-        self._best_metrics = None
+        # self._best_metrics = None
 
-        self._stop_epoch = False
-        self.run_callbacks('on_init')
+        self._run_pipes('on_init')
 
 
-    def run_callbacks(self, stage):
+    def _traverse_pipes(self, stage, action='run'):
         priorities = []
-        for callback in self._callbacks:
-
-            if hasattr(callback, 'priority'):
-                if isinstance(callback.priority, dict):
-                    if stage in callback.priority:
-                        priorities.append(-callback.priority[stage])
+        for pipe in self._pipes:
+            if hasattr(pipe, 'priority'):
+                if isinstance(pipe.priority, dict):
+                    if stage in pipe.priority:
+                        priorities.append(-pipe.priority[stage])
                     else:
                         priorities.append(0)
                 else:
-                    priorities.append(-callback.priority)
+                    priorities.append(-pipe.priority)
             else:
                 priorities.append(0)
         priorities = numpy.array(priorities)
 
         order = priorities.argsort(kind='stable')
 
+        res = []
         for index in order:
-            getattr(self._callbacks[index], stage)()
+            if hasattr(self._pipes[index], stage):
+                if action == 'run':
+                    getattr(self._pipes[index], stage)()
+                elif action == 'view':
+                    doc = 'Whoopsy... No description provided'
+                    name = self._pipes[index].__class__.__name__ + '.' + getattr(self._pipes[index], stage).__name__
+                    if hasattr(getattr(self._pipes[index], stage), '__doc__'):
+                        if getattr(self._pipes[index], stage).__doc__ is not None:
+                            doc = getattr(self._pipes[index], stage).__doc__
+
+                    res.append((priorities[order[index]], name, ' '.join(doc.split())))
+
+        return res
 
 
-    def one_epoch(self,
+    def _run_pipes(self, stage):
+        self._traverse_pipes(stage, action='run')
+
+
+    def _view_pipes(self, stage):
+        self._traverse_pipes(stage, action='view')
+
+
+    def _traverse_train(self,
+                  n_epochs=None,
+                  action='view'):
+
+        if action == 'view':
+            n_epochs = 1
+
+        if n_epochs is not None:
+            self._n_epochs = n_epochs
+            self.status["n_epochs"] = n_epochs
+
+        res = []
+        for stage in self._train_flow:
+            res.extend(self._traverse_pipes(stage, action=action))
+
+        return res
+
+
+    def _traverse_epoch(self,
                   mode='valid',
                   subset='valid',
-                  n_iterations=None):
+                  n_iterations=None,
+                  action='view'):
 
-        '''
-        Trains a model for one epoch.
-
-        Args:
-            dataset (base.DataSet): dataset instance to train on.
-
-            subset (hashable): identifier of the dataset's subset
-                which willbe used for training.
-
-            batch_size (int): batch size to use during training.
-
-            num_workers (int): number of workers to use in
-                torch.utils.data.DataLoader.
-
-            max_iterations (int): maximum amount of iterations to
-                perform during one epoch. If None -- training
-                will be performed until the end of the subset.
-        '''
-
-        self.status['mode'] = mode
-        self._mode = mode
-
-        self.status['subset'] = subset
-        self._subset = subset
+        if action == 'view':
+            n_iterations = 1
 
         if mode == 'train':
-            self.status['epoch'] += 1
             self._epoch += 1
+            self.status['epoch'] += 1
 
         self._epoch_iteration = 0
 
-        self.run_callbacks('on_epoch_begin')
-        
-        if n_iterations is not None:
-            n_iterations = min(self._n_iterations, n_iterations)
-        else:
-            n_iterations = self._n_iterations
-        
-        for i in range(n_iterations):
+        self._mode = mode
+        self._subset = subset
 
-            if mode == 'train':
-                self._iteration += 1
-                self.status["iteration"] += 1
+        self._n_iterations = n_iterations
 
-            self._epoch_iteration += 1
-
-            self.run_callbacks('on_batch_begin')
-            self.run_callbacks('on_batch_run')
-            self.run_callbacks("on_batch_end")
-
-            if hasattr(self, "_stop_epoch"):
-                if self._stop_epoch:
-                    self._stop_epoch = False
-                    return
-
-        self.run_callbacks("on_epoch_end")
-
-
-    def get_optimizers_states(self):
-        '''
-        Gets the optimizers states.
-
-        Returns:
-            list with optimizers states
-        '''
         res = []
-        for optimizer in self._optimizers:
-            res.append(optimizer.optimizer.state_dict())
+        for stage in self._epoch_flow:
+            res.extend(self._traverse_pipes(stage, action=action))
         return res
 
 
-    def set_optimizers_states(self, states):
-        '''
-        Sets the optimizers states.
+    def _traverse_batch(self, action='view'):
 
-        Args:
-            states: list of states for each of the optimizer.
-        '''
-        for opt_index in range(len(states)):
-            self._optimizers[opt_index].optimizer.load_state_dict(states[opt_index])
+        if self._mode == 'train':
+            self._iteration += 1
+            self.status['iteration'] += 1
 
+        self._epoch_iteration += 1
 
-    def get_optimizers_flags(self):
-        '''
-        Gets optimizers active flags.
-
-        Returns:
-            list with optimizer active flags.
-        '''
         res = []
-        for optimizer in self._optimizers:
-            res.append(optimizer.active)
+        for stage in self._batch_flow:
+            res.extend(self._traverse_pipes(stage, action=action))
+
         return res
 
 
-    def set_optimizers_flags(self, flags):
-        '''
-        Sets optimizers active flags.
+    def run_train(self, n_epochs=None):
+        self._traverse_train(n_epochs=n_epochs, action='run')
 
-        Args:
-             flags (list): list with optimizers active flags.
-        '''
-        for opt_index in range(len(flags)):
-            self._optimizers[opt_index].active = flags[opt_index]
+
+    def run_epoch(self,
+                  mode='valid',
+                  subset='valid',
+                  n_iterations=None):
+        self._traverse_epoch(mode=mode, subset=subset, n_iterations=n_iterations, action='run')
+
+
+    def run_batch(self):
+        self._traverse_batch(action='run')
+
+
+    def view_train(self):
+        res = pandas.DataFrame(self._traverse_train(action='view'))
+        res.columns = ['priority', 'action', 'description']
+        return res
+
+
+    def view_epoch(self):
+        res = pandas.DataFrame(self._traverse_epoch(action='view'))
+        res.columns = ['priority', 'action', 'description']
+        return res
+
+
+    def view_batch(self):
+        res = pandas.DataFrame(self._traverse_batch(action='view'))
+        res.columns = ['priority', 'action', 'description']
+        return res
+
+
+    def view_pipeline(self):
+        res = []
+        for index in range(len(self._pipes)):
+            res.append([self._pipes[index].__class__.__name__])
+
+        return pandas.DataFrame(res)

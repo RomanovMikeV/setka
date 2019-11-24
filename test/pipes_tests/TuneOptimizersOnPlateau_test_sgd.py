@@ -1,21 +1,31 @@
+import setka
 import setka.base
 import setka.pipes
 
 import torch
 
+import torchvision.datasets
+import torchvision.transforms
+
+from torch import nn
+import torch.nn.functional as F
+
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),  '..'))
 import tiny_model
 import test_dataset
-from test_metrics import tensor_loss as loss
 
-setka.base.environment_setup()
+import matplotlib.pyplot as plt
+
+from test_metrics import tensor_loss as loss
+from test_metrics import tensor_acc as acc
 
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()
 
-input, target = ds['train', 0]
-
 trainer = setka.base.Trainer(pipes=[
-                                 setka.pipes.DataSetHandler(ds, batch_size=32, limits=2, shuffle=True),
+                                 setka.pipes.DataSetHandler(ds, batch_size=32, limits=2),
                                  setka.pipes.ModelHandler(model),
                                  setka.pipes.LossHandler(loss),
                                  setka.pipes.OneStepOptimizers(
@@ -23,26 +33,17 @@ trainer = setka.base.Trainer(pipes=[
                                         setka.base.OptimizerSwitch(
                                             model,
                                             torch.optim.SGD,
-                                            lr=0.1,
+                                            lr=0.0,
                                             momentum=0.9,
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.pipes.Pipe(),
+                                 setka.pipes.ComputeMetrics([loss, acc]),
+                                 setka.pipes.TuneOptimizersOnPlateau('tensor_acc', max_mode=True),
                                  setka.pipes.GarbageCollector()
                              ])
 
-trainer.run_train(n_epochs=2)
-trainer.run_epoch(mode='train', subset='train', n_iterations=10)
-trainer.run_epoch(mode='valid', subset='valid', n_iterations=10)
-trainer.run_epoch(mode='test', subset='valid', n_iterations=10)
-
-print("=====  Training schedule =====")
-print(trainer.view_train())
-print("===== Epoch schedule =====")
-print(trainer.view_epoch())
-print("===== Batch schedule =====")
-print(trainer.view_batch())
-
-print("===== Trianer =====")
-print(trainer.view_pipeline())
+for index in range(10):
+    trainer.one_epoch('train', 'train')
+    trainer.one_epoch('valid', 'train')
+    trainer.one_epoch('valid', 'valid')

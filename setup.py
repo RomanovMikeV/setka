@@ -23,7 +23,8 @@ setuptools.setup(
         'tqdm',
         'matplotlib',
         'scikit-image',
-        'termcolor'
+        'termcolor',
+        'pandas'
     ],
     classifiers=(
         "Programming Language :: Python :: 3",

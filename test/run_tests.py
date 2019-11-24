@@ -31,7 +31,7 @@ def run_python_script(script_path):
 
 tests_list = ['test/base_test.py']
 
-directory = 'test/callbacks_tests'
+directory = 'test/pipes_tests'
 # sys.path.append(directory)
 # sys.path.append('test')
 
