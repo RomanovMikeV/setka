@@ -6,31 +6,29 @@ class UnfreezeOnPlateau(Pipe):
     is reached. If used together with ReduceLROnPlateau, should be listed after
     it. It temporarily turns off LR reducing and, instead of it, performs
     unfreezing.
+
+    Args:
+        metric (str) : name of the metric to monitor.
+
+        cooldown (int) : minimal amount of epochs between two learning rate changes.
+
+        limit (int) : amount of epochs since the last improvement of maximum of
+            the monitored metric before the learning rate change.
+
+        max_mode (bool) : if True then the higher is the metric the better.
+            Otherwise the lower is the metric the better.
     '''
     def __init__(self,
                  metric,
                  subset='valid',
                  cooldown=5,
                  limit=5,
+                 tolerance=1.0e-3,
                  max_mode=False):
-
-        '''
-        Constructor.
-
-        Args:
-            metric (str) : name of the metric to monitor.
-
-            cooldown (int) : minimal amount of epochs between two learning rate changes.
-
-            limit (int) : amount of epochs since the last improvement of maximum of
-                the monitored metric before the learning rate change.
-
-            max_mode (bool) : if True then the higher is the metric the better.
-                Otherwise the lower is the metric the better.
-        '''
 
         self.cooldown = cooldown
         self.limit = limit
+        self.tolerance = tolerance
 
         self.since_last = 0
         self.since_best = 0
@@ -65,8 +63,8 @@ class UnfreezeOnPlateau(Pipe):
             else:
                 new_metric = self.trainer._metrics[self.subset][self.metric]
 
-                if ((new_metric > self.best_metric and self.max_mode) or
-                    (new_metric < self.best_metric and not self.max_mode)):
+                if ((new_metric >= self.best_metric - self.tolerance and self.max_mode) or
+                    (new_metric < self.best_metric + self.tolerance and not self.max_mode)):
 
                     self.best_metric = new_metric
                     self.since_best = 0

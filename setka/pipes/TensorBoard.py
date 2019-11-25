@@ -34,6 +34,15 @@ class TensorBoard(Pipe):
                 "target": target_fig}}
     ```
 
+    Args:
+        f (callbale): function to visualize the network results.
+
+        write_flag (bool): if True -- the results of f will be written to the tensorboard
+
+        name (str): name of the experiment.
+
+        log_dir (str): path to the directory, where the logs will be stored.
+
     '''
     def __init__(self,
                  f=None,
@@ -46,6 +55,9 @@ class TensorBoard(Pipe):
         self.name = name
 
     def before_epoch(self):
+        '''
+        Initializes the TensorBoardWriter.
+        '''
         self.tb_writer = TB.SummaryWriter(log_dir=self.log_dir)
         
         if self.trainer._mode == 'train' and self.write_flag:
@@ -68,6 +80,10 @@ class TensorBoard(Pipe):
                     
     
     def after_epoch(self):
+        '''
+        Destroys TensorBoardWriter
+        '''
+
         self.tb_writer.close()
         del self.tb_writer
         
@@ -106,6 +122,9 @@ class TensorBoard(Pipe):
 
 
     def after_batch(self):
+        '''
+        Writes the figures to the tensorboard when the trainer is in the test mode.
+        '''
         if self.trainer._mode == 'test' and self.write_flag and (self.f is not None):
             for index in range(len(self.trainer._ids)):
 
@@ -116,3 +135,8 @@ class TensorBoard(Pipe):
                 id = self.trainer._ids[index]
 
                 self.show(res, id)
+
+        self.tb_writer.add_scalar(
+            self.name + '/loss',
+            self.trainer._loss.detach().cpu(),
+            self.trainer._epoch)

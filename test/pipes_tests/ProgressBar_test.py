@@ -35,5 +35,4 @@ trainer = setka.base.Trainer(pipes=[
                                  setka.pipes.GarbageCollector()
                              ])
 
-trainer.one_epoch('train', 'train')
-trainer.one_epoch('valid', 'train')
+trainer.run_train(1)

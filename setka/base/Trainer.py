@@ -1,6 +1,7 @@
 import collections
 import numpy
 import pandas
+import datetime
 
 class Trainer():
     '''
@@ -16,6 +17,8 @@ class Trainer():
                  train_flow=['before_train', 'on_train', 'after_train'],
                  epoch_flow=['before_epoch', 'on_epoch', 'after_epoch'],
                  batch_flow=['before_batch', 'on_batch', 'after_batch']):
+
+        self.creation_time = datetime.datetime.now()
 
         self._train_flow = train_flow
         self._batch_flow = batch_flow

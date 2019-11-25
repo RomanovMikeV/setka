@@ -46,17 +46,24 @@ class MakeCheckpoints(Pipe):
         self.name = name
         self.subset = subset
         self.set_priority(1000)
-        self.log_dir = os.path.join(
-            log_dir,
-            'logs',
-            self.name,
-            str(datetime.datetime.now()).strftime("%Y-%m-%d--%H:%M:%S")
-        )
+        self.log_dir = log_dir
+
         self.keep_best_only=keep_best_only
 
         if not os.path.exists(os.path.join(self.log_dir, 'checkpoints')):
             os.makedirs(os.path.join(self.log_dir, 'checkpoints'))
 
+
+    def on_init(self):
+        self.log_dir = os.path.join(
+            self.log_dir,
+            'logs',
+            self.name,
+            str(self.trainer.creation_time)
+        )
+
+        if not os.path.exists(os.path.join(self.log_dir, 'checkpoints')):
+            os.makedirs(os.path.join(self.log_dir, 'checkpoints'))
 
     def before_epoch(self):
         '''
@@ -64,59 +71,60 @@ class MakeCheckpoints(Pipe):
         '''
         is_best = False
 
-        if self.trainer.status["mode"] == 'train':
-            if hasattr(self.trainer, '_metrics'):
-                if self.subset in self.trainer._metrics:
-                    if self.metric in self.trainer._metrics[self.subset]:
-                        if self.best_metric is None:
-                            self.best_metric = (
-                                self.trainer._metrics[self.subset][self.metric])
-                            is_best = True
+        if "mode" in self.trainer.status:
+            if self.trainer.status["mode"] == 'train':
+                if hasattr(self.trainer, '_metrics'):
+                    if self.subset in self.trainer._metrics:
+                        if self.metric in self.trainer._metrics[self.subset]:
+                            if self.best_metric is None:
+                                self.best_metric = (
+                                    self.trainer._metrics[self.subset][self.metric])
+                                is_best = True
 
-                        if ((self.best_metric < self.trainer._metrics[self.subset][self.metric] and
-                             self.max_mode) or
-                            (self.best_metric > self.trainer._metrics[self.subset][self.metric] and
-                             not self.max_mode)):
+                            if ((self.best_metric < self.trainer._metrics[self.subset][self.metric] and
+                                 self.max_mode) or
+                                (self.best_metric > self.trainer._metrics[self.subset][self.metric] and
+                                 not self.max_mode)):
 
-                             self.best_metric = self.trainer._metrics[self.subset][self.metric]
-                             is_best = True
+                                 self.best_metric = self.trainer._metrics[self.subset][self.metric]
+                                 is_best = True
 
-            torch.save({'trainer': self.trainer},
-                       os.path.join(
+                torch.save({'trainer': self.trainer},
+                           os.path.join(
+                                self.log_dir,
+                                'checkpoints',
+                                self.name + '_latest.pth.tar'))
+
+                torch.save(self.trainer._model.state_dict(),
+                           os.path.join(
+                                self.log_dir,
+                                'checkpoints',
+                                self.name + '_weights_latest.pth.tar'))
+
+                if is_best:
+                    torch.save({'trainer': self.trainer},
+                            os.path.join(
                             self.log_dir,
                             'checkpoints',
-                            self.name + '_latest.pth.tar'))
-            
-            torch.save(self.trainer._model.state_dict(),
-                       os.path.join(
+                            self.name + '_best.pth.tar'))
+
+                    torch.save(self.trainer._model.state_dict(),
+                            os.path.join(
                             self.log_dir,
                             'checkpoints',
-                            self.name + '_weights_latest.pth.tar'))
+                            self.name + '_weights_best.pth.tar'))
 
-            if is_best:
-                torch.save({'trainer': self.trainer},
-                        os.path.join(
-                        self.log_dir,
-                        'checkpoints',
-                        self.name + '_best.pth.tar'))
-            
-                torch.save(self.trainer._model.state_dict(),
-                        os.path.join(
-                        self.log_dir,
-                        'checkpoints',
-                        self.name + '_weights_best.pth.tar'))
-            
-            
-            if not self.keep_best_only:
-                torch.save({'trainer': self.trainer},
-                        os.path.join(
-                        self.log_dir,
-                        'checkpoints',
-                        self.name + '_' + str(self.trainer._epoch - 1) + '.pth.tar'))
-                
-                torch.save(self.trainer._model.state_dict(),
-                        os.path.join(
-                        self.log_dir,
-                        'checkpoints',
-                        self.name + '_weights_' + str(self.trainer._epoch - 1) + '.pth.tar'))
+
+                if not self.keep_best_only:
+                    torch.save({'trainer': self.trainer},
+                            os.path.join(
+                            self.log_dir,
+                            'checkpoints',
+                            self.name + '_' + str(self.trainer._epoch - 1) + '.pth.tar'))
+
+                    torch.save(self.trainer._model.state_dict(),
+                            os.path.join(
+                            self.log_dir,
+                            'checkpoints',
+                            self.name + '_weights_' + str(self.trainer._epoch - 1) + '.pth.tar'))
             

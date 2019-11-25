@@ -13,6 +13,14 @@ class WeightAveraging(Pipe):
     This pipes does nothing until specified epoch. After this epoch it
     begins tracking of the averaged model. During validation and testing, the
     averaged model is used.
+
+    Args:
+        gamma (float): factor of Exponential Moving Average.
+
+        epoch_start (int): epoch when the averaging starts.
+
+        interval (int): interval between the iterations when the model is averaged.
+
     '''
 
     def __init__(self,
@@ -24,6 +32,10 @@ class WeightAveraging(Pipe):
         self.interval = interval
 
     def before_epoch(self):
+        '''
+        Copies the current model, changes the model to the average model in case the Trainer is in
+        'valid' or 'test' modes.
+        '''
         if (self.trainer._epoch >= self.epoch_start and
             not hasattr(self, 'averaged_model') and
             self.trainer._mode == 'train'):
@@ -37,6 +49,9 @@ class WeightAveraging(Pipe):
             self.trainer._model = self.averaged_model
 
     def after_epoch(self):
+        '''
+        Sets the model from averaged to trained if the trainer is in 'valid' or 'test' modes.
+        '''
         if (hasattr(self, 'averaged_model') and (
                 self.trainer._mode == 'valid' or
                 self.trainer._mode == 'test')):
@@ -45,6 +60,9 @@ class WeightAveraging(Pipe):
 
 
     def after_batch(self):
+        '''
+        If trainer is in 'train' mode, the averaging of the models is performed.
+        '''
         if (hasattr(self, 'averaged_model') and
             self.trainer._mode == 'train'):
 

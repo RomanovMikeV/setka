@@ -2,6 +2,10 @@ from .Pipe import Pipe
 import torch
 
 class UseCuda(Pipe):
+    '''
+    This pipe moves the tensors and the model to cuda when it is needed.
+    '''
+
     @staticmethod
     def move2cuda(coll):
         if isinstance(coll, dict):
@@ -23,7 +27,13 @@ class UseCuda(Pipe):
         pass
     
     def before_epoch(self):
+        '''
+        Moves model to GPU.
+        '''
         self.trainer._model.cuda()
     
     def before_batch(self):
+        '''
+        Moves batch to GPU.
+        '''
         self.move2cuda(self.trainer._input)

@@ -56,15 +56,17 @@ class Logger(Pipe):
                  ignore_list=('checkpoints', 'logs', 'predictions', 'runs')):
 
         self.f = f
-        self.write_test = write_test
         self.name = name
         self.log_dir = log_dir
+        self.ignore_list = ignore_list
 
+
+    def on_init(self):
         self.root_path = os.path.join(
             self.log_dir,
             'logs',
             self.name,
-            str(datetime.datetime.now()).strftime("%Y-%m-%d--%H:%M:%S")
+            str(self.trainer.creation_time)
         )
 
         os.makedirs(self.root_path)
@@ -81,13 +83,10 @@ class Logger(Pipe):
         zip = zipfile.ZipFile(os.path.join(self.root_path, 'snapshot.zip'), 'w')
 
         for file in os.listdir(command_root_dir):
-            if (file not in ignore_list and
-                file[0] != '.'):
-
+            if (file not in self.ignore_list and
+                    file[0] != '.'):
                 zip.write(os.path.join(command_root_dir, file))
 
-
-    def on_init(self):
         checkpoints_dir = os.path.join(self.root_path, 'checkpoints')
         predictions_dir = os.path.join(self.root_path, 'predictions')
 

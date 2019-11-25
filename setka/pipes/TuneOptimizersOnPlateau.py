@@ -25,6 +25,9 @@ class TuneOptimizersOnPlateau(Pipe):
 
         max_mode (bool) : if True then the higher is the metric the better.
             Otherwise the lower is the metric the better.
+
+        reset_optimizer (bool) : if True, the optimizers will be completely reset when
+            the plateau is reached.
     '''
 
     def __init__(self,
@@ -32,6 +35,7 @@ class TuneOptimizersOnPlateau(Pipe):
                  subset='valid',
                  cooldown=5,
                  patience=5,
+                 tolerance=1.0e-4,
                  lr_factor=1.0,
                  m_power=1.0,
                  max_mode=False,
@@ -41,6 +45,7 @@ class TuneOptimizersOnPlateau(Pipe):
         self.patience = patience
         self.lr_factor = lr_factor
         self.m_power = m_power
+        self.tolerance = tolerance
 
         self.since_last = 0
         self.since_best = 0
@@ -61,7 +66,9 @@ class TuneOptimizersOnPlateau(Pipe):
 
 
     def before_epoch(self):
-        # print(self.trainer.status)
+        '''
+        Informs the user that the plateau has been reached.
+        '''
         if 'OnPlateau' in self.trainer.status:
             del(self.trainer.status["OnPlateau"])
 
@@ -74,6 +81,10 @@ class TuneOptimizersOnPlateau(Pipe):
 
 
     def after_epoch(self):
+        '''
+        Checks if the plateau is reached. If yes -- the optimizers are tuned.
+        '''
+
         if (self.trainer._mode == 'valid' and
                 self.trainer._subset == self.subset and
                 self.trainer._lr_reduce):
@@ -84,8 +95,8 @@ class TuneOptimizersOnPlateau(Pipe):
             else:
                 new_metric = self.trainer._metrics[self.subset][self.metric]
 
-                if ((new_metric >= self.best_metric and self.max_mode) or
-                    (new_metric <= self.best_metric and not self.max_mode)):
+                if ((new_metric >= self.best_metric - self.tolerance and self.max_mode) or
+                    (new_metric < self.best_metric + self.tolerance and not self.max_mode)):
 
                     self.update_best()
 
@@ -95,7 +106,7 @@ class TuneOptimizersOnPlateau(Pipe):
                 self._m_power *= self.m_power
 
                 self.trainer._model.load_state_dict(self.best_model_state)
-                self.trainer.optimziers = self.best_optimizers
+                self.trainer._optimizers = self.best_optimizers
 
                 if "OnPlateau" not in self.trainer.status:
                     self.trainer.status["OnPlateau"] = ''
