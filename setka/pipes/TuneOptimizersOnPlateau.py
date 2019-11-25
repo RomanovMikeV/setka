@@ -35,7 +35,7 @@ class TuneOptimizersOnPlateau(Pipe):
                  subset='valid',
                  cooldown=5,
                  patience=5,
-                 tolerance=1.0e-4,
+                 tolerance=1.0e-3,
                  lr_factor=1.0,
                  m_power=1.0,
                  max_mode=False,
@@ -96,7 +96,11 @@ class TuneOptimizersOnPlateau(Pipe):
                 new_metric = self.trainer._metrics[self.subset][self.metric]
 
                 if ((new_metric >= self.best_metric - self.tolerance and self.max_mode) or
+<<<<<<< HEAD:setka/pipes/TuneOptimizersOnPlateau.py
                     (new_metric < self.best_metric + self.tolerance and not self.max_mode)):
+=======
+                    (new_metric <= self.best_metric + self.tolerance and not self.max_mode)):
+>>>>>>> 5d34872e0a82db3a479224135366dcdb9ccad97f:setka/callbacks/TuneOptimizersOnPlateau.py
 
                     self.update_best()
 
