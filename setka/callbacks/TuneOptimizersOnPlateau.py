@@ -31,6 +31,7 @@ class TuneOptimizersOnPlateau(Callback):
                  subset='valid',
                  cooldown=5,
                  patience=5,
+                 tolerance=1.0e-3,
                  lr_factor=1.0,
                  m_power=1.0,
                  max_mode=False,
@@ -40,6 +41,7 @@ class TuneOptimizersOnPlateau(Callback):
         self.patience = patience
         self.lr_factor = lr_factor
         self.m_power = m_power
+        self.tolerance = tolerance
 
         self.since_last = 0
         self.since_best = 0
@@ -83,8 +85,8 @@ class TuneOptimizersOnPlateau(Callback):
             else:
                 new_metric = self.trainer._metrics[self.subset][self.metric]
 
-                if ((new_metric >= self.best_metric and self.max_mode) or
-                    (new_metric <= self.best_metric and not self.max_mode)):
+                if ((new_metric >= self.best_metric - self.tolerance and self.max_mode) or
+                    (new_metric <= self.best_metric + self.tolerance and not self.max_mode)):
 
                     self.update_best()
 
