@@ -23,7 +23,7 @@ def run_python_script(script_path):
     try:
         test = __import__(script_name)
         del test
-    except e:
+    except Exception as e:
         exit_code = 1
         message = str(e)
 
