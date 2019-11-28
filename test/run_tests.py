@@ -18,14 +18,18 @@ def run_python_script(script_path):
 
     sys.stdout = open(os.devnull, 'w')
     exit_code = 0
+    message = None
+
     try:
         test = __import__(script_name)
         del test
-    except:
+    except e:
         exit_code = 1
+        message = str(e)
+
     gc.collect()
     sys.stdout = sys.__stdout__
-    return exit_code
+    return exit_code, message
 
 
 
@@ -49,8 +53,9 @@ for test_file in tests_list:
     print("Testing ", test_file, end=' ')
 
     res = run_python_script(test_file)
-    if res:
+    if res[0]:
         print(colored("FAILED", 'red'))
+        print(res[1])
         failed.append(test_file)
     else:
         print(colored("OK", "green"))
