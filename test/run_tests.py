@@ -3,7 +3,7 @@
 import os
 import sys
 import gc
-import subprocess
+import traceback
 
 from termcolor import colored
 
@@ -25,7 +25,7 @@ def run_python_script(script_path):
         del test
     except Exception as e:
         exit_code = 1
-        message = str(e)
+        message = traceback.format_exc()
 
     gc.collect()
     sys.stdout = sys.__stdout__
