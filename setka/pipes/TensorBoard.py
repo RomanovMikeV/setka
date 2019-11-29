@@ -137,7 +137,9 @@ class TensorBoard(Pipe):
 
                 self.show(res, id)
 
-        self.tb_writer.add_scalar(
-            self.name + '/loss',
-            self.trainer._loss.detach().cpu(),
-            self.trainer._epoch)
+
+        if self.trainer._mode == 'train':
+            self.tb_writer.add_scalar(
+                self.name + '/loss',
+                self.trainer._loss.detach().cpu(),
+                self.trainer._epoch)

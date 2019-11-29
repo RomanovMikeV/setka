@@ -70,7 +70,7 @@ class Trainer():
                         if getattr(self._pipes[index], stage).__doc__ is not None:
                             doc = getattr(self._pipes[index], stage).__doc__
 
-                    res.append((priorities[order[index]], name, ' '.join(doc.split())))
+                    res.append((priorities[index], name, ' '.join(doc.split())))
 
         return res
 
@@ -129,11 +129,12 @@ class Trainer():
 
     def _traverse_batch(self, action='view'):
 
-        if self._mode == 'train':
-            self._iteration += 1
-            self.status['iteration'] += 1
+        if action != 'view':
+            if self._mode == 'train':
+                self._iteration += 1
+                self.status['iteration'] += 1
 
-        self._epoch_iteration += 1
+            self._epoch_iteration += 1
 
         res = []
         for stage in self._batch_flow:
