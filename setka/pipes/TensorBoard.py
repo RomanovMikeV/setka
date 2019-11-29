@@ -48,7 +48,8 @@ class TensorBoard(Pipe):
                  f=None,
                  write_flag=True,
                  name='checkpoint',
-                 log_dir='./'):
+                 log_dir='./',
+                 priority={'after_batch': 10}):
         self.log_dir = os.path.join(log_dir, 'runs')
         self.f = f
         self.write_flag = write_flag
