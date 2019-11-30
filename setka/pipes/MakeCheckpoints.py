@@ -71,8 +71,8 @@ class MakeCheckpoints(Pipe):
         '''
         is_best = False
 
-        if "mode" in self.trainer.status:
-            if self.trainer.status["mode"] == 'train':
+        if hasattr(self.trainer, "_mode"):
+            if self.trainer._mode == 'train':
                 if hasattr(self.trainer, '_metrics'):
                     if self.subset in self.trainer._metrics:
                         if self.metric in self.trainer._metrics[self.subset]:

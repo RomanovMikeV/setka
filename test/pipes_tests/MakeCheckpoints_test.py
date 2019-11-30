@@ -36,5 +36,5 @@ trainer = setka.base.Trainer(pipes=[
                                  setka.pipes.GarbageCollector()
                              ])
 
-trainer.run_train(2)
+trainer.run_train(5)
 trainer.run_epoch('test', 'test', n_iterations=2)
