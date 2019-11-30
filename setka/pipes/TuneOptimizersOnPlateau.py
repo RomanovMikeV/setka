@@ -74,7 +74,9 @@ class TuneOptimizersOnPlateau(Pipe):
 
 
     def update_best(self):
+
         self.best_metric = self.trainer._metrics[self.subset][self.metric]
+
         self.since_best = 0
         self.best_model_state = self.trainer._model.state_dict()
         self.best_optimizers = copy.deepcopy(self.trainer._optimizers)
@@ -95,8 +97,8 @@ class TuneOptimizersOnPlateau(Pipe):
             else:
                 new_metric = self.trainer._metrics[self.subset][self.metric]
 
-                if ((new_metric >= self.best_metric - self.tolerance and self.max_mode) or
-                    (new_metric < self.best_metric + self.tolerance and not self.max_mode)):
+                if ((new_metric >= self.best_metric + self.tolerance and self.max_mode) or
+                    (new_metric < self.best_metric - self.tolerance and not self.max_mode)):
 
                     self.update_best()
 
