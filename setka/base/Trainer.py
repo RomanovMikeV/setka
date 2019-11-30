@@ -119,6 +119,9 @@ class Trainer():
         self._mode = mode
         self._subset = subset
 
+        self.status["mode"] = mode
+        self.status["subset"] = subset
+
         self._n_iterations = n_iterations
 
         res = []
