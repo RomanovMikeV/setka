@@ -54,8 +54,8 @@ trainer = setka.base.Trainer(pipes=[
                                     ]
                                  ),
                                  setka.pipes.ComputeMetrics([loss, acc]),
-                                 setka.pipes.UnfreezeOnPlateau('tensor_acc', max_mode=True),
                                  setka.pipes.TuneOptimizersOnPlateau('tensor_acc', max_mode=True),
+                                 setka.pipes.UnfreezeOnPlateau('tensor_acc', max_mode=True),
                                  setka.pipes.GarbageCollector()
                              ])
 

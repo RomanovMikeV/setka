@@ -63,8 +63,8 @@ class UnfreezeOnPlateau(Pipe):
             else:
                 new_metric = self.trainer._metrics[self.subset][self.metric]
 
-                if ((new_metric >= self.best_metric + self.tolerance and self.max_mode) or
-                    (new_metric < self.best_metric - self.tolerance and not self.max_mode)):
+                if ((new_metric >= self.best_metric - self.tolerance and self.max_mode) or
+                    (new_metric < self.best_metric + self.tolerance and not self.max_mode)):
 
                     self.best_metric = new_metric
                     self.since_best = 0
