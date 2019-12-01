@@ -146,6 +146,7 @@ class Logger(Pipe):
 
 
     def save_file(self, name, content, epoch, ext='bin'):
+        print("In file save")
         fname = os.path.join(self.root_path, name + '_' + str(epoch) + '.' + ext)
         self.make_dirs(fname)
         with open(fname, 'wb+') as fout:

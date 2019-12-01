@@ -42,7 +42,7 @@ def view_result(one_input, one_output):
             'texts': {'img': 'Sample'},
             'images': {'img': (img * 255.0).int().numpy().astype('uint8')},
             'audios': {'img': signal},
-            'files': file}
+            'files': {'img': file}}
 
 
 
