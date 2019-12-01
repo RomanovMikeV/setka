@@ -14,23 +14,18 @@ class SaveResult(Pipe):
 
     Args:
         f (callable): function to process the predictions.
+        dir (string): location where the predictions will be saved
     '''
-    def __init__(self, f=None):
-        '''
-        Constructor
-
-        Args:
-            f (function): function to process the
-                predictions.
-
-            dir (string): directory where the results should be
-                stored.
-        '''
+    def __init__(self,
+                 f=None,
+                 dir='./'):
         self.f = f
         self.index = 0
+        self.dir = dir
+        self.root_dir = os.path.join(self.dir, './predictions')
 
-        if not os.path.exists('./predictions'):
-            os.makedirs('./predictions')
+        if not os.path.exists(self.root_dir):
+            os.makedirs(self.root_dir)
 
     @staticmethod
     def get_one(input, item_index):
@@ -62,10 +57,6 @@ class SaveResult(Pipe):
                 else:
                     res[self.trainer._ids[index]] = one_output
 
-            torch.save(res, os.path.join('./predictions', str(self.index) + '.pth.tar'))
-
-            if hasattr(self.trainer, "_predictions_dir"):
-                torch.save(res, os.path.join(self.trainer._predictions_dir,
-                    str(self.index) + 'pth.tar'))
+            torch.save(res, os.path.join(self.root_dir, str(self.index) + '.pth.tar'))
 
             self.index += 1
