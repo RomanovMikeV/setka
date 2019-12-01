@@ -31,7 +31,7 @@ class ComputeMetrics(Pipe):
         (case of ```divide_first``` for the metric is set to True).
 
     Args:
-        metrics (list of callables, not required): list of metric functions to compute.
+        metrics (list of callables, required): list of metric functions to compute.
 
         divide_first (list of bools, not required): list of flags indicating that the
             division should be performed before the reduce.
@@ -40,7 +40,7 @@ class ComputeMetrics(Pipe):
             updated
     '''
     def __init__(self,
-                 metrics=None,
+                 metrics,
                  divide_first=None,
                  steps_to_compute=1):
 
@@ -48,13 +48,8 @@ class ComputeMetrics(Pipe):
         self.metrics = metrics
         self.names = []
 
-        if self.metrics is None:
-            self.names = []
-            self.metrics = []
-
-        else:
-            for index in range(len(self.metrics)):
-                self.names.append(self.metrics[index].__name__)
+        for index in range(len(self.metrics)):
+            self.names.append(self.metrics[index].__name__)
 
         if divide_first is None:
             self.divide_first = [True] * len(self.metrics)

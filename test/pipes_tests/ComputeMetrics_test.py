@@ -12,6 +12,7 @@ import test_dataset
 
 from test_metrics import tensor_loss as loss
 from test_metrics import tensor_acc as acc
+from tensor_metrics import const
 
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()
@@ -30,8 +31,8 @@ trainer = setka.base.Trainer(pipes=[
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.pipes.ComputeMetrics([loss, acc],
-                                                                divide_first=[True, False],
+                                 setka.pipes.ComputeMetrics([loss, acc, const],
+                                                                divide_first=[True, False, True],
                                                                 steps_to_compute=2),
                                  setka.pipes.GarbageCollector()
                              ])
