@@ -18,6 +18,20 @@ from test_metrics import dict_acc as acc
 ds = test_dataset.CIFAR10()
 model = tiny_model.DictNet()
 
+def view_result(one_input, one_output):
+    # print("In view result")
+    img = one_input[0]
+    img = (img - img.min()) / (img.max() - img.min())
+    truth = one_input[1]
+    label = one_output['res']
+
+    # print(img.size())
+
+    fig = plt.figure()
+    plt.imshow(img.permute(2, 1, 0))
+    plt.close()
+    return {'figures': {'img': fig}}
+
 trainer = setka.base.Trainer(pipes=[
                                  setka.pipes.DataSetHandler(ds, batch_size=4, limits=2),
                                  setka.pipes.ModelHandler(model),
@@ -38,3 +52,4 @@ trainer = setka.base.Trainer(pipes=[
                              ])
 
 trainer.run_train(2)
+trainer.run_epoch(mode='test', subset='valid', n_iterations=2)
