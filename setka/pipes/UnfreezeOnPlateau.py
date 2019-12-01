@@ -22,12 +22,12 @@ class UnfreezeOnPlateau(Pipe):
                  metric,
                  subset='valid',
                  cooldown=5,
-                 limit=5,
+                 patience=5,
                  tolerance=1.0e-3,
                  max_mode=False):
 
         self.cooldown = cooldown
-        self.limit = limit
+        self.patience = patience
         self.tolerance = tolerance
 
         self.since_last = 0
@@ -70,11 +70,12 @@ class UnfreezeOnPlateau(Pipe):
                     self.since_best = 0
 
 
-            if self.since_last >= self.cooldown and self.since_best >= self.limit and not self.complete:
+            if self.since_last >= self.cooldown and self.since_best >= self.patience and not self.complete:
                 if "OnPlateau" not in self.trainer.status:
                     self.trainer.status["OnPlateau"] = ""
                 self.trainer.status["OnPlateau"] += " Unfreezing (optimizer " + str(self.optimizer_index) + ") *** "
-                self.trainer._optimizers[self.optimizer_index].is_active = True
+                self.trainer._optimizers[self.optimizer_index].active = True
+
                 self.since_last = 0
                 self.optimizer_index += 1
                 if self.optimizer_index >= len(self.trainer._optimizers):

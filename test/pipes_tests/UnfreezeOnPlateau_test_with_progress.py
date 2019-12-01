@@ -31,23 +31,23 @@ trainer = setka.base.Trainer(pipes=[
                                  setka.pipes.OneStepOptimizers(
                                     [
                                         setka.base.OptimizerSwitch(
-                                            model.layer1,
+                                            model,
                                             torch.optim.SGD,
-                                            lr=1.0,
+                                            lr=0.0,
                                             momentum=0.9,
                                             weight_decay=5e-4,
                                             is_active=True),
                                         setka.base.OptimizerSwitch(
-                                            model.layer2,
+                                            model,
                                             torch.optim.SGD,
-                                            lr=1.0,
+                                            lr=0.0,
                                             momentum=0.9,
                                             weight_decay=5e-4,
                                             is_active=False),
                                         setka.base.OptimizerSwitch(
-                                            model.layer3,
+                                            model,
                                             torch.optim.SGD,
-                                            lr=1.0,
+                                            lr=0.1,
                                             momentum=0.9,
                                             weight_decay=5e-4,
                                             is_active=False)
@@ -55,8 +55,9 @@ trainer = setka.base.Trainer(pipes=[
                                  ),
                                  setka.pipes.ComputeMetrics([loss, acc]),
                                  setka.pipes.TuneOptimizersOnPlateau('tensor_acc', max_mode=True),
-                                 setka.pipes.UnfreezeOnPlateau('tensor_acc', max_mode=True),
-                                 setka.pipes.GarbageCollector()
+                                 setka.pipes.UnfreezeOnPlateau('tensor_acc', max_mode=True, cooldown=5, patience=5),
+                                 setka.pipes.GarbageCollector(),
+                                 # setka.pipes.ProgressBar()
                              ])
 
 trainer.run_train(n_epochs=50)
