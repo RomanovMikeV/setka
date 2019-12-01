@@ -36,6 +36,7 @@ class TuneOptimizersOnPlateau(Pipe):
                  cooldown=5,
                  patience=5,
                  tolerance=1.0e-3,
+                 early_stopping=5,
                  lr_factor=1.0,
                  m_power=1.0,
                  max_mode=False,
@@ -46,9 +47,11 @@ class TuneOptimizersOnPlateau(Pipe):
         self.lr_factor = lr_factor
         self.m_power = m_power
         self.tolerance = tolerance
+        self.early_stopping = early_stopping
 
         self.since_last = 0
         self.since_best = 0
+        self.reduces_since_best = 0
 
         self.best_metric = None
         self.subset = subset
@@ -81,6 +84,8 @@ class TuneOptimizersOnPlateau(Pipe):
         self.best_model_state = self.trainer._model.state_dict()
         self.best_optimizers = copy.deepcopy(self.trainer._optimizers)
 
+        self.no_improvement = 0
+
 
     def after_epoch(self):
         '''
@@ -103,6 +108,13 @@ class TuneOptimizersOnPlateau(Pipe):
                     self.update_best()
 
             if self.since_last >= self.cooldown and self.since_best >= self.patience:
+
+                if self.since_best >= self.since_last:
+                    self.reduces_since_best += 1
+
+                if self.reduces_since_best >= self.early_stopping:
+                    self.trainer._stop_epoch_signal = True
+                    self.trainer._stop_train_signal = True
 
                 self._lr_mult *= self.lr_factor
                 self._m_power *= self.m_power
