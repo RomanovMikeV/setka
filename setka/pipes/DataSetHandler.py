@@ -179,13 +179,13 @@ class DataSetHandler(Pipe):
                 if self.trainer._epoch >= self.trainer._n_epochs:
                     break
 
+            for regime in self.epoch_schedule:
+                self.trainer.run_epoch(**regime)
+
             if hasattr(self.trainer, '_stop_train_signal'):
                 if self.trainer._stop_train_signal:
                     del self.trainer._stop_train_signal
                     break
-
-            for regime in self.epoch_schedule:
-                self.trainer.run_epoch(**regime)
 
 
     def on_epoch(self):
@@ -197,12 +197,12 @@ class DataSetHandler(Pipe):
             if self.trainer._epoch_iteration >= self.trainer._n_iterations:
                 break
 
+            self.trainer.run_batch()
+
             if hasattr(self.trainer, '_stop_epoch_signal'):
                 if self.trainer._stop_epoch_signal:
                     del self.trainer._stop_epoch_signal
                     break
-
-            self.trainer.run_batch()
 
 
     def after_epoch(self):
