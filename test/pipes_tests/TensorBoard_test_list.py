@@ -50,3 +50,4 @@ trainer = setka.base.Trainer(pipes=[
                              ])
 
 trainer.run_train(2)
+trainer.run_epoch(mode='test', subset='valid', n_iterations=2)
