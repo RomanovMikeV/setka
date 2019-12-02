@@ -12,7 +12,7 @@ import test_dataset
 
 from test_metrics import tensor_loss as loss
 from test_metrics import tensor_acc as acc
-from tensor_metrics import const
+from test_metrics import const
 
 ds = test_dataset.CIFAR10()
 model = tiny_model.TensorNet()
