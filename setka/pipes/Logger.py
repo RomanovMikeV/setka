@@ -75,7 +75,7 @@ class Logger(Pipe):
         with open(os.path.join(self.root_path, 'bash_command.txt'), 'w+') as fout:
             fout.write(' '.join(sys.argv))
 
-        command_root_dir = os.getcwd().split('/')
+        command_root_dir = os.getcwd()
 
         zip = zipfile.ZipFile(os.path.join(self.root_path, 'snapshot.zip'), 'w')
 
