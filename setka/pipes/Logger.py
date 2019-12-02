@@ -86,9 +86,12 @@ class Logger(Pipe):
 
         checkpoints_dir = os.path.join(self.root_path, 'checkpoints')
         predictions_dir = os.path.join(self.root_path, 'predictions')
-
-        os.makedirs(checkpoints_dir)
-        os.makedirs(predictions_dir)
+        
+        if not os.path.exists(checkpoints_dir):
+            os.makedirs(checkpoints_dir)
+        
+        if not os.path.exists(predictions_dir):
+            os.makedirs(predictions_dir)
 
         self.trainer._checkpoints_dir = checkpoints_dir
         self.trainer._predictions_dir = predictions_dir
