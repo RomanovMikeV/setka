@@ -69,7 +69,8 @@ class Logger(Pipe):
             str(self.trainer.creation_time)
         )
 
-        os.makedirs(self.root_path)
+        if not os.path.exists(self.root_path):
+            os.makedirs(self.root_path)
 
         with open(os.path.join(self.root_path, 'bash_command.txt'), 'w+') as fout:
             fout.write(' '.join(sys.argv))
