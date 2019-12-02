@@ -93,9 +93,6 @@ class Logger(Pipe):
         if not os.path.exists(predictions_dir):
             os.makedirs(predictions_dir)
 
-        self.trainer._checkpoints_dir = checkpoints_dir
-        self.trainer._predictions_dir = predictions_dir
-
 
     def before_epoch(self):
         '''
