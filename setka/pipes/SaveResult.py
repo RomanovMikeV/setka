@@ -50,12 +50,12 @@ class SaveResult(Pipe):
                 one_input = self.get_one(self.trainer._input, index)
                 one_output = self.get_one(self.trainer._output, index)
 
+                res[self.trainer._ids[index]] = one_output
+
                 if self.f is not None:
                     res[self.trainer._ids[index]] = self.f(
                         one_input,
                         one_output)
-                else:
-                    res[self.trainer._ids[index]] = one_output
 
             torch.save(res, os.path.join(self.root_dir, str(self.index) + '.pth.tar'))
 
