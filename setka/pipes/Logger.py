@@ -69,16 +69,13 @@ class Logger(Pipe):
             str(self.trainer.creation_time)
         )
 
-        os.makedirs(self.root_path)
+        if not os.path.exists(self.root_path):
+            os.makedirs(self.root_path)
 
         with open(os.path.join(self.root_path, 'bash_command.txt'), 'w+') as fout:
             fout.write(' '.join(sys.argv))
 
-        command_root_dir = os.getcwd().split('/')
-        if len(command_root_dir) <= 1:
-            command_root_dir = '.'
-        else:
-            command_root_dir = '/'.join(command_root_dir[:-1])
+        command_root_dir = os.getcwd()
 
         zip = zipfile.ZipFile(os.path.join(self.root_path, 'snapshot.zip'), 'w')
 
@@ -89,12 +86,12 @@ class Logger(Pipe):
 
         checkpoints_dir = os.path.join(self.root_path, 'checkpoints')
         predictions_dir = os.path.join(self.root_path, 'predictions')
-
-        os.makedirs(checkpoints_dir)
-        os.makedirs(predictions_dir)
-
-        self.trainer._checkpoints_dir = checkpoints_dir
-        self.trainer._predictions_dir = predictions_dir
+        
+        if not os.path.exists(checkpoints_dir):
+            os.makedirs(checkpoints_dir)
+        
+        if not os.path.exists(predictions_dir):
+            os.makedirs(predictions_dir)
 
 
     def before_epoch(self):
