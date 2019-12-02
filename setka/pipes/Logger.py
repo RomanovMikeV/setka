@@ -76,10 +76,6 @@ class Logger(Pipe):
             fout.write(' '.join(sys.argv))
 
         command_root_dir = os.getcwd().split('/')
-        if len(command_root_dir) <= 1:
-            command_root_dir = '.'
-        else:
-            command_root_dir = '/'.join(command_root_dir[:-1])
 
         zip = zipfile.ZipFile(os.path.join(self.root_path, 'snapshot.zip'), 'w')
 
