@@ -6,5 +6,15 @@
 *.tar.gz
 *.pth.tar
 *__pycache__*
+*.png
+*.jpg
+*.zip
+*.ipynb
+*.pyc
+.ipynb_checkpoints/*
+logs/*
+predictions/*
+runs/*
 dist/*
 build/*
+cifar10_data/*

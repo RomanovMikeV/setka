@@ -6,156 +6,173 @@ Dev branch:
 [![Build Status](https://travis-ci.com/RomanovMikeV/setka.svg?branch=dev)](https://travis-ci.com/RomanovMikeV/setka)
 [![codecov](https://codecov.io/gh/RomanovMikeV/setka/branch/dev/graph/badge.svg)](https://codecov.io/gh/RomanovMikeV/setka)
 
+# Setka: pipeline builder for Neural Network training.
 
+Setka is a powerful and flexible tool for neural network training
+with accent on fast prototyping and reproducibility. Includes
+modules for logging the training process, common tricks
+and visualisation.
 
-# setka: utilities for network training with PyTorch
+## Overview
 
-setka is a powerful and flexible tool for neural network training and fast
-prototyping.
+The network training is now as simple as:
+
+* You build (or load) the model
+* You build (or load) the dataset
+* You wrap the dataset with a provided wrapper for convenience
+* You define a pipeline with available (or yours) Setka modules
+* You trigger train
+* You enjoy
 
 ## Installation
+
 To install this package, use
 ```
 pip install git+http://github.com/RomanovMikeV/setka
 ```
 
-## Usage
+## Example
 
-Model training with setka:
+1) Define the dataset:
 ```python
+import torchvision.transforms
+import torchvision.datasets
 
-# Define your dataset
-class Iris(setka.base.DataSet):
-    def __init__(self, valid_split=0.1, test_split=0.1):
-        super()
-        data = sklearn.datasets.load_iris()
+class CIFAR10(setka.base.DataSet):
+    def __init__(self,
+                 root='~/datasets'):
 
-        X = data['data']
-        y = data['target']
+        train_transforms = torchvision.transforms.Compose([
+            torchvision.transforms.RandomCrop(32, padding=4),
+            torchvision.transforms.RandomHorizontalFlip(),
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
 
-        n_valid = int(y.size * valid_split)
-        n_test =  int(y.size * test_split)
+        test_transforms = torchvision.transforms.Compose([
+            torchvision.transforms.ToTensor(),
+            torchvision.transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
 
-        order = numpy.random.permutation(y.size)
+        self.train_data = torchvision.datasets.CIFAR10(
+            '~/datasets', train=True, download=True,
+            transform=train_transforms)
+        self.test_data = torchvision.datasets.CIFAR10(
+            '~/datasets', train=False, download=True,
+            transform=test_transforms)
 
-        X = X[order, :]
-        y = y[order]
+        self.n_valid = int(0.05 * len(self.train_data))
 
-        self.data = {
-            'valid': X[:n_valid, :],
-            'test': X[n_valid:n_valid + n_test, :],
-            'train': X[n_valid + n_test:, :]
-        }
-
-        self.targets = {
-            'valid': y[:n_valid],
-            'test': y[n_valid:n_valid + n_test],
-            'train': y[n_valid + n_test:]
-        }
-
-    # Define a method that gets the length of the subset by subset keyword
-    def getlen(self, subset):
-        return len(self.targets[subset])
-
-    # Define a method that gets the item by the subset keyword and index of the item
-    def getitem(self, subset, index):
-        features = torch.Tensor(self.data[subset][index])
-        class_id = torch.Tensor(self.targets[subset][index:index+1])
-	
-	# Method should return three items: list of features, list of targets and string ID of a sample
-        return [features], [class_id], subset + "_" + str(index)
-
-
-# Define your network (in the same way as it is done in PyTorch)
-class IrisNet(setka.base.Network):
-    def __init__(self):
-        super().__init__()
-        self.fc1 = torch.nn.Linear(4, 100)
-        self.fc2 = torch.nn.Linear(100, 3)
-
-    def forward(self, x):
-	# Network should return a list of outputs
-        return [self.fc2(self.fc1(x[0]))]
-
-
-ds = Iris()
-model = IrisNet()
-
-# Define your loss
-def loss(pred, targ):
-    return torch.nn.functional.cross_entropy(pred[0], targ[0][:, 0].long())
-
-# Define your metrics
-def accuracy(pred, targ):
-    predicted = pred[0].argmax(dim=1)
-    return (predicted == targ[0][:, 0].long()).sum(), predicted.numel()
-
-# Define your trainer
-trainer = setka.base.Trainer(model,
-                              optimizers=[setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-3)],
-                              criterion=loss,
-                              callbacks=[
-                                setka.callbacks.ComputeMetrics(metrics=[loss, accuracy]),
-                                setka.callbacks.ReduceLROnPlateau(metric='loss'),
-                                setka.callbacks.ExponentialWeightAveraging(),
-                                setka.callbacks.WriteToTensorboard(name=name),
-                                setka.callbacks.Logger(name=name)
-                              ])
-
-# You are ready to train
-for index in range(100):
-    trainer.train_one_epoch(ds, subset='train')
-    trainer.validate_one_epoch(ds, subset='train')
-    trainer.validate_one_epoch(ds, subset='valid')
-
-trainer.predict_one_epoch(ds, subset='test')
-```
-
-## Defining the Model
-
-Network should be defined as follows:
-
-```python
-class Network(setka.base.Network):
-    def __init__(self):
-        super().__init__()
-
-        # Layers for your network should be defined here.
-
-    def forward(self, input):
-
-        # Your code here, compute res1 and res2.
-
-        return [res1, res2]
-```
-
-
-## Defining the DataSet
-
-Dataset should be defined as follows:
-```python
-class DataSet(setka.base.DataSet):
-    def __init__(self):
-        '''
-        Definition of your dataset elements
-        '''
-        pass
+        self.subsets = ['train', 'valid', 'test']
 
     def getlen(self, subset):
-        '''
-        Function to get length of the subset specified with 'mode'.
-        '''
-        return len(self.data[subset])
+        if subset == 'train':
+            return len(self.train_data) - self.n_valid
+        elif subset == 'valid':
+            return self.n_valid
+        elif subset == 'test':
+            return len(self.test_data)
 
     def getitem(self, subset, index):
-        '''
-        Function to get an item from from the subset of the dataset specified
-        with 'mode'.
-        '''
-        return [datum], [target], id
+        if subset == 'train':
+            image, label = self.train_data[self.n_valid + index]
+            return {'image': image, 'label': label}
+        elif subset == 'valid':
+            image, label = self.train_data[index]
+            return {'image': image, 'label': label}
+        elif subset == 'test':
+            image, label = self.test_data[index]
+            return {'image': image, 'label': label}
+
+```
+2) Define your model:
+```python
+import torch.nn
+
+class SimpleModel(torch.nn.Module):
+    def __init__(self, channels, input_channels=3, n_classes=10):
+        super().__init__()
+
+        modules = []
+
+        in_c = input_channels
+        for out_c in channels:
+            modules.append(torch.nn.Conv2d(in_c, out_c, 3, padding=1))
+            modules.append(torch.nn.BatchNorm2d(out_c))
+            modules.append(torch.nn.ReLU(inplace=True))
+            modules.append(torch.nn.MaxPool2d(2))
+
+            in_c = out_c
+
+        self.encoder = torch.nn.Sequential(*modules)
+        self.decoder = torch.nn.Linear(in_c, n_classes)
+
+    def __call__(self, input):
+        x = input['image']
+        # print(x.shape)
+        # print(self.encoder)
+        x = self.encoder(x).mean(dim=-1).mean(dim=-1)
+        x = self.decoder(x)
+
+        return x
 ```
 
-## Callbacks engine
+3) Define your pipeline and train:
+```python
+import setka
+import setka.base
+import setka.pipes
 
-You can use as many callbacks available in callbacks collection or you may
-specify your own callbacks to extend the functionality of the package.
+
+def loss(pred, input):
+    return torch.nn.functional.cross_entropy(pred, input['label'])
+
+
+def acc(pred, input):
+    return (input['label'] == pred.argmax(dim=1)).float().sum() / float(pred.size(0))
+
+
+
+ds = CIFAR10()
+model = SimpleModel(channels=[8, 16, 32, 64])
+
+trainer = setka.base.Trainer(
+    pipes=[
+        setka.pipes.DataSetHandler(ds, 32, workers=4, timeit=True,
+                                   shuffle={'train': True, 'valid': True, 'test': False},
+                                   epoch_schedule=[
+                                       {'mode': 'train', 'subset': 'train'},
+                                       {'mode': 'valid', 'subset': 'train', 'n_iterations': 100},
+                                       {'mode': 'valid', 'subset': 'valid'},
+                                       {'mode': 'valid', 'subset': 'test'}]),
+        setka.pipes.ModelHandler(model),
+        setka.pipes.LossHandler(loss),
+        setka.pipes.ComputeMetrics([loss, acc]),
+        setka.pipes.ProgressBar(),
+        setka.pipes.OneStepOptimizers([setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-2)]),
+        setka.pipes.TuneOptimizersOnPlateau('acc', max_mode=True, subset='valid', lr_factor=0.3, reset_optimizer=True),
+        setka.pipes.MakeCheckpoints('acc', max_mode=True)
+    ]
+)
+
+
+trainer.run_train(10)
+```
+
+
+## If you need more functionality
+
+You may define your own pipes without hustle. Here is an
+example of pipe that prints when the trainer performs callbacks 
+"before_batch"
+
+```python
+import setka.base
+
+class StatusPrinter(setka.pipes.Pipe):
+    def __init__(self):
+        super().__init__()
+    
+    def before_batch(self):
+        print("In before batch")
+```

@@ -2,7 +2,7 @@ import torch
 import setka
 import torchvision.datasets
 import setka.base
-import setka.callbacks
+import setka.pipes
 import os
 import numpy
 import sys
@@ -29,8 +29,8 @@ trainer = setka.base.Trainer(
     net,
     criterion=loss,
     optimizers=[setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
-    callbacks=[setka.callbacks.ComputeMetrics([loss, acc]),
-               setka.callbacks.ExponentialWeightAveraging(epoch_start=2)]
+    pipes=[setka.pipes.ComputeMetrics([loss, acc]),
+               setka.pipes.ExponentialWeightAveraging(epoch_start=2)]
 )
 
 for index in range(5):
@@ -53,8 +53,8 @@ trainer = setka.base.Trainer(
     net,
     criterion=loss,
     optimizers=[setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
-    callbacks=[setka.callbacks.ComputeMetrics([loss, acc]),
-               setka.callbacks.ExponentialWeightAveraging(epoch_start=2)]
+    pipes=[setka.pipes.ComputeMetrics([loss, acc]),
+               setka.pipes.ExponentialWeightAveraging(epoch_start=2)]
 )
 
 for index in range(5):
@@ -79,8 +79,8 @@ for index in range(5):
 #     net,
 #     criterion=loss,
 #     optimizers=[setka.base.OptimizerSwitch(net, torch.optim.Adam, lr=3.0e-4)],
-#     callbacks=[setka.callbacks.ComputeMetrics([loss, acc]),
-#                setka.callbacks.ExponentialWeightAveraging(epoch_start=2)]
+#     pipes=[setka.pipes.ComputeMetrics([loss, acc]),
+#                setka.pipes.ExponentialWeightAveraging(epoch_start=2)]
 # )
 #
 # for index in range(5):

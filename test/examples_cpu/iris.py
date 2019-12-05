@@ -1,6 +1,6 @@
 import torch
 import setka.base
-import setka.callbacks
+import setka.pipes
 import sklearn.datasets
 import numpy
 
@@ -69,14 +69,14 @@ def accuracy(pred, targ):
 
 
 trainer = setka.base.Trainer(model,
-                              optimizers=[setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-3)],
-                              criterion=loss,
-                              callbacks=[
-                                setka.callbacks.ComputeMetrics(metrics=[loss, accuracy]),
-                                setka.callbacks.ReduceLROnPlateau(metric='loss'),
-                                setka.callbacks.ExponentialWeightAveraging(),
-                                setka.callbacks.WriteToTensorboard(name=name),
-                                setka.callbacks.Logger(name=name)
+                             optimizers=[setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-3)],
+                             criterion=loss,
+                             pipes=[
+                                setka.pipes.ComputeMetrics(metrics=[loss, accuracy]),
+                                setka.pipes.ReduceLROnPlateau(metric='loss'),
+                                setka.pipes.ExponentialWeightAveraging(),
+                                setka.pipes.WriteToTensorboard(name=name),
+                                setka.pipes.Logger(name=name)
                               ])
 
 for index in range(100):
