@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="setka",
-    version="0.2",
+    version="1.0",
     author="Mikhail Romanov",
     author_email="romanov.michael.v@gmail.com",
     description="A set of scripts for fast Neural Network training",
