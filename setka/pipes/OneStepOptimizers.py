@@ -25,6 +25,7 @@ class OneStepOptimizers(Pipe):
                 if optimizer.active:
                     optimizer.optimizer.zero_grad()
                     optimizer.module.train()
+                    optimizer.module.requires_grad = True
 
     def after_batch(self):
         '''
@@ -36,3 +37,4 @@ class OneStepOptimizers(Pipe):
                     optimizer.optimizer.step()
 
         self.trainer._model.eval()
+        self.trainer._model.requires_grad = False

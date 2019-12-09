@@ -20,6 +20,7 @@ class ModelHandler(Pipe):
     def on_init(self):
         self.trainer._model = torch.nn.DataParallel(self.model)
         self.trainer._model.eval()
+        self.trainer._model.requires_grad = False
 
     def before_epoch(self):
         '''
