@@ -34,6 +34,12 @@ class SaveResult(Pipe):
             for list_index in range(len(input)):
                 one.append(input[list_index][item_index])
             return one
+        
+        elif isinstance(input, dict):
+            one = {}
+            for dict_key in input:
+                one[dict_key] = input[dict_key][item_index]
+            return one
 
         else:
             one = input[item_index]
