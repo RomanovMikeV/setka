@@ -114,7 +114,7 @@ class Logger(Pipe):
 
 
     def save_image(self, name, content, epoch, ext='png'):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch))
+        fname = os.path.join(self.root_path, str(epoch) + '_' + name)
         if len(fname.split('/')[-1].split('.')) == 1:
             fname = fname + '.' + ext
         if len(content.shape) == 3:
@@ -125,7 +125,7 @@ class Logger(Pipe):
             content)
 
     def save_text(self, name, content, epoch, ext='txt'):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch))
+        fname = os.path.join(self.root_path, str(epoch) + '_' + name)
         if len(fname.split('/')[-1].split('.')) == 1:
             fname = fname + '.' + ext
         self.make_dirs(fname)
@@ -133,7 +133,7 @@ class Logger(Pipe):
             fout.write(content)
 
     def save_audio(self, name, content, epoch, ext='wav'):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch))
+        fname = os.path.join(self.root_path, str(epoch) + '_' + name)
         if len(fname.split('/')[-1].split('.')) == 1:
             fname = fname + '.' + ext
         self.make_dirs(fname)
@@ -143,7 +143,7 @@ class Logger(Pipe):
             content)
 
     def save_figure(self, name, content, epoch, ext='png'):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch))
+        fname = os.path.join(self.root_path, str(epoch) + '_' + name)
         if len(fname.split('/')[-1].split('.')) == 1:
             fname = fname + '.' + ext
         self.make_dirs(fname)
@@ -151,7 +151,7 @@ class Logger(Pipe):
 
 
     def save_file(self, name, content, epoch, ext='bin'):
-        fname = os.path.join(self.root_path, name + '_' + str(epoch))
+        fname = os.path.join(self.root_path, str(epoch) + '_' + name)
         if len(fname.split('/')[-1].split('.')) == 1:
             fname = fname + '.' + ext
 
