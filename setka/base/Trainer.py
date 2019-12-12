@@ -185,3 +185,13 @@ class Trainer():
             res.append([self._pipes[index].__class__.__name__])
 
         return pandas.DataFrame(res)
+
+
+    def remove_pipe(self, pipe_type):
+        for index in reversed(range(len(self._pipes))):
+            if isinstance(self._pipes[index], pipe_type):
+                del(self._pipes[index])
+
+
+    def add_pipe(self, pipe):
+        self._pipes.append(pipe)
