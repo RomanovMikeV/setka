@@ -7,8 +7,9 @@ import zipfile
 import skimage.io
 import scipy.io.wavfile
 
+
 class Logger(Pipe):
-    '''
+    """
     This pipe saves all the information about training process of the
     model. It is important the training process understanding and for the
     experiment reproducibility.
@@ -48,18 +49,18 @@ class Logger(Pipe):
 
         ignore_list (list of str): folders to not to include to the snapshot.
 
-    '''
+    """
     def __init__(self,
                  f=None,
                  name='checkpoint',
                  log_dir='./',
                  ignore_list=('checkpoints', 'logs', 'predictions', 'runs')):
 
+        super(Logger, self).__init__()
         self.f = f
         self.name = name
         self.log_dir = log_dir
         self.ignore_list = ignore_list
-
 
     def on_init(self):
         self.root_path = os.path.join(
@@ -93,11 +94,10 @@ class Logger(Pipe):
         if not os.path.exists(predictions_dir):
             os.makedirs(predictions_dir)
 
-
     def before_epoch(self):
-        '''
+        """
         Dumps metrics to the log file.
-        '''
+        """
         if self.trainer._mode == 'train':
             with open(os.path.join(self.root_path, 'metrics.txt'), 'a+') as fout:
                 if hasattr(self.trainer, '_metrics'):
@@ -105,13 +105,11 @@ class Logger(Pipe):
                         str(self.trainer._epoch - 1) + '\t' +
                         str(self.trainer._metrics) + '\n')
 
-
     @staticmethod
     def make_dirs(fname):
         dir_name = '/'.join(fname.split('/')[:-1])
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
-
 
     def save_image(self, name, content, epoch, ext='png'):
         fname = os.path.join(self.root_path, name + '_' + str(epoch))
@@ -149,7 +147,6 @@ class Logger(Pipe):
         self.make_dirs(fname)
         content.savefig(fname)
 
-
     def save_file(self, name, content, epoch, ext='bin'):
         fname = os.path.join(self.root_path, name + '_' + str(epoch))
         if len(fname.split('/')[-1].split('.')) == 1:
@@ -162,25 +159,23 @@ class Logger(Pipe):
             content.seek(0)
             fout.write(content.read())
 
-
     @staticmethod
     def get_one(input, item_index):
         if isinstance(input, (list, tuple)):
             one = []
             for list_index in range(len(input)):
-                one.append(input[list_index][item_index])
+                one.append(input[list_index][item_index].detach())
             return one
 
         elif isinstance(input, dict):
             one = {}
             for key, value in input.items():
-                one[key] = value[item_index]
+                one[key] = value[item_index].detach()
             return one
 
         else:
-            one = input[item_index]
+            one = input[item_index].detach()
             return one
-
 
     def show(self, to_show, id):
         type_writers = {
@@ -202,10 +197,10 @@ class Logger(Pipe):
                     type_writers[type](**kwargs)
 
     def after_batch(self):
-        '''
+        """
         Writes the loss to the loss log (in case of train mode).
         Also performs visualisation in case of test mode.
-        '''
+        """
         if self.trainer._mode == 'train':
             with open(os.path.join(self.root_path, 'loss.txt'), 'a+') as fout:
                 fout.write(str(self.trainer._epoch) + '\t' +
@@ -213,7 +208,6 @@ class Logger(Pipe):
 
         if self.trainer._mode == 'test' and (self.f is not None):
             for index in range(len(self.trainer._ids)):
-
                 one_input = self.get_one(self.trainer._input, index)
                 one_output = self.get_one(self.trainer._output, index)
 
@@ -223,9 +217,9 @@ class Logger(Pipe):
                 self.show(res, id)
 
     def after_epoch(self):
-        '''
+        """
         Writes the trainer status to the log file.
-        '''
+        """
         line = '  '.join([str(k) + ': ' + str(v) for k, v in self.trainer.status.items()])
         with open(os.path.join(self.root_path, 'log.txt'), 'a+') as fout:
             fout.write(line + '\n')

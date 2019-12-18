@@ -1,4 +1,4 @@
-class Pipe():
+class Pipe:
     '''
     pipe basic class.
 
@@ -32,7 +32,7 @@ class Pipe():
     '''
 
     def __init__(self):
-        pass
+        self.trainer = None
 
     def on_init(self):
         pass
