@@ -194,4 +194,6 @@ class Trainer():
 
 
     def add_pipe(self, pipe):
+        pipe.trainer = self
         self._pipes.append(pipe)
+        
