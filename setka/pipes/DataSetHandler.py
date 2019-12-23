@@ -1,12 +1,13 @@
-from .Pipe import Pipe
-
-import setka.base
-import torch
 import time
 
 import numpy
+import torch
 
-class DataSetWrapper():
+import setka.base
+from .Pipe import Pipe
+
+
+class DataSetWrapper:
     def __init__(self, dataset, name):
         self.dataset = dataset
         self.name = name
@@ -27,7 +28,7 @@ class DataSetWrapper():
 
 
 class DataSetHandler(Pipe):
-    '''
+    """
     This class is a main pipe in the learning procedure. It holds the dataset and produces batches from the dataset
     for training. Besides, it also controls the epochs launches via ```run_epoch```within training loop and batches
     passes launches via ```run_batch``` within epoch loop.
@@ -66,7 +67,7 @@ class DataSetHandler(Pipe):
                 * firstly the Trainer is switched to the `train` mode and `train` subset of the dataset is used.
                 * secondly, the Trainer is switched to the `valid` mode and `train` subset of the dataset is used.
                 * thirdly, the Trainer is switched to the `valid` mode and `valid` subset of the dataset is used.
-    '''
+    """
     def __init__(self,
                  dataset,
                  batch_size,
@@ -80,8 +81,9 @@ class DataSetHandler(Pipe):
                      {'mode': 'valid', 'subset': 'valid'}
                  ]):
 
+        super(DataSetHandler, self).__init__()
         self.dataset = dataset
-        self.set_priority({'before_epoch':10, 'before_batch': 10, 'after_batch': -10, "after_epoch": -10})
+        self.set_priority({'before_epoch': 10, 'before_batch': 10, 'after_batch': -10, "after_epoch": -10})
         self.batch_size = batch_size
         self.workers = workers
         self.timeit = timeit
@@ -90,26 +92,19 @@ class DataSetHandler(Pipe):
 
         self.epoch_schedule = epoch_schedule
 
-
     def before_epoch(self):
-        '''
+        """
         Initializes new epoch: shuffles dataset,
         prepares dataloader, counts number of
         iterations in dataloader.
-        '''
-        ds_wrapper = DataSetWrapper(
-            self.dataset[self.trainer._subset],
-            self.trainer._subset)
-
-        drop_last = False
-        if self.trainer._mode == 'train':
-            drop_last = True
+        """
+        ds_wrapper = DataSetWrapper(self.dataset[self.trainer._subset], self.trainer._subset)
+        drop_last = True if self.trainer._mode == 'train' else False
 
         shuffle = False
         if isinstance(self.shuffle, dict):
             if self.trainer._mode in self.shuffle:
-                shuffle = shuffle
-
+                shuffle = self.shuffle[self.trainer._mode]
         else:
             shuffle = self.shuffle
 
@@ -142,22 +137,21 @@ class DataSetHandler(Pipe):
                 self.trainer._n_iterations,
                 self.limits)
 
-
     def before_batch(self):
-        '''
+        """
         Samples a batch from dataloader and measures the
         time used for it.
-        '''
+        """
 
         self.start_time = time.time()
         self.trainer._input, self.trainer._ids = next(self.iterator)
         self.data_time = time.time() - self.start_time
 
     def after_batch(self):
-        '''
+        """
         Releases the 'self.trainer._input' and 'self.trainer._ids'. Also
         evaluates batch time.
-        '''
+        """
 
         del self.trainer._input, self.trainer._ids
 
@@ -167,12 +161,11 @@ class DataSetHandler(Pipe):
             self.trainer.status['D'] = self.data_time
             self.trainer.status['B'] = self.batch_time
 
-
     def on_train(self):
-        '''
+        """
         Cycles through the epochs. For epoch details, use
         `view_epoch()`.
-        '''
+        """
 
         while True:
             if hasattr(self.trainer, '_n_epochs'):
@@ -187,12 +180,11 @@ class DataSetHandler(Pipe):
                     del self.trainer._stop_train_signal
                     break
 
-
     def on_epoch(self):
-        '''
+        """
         Cycles through batches. For batch details, use
         `view_batch()`.
-        '''
+        """
         while True:
             if self.trainer._epoch_iteration >= self.trainer._n_iterations:
                 break
@@ -204,11 +196,8 @@ class DataSetHandler(Pipe):
                     del self.trainer._stop_epoch_signal
                     break
 
-
     def after_epoch(self):
-        '''
+        """
         Deletes dataloader.
-        '''
+        """
         del self.loader, self.iterator
-
-

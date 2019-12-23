@@ -18,3 +18,5 @@ runs/*
 dist/*
 build/*
 cifar10_data/*
+.idea
+.idea/*

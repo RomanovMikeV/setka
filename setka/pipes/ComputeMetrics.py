@@ -4,8 +4,9 @@ import torch.utils
 
 from .Pipe import Pipe
 
+
 class ComputeMetrics(Pipe):
-    '''
+    """
     This pipe computes metrics when the validation is
     performed. The metrics are updated on batch end. The parameter
     ```steps_to_compute``` specifies on how many batches the
@@ -13,13 +14,13 @@ class ComputeMetrics(Pipe):
     are computed. The history is flushed when the
     epoch starts.
 
-    Note: list of metrics should contain callables. Each of the
-        callables my return either one value or two values. If two
+    Note: list of metrics should contain callable. Each of the
+        callable my return either one value or two values. If two
         values are returned (or two numpy arrays of the same shape) --
         the first value is treated as enumerator(s), the second is treated as a
         denominator(s).
         When the metric is requested -- the new enumerator(s) and
-        denomirator(s) are computed. Overall enumerators and denominators
+        denominator(s) are computed. Overall enumerators and denominators
         are updated (new values added to the accumulated ones).
         After that there are two options
         for computing average for each of the metrics in arrays.
@@ -31,19 +32,13 @@ class ComputeMetrics(Pipe):
         (case of ```divide_first``` for the metric is set to True).
 
     Args:
-        metrics (list of callables, required): list of metric functions to compute.
-
-        divide_first (list of bools, not required): list of flags indicating that the
+        metrics (list of callable, required): list of metric functions to compute.
+        divide_first (list of bool, not required): list of flags indicating that the
             division should be performed before the reduce.
-
-        steps_to_compute (int): indicates how often the metrics values should be
-            updated
-    '''
-    def __init__(self,
-                 metrics,
-                 divide_first=None,
-                 steps_to_compute=1):
-
+        steps_to_compute (int): indicates how often the metrics values should be updated
+    """
+    def __init__(self, metrics, divide_first=None, steps_to_compute=1):
+        super(ComputeMetrics, self).__init__()
         self.steps_to_compute = steps_to_compute
         self.metrics = metrics
         self.names = []
@@ -57,29 +52,18 @@ class ComputeMetrics(Pipe):
             self.divide_first = divide_first
 
         self.steps = 0
-
         self.avg_values = {}
-
-        # self.inputs = []
-        # self.outputs = []
-
-        # self.enumerators = []
-        # self.denominators = []
-
+        self.enumerators = None
+        self.denominators = None
 
     def reset(self):
-        self.enumerators = []
-        self.denominators = []
-
-        for metric in self.metrics:
-            self.enumerators.append(None)
-            self.denominators.append(None)
-
+        self.enumerators = [None] * len(self.metrics)
+        self.denominators = [None] * len(self.metrics)
 
     def before_epoch(self):
-        '''
-        Initializes the storages for the metrics.
-        '''
+        """
+        Initializes the storage for the metrics.
+        """
         self.reset()
 
         if hasattr(self, 'inputs'):
@@ -92,7 +76,6 @@ class ComputeMetrics(Pipe):
         self.outputs = []
 
         self.steps = 0
-
 
     @staticmethod
     def preprocess_collection(input):
@@ -123,25 +106,27 @@ class ComputeMetrics(Pipe):
         else:
             return torch.cat(input, dim=0)
 
-
     def evaluate(self):
         self.inputs = self.preprocess_collection(self.inputs)
         self.outputs = self.preprocess_collection(self.outputs)
 
         for index in range(len(self.metrics)):
-            res = self.metrics[index](self.outputs, self.inputs)
+            with torch.no_grad():
+                res = self.metrics[index](self.outputs, self.inputs)
 
             if isinstance(res, (list, tuple)):
-                if len(res) == 2:
-                    if isinstance(res[0], torch.Tensor):
-                        enum = res[0].detach()
-                    else:
-                        enum = torch.tensor(res[0])
+                assert len(res) == 2, \
+                    "Metric should return list or tuple of length 2: numerator and denominator of result"
 
-                    if isinstance(res[1], torch.Tensor):
-                        denom = res[1].detach()
-                    else:
-                        denom = torch.tensor(res[1])
+                if isinstance(res[0], torch.Tensor):
+                    enum = res[0].detach()
+                else:
+                    enum = torch.tensor(res[0])
+
+                if isinstance(res[1], torch.Tensor):
+                    denom = res[1].detach()
+                else:
+                    denom = torch.tensor(res[1])
             else:
                 if isinstance(res, torch.Tensor):
                     enum = res.detach()
@@ -175,12 +160,10 @@ class ComputeMetrics(Pipe):
 
         self.inputs = []
         self.outputs = []
-
         self.steps = 0
 
         for x in self.avg_values:
             self.trainer.status[x] = self.avg_values[x]
-
 
     @staticmethod
     def detach_collection(input):
@@ -191,28 +174,23 @@ class ComputeMetrics(Pipe):
         else:
             return input.detach()
 
-
     def after_batch(self):
-        '''
-        Updates storages and evaluates the metrics.
-        '''
+        """
+        Updates storage and evaluates the metrics.
+        """
         if self.trainer._mode in ('train', 'valid'):
-
             self.steps += 1
-
             self.outputs.append(self.detach_collection(self.trainer._output))
-
             self.inputs.append(self.detach_collection(self.trainer._input))
 
             if self.steps >= self.steps_to_compute:
                 self.evaluate()
 
-
     def after_epoch(self):
-        '''
+        """
         Stores final metrics in the 'self.trainer._metrics' and resets the
         pipe.
-        '''
+        """
         if self.trainer._mode == 'valid':
             if self.steps != 0:
                 self.evaluate()
