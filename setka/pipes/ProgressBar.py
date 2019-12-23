@@ -38,10 +38,13 @@ class ProgressBar(Pipe):
                 ascii=True,
                 leave=False,
                 bar_format='{percentage:3.0f}% [{elapsed}>{remaining}] {rate_fmt} {postfix}')
+        else:
+            pass
         
-        self.pbar.clear()
-        self.pbar.n = 0
-        self.pbar.start_t = time.time()
+        if hasattr(self, 'pbar'):
+            self.pbar.clear()
+            self.pbar.n = 0
+            self.pbar.start_t = time.time()
 
         
     def after_epoch(self):
@@ -50,22 +53,24 @@ class ProgressBar(Pipe):
         '''
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
         
-        #print(self.status_string)
-        if hasattr(self, 'status_string'):
+        if hasattr(self, 'pbar'):
             self.pbar.write(self.status_string)
         
-        self.pbar.clear()
-        self.pbar.close()
-        del self.pbar
+            self.pbar.clear()
+            self.pbar.close()
+            del self.pbar
+        else:
+            print(self.status_string)
 
     def after_batch(self):
         '''
         Updates the progressbar.
         '''
 
-        self.pbar.n = float(self.trainer._epoch_iteration) / float(self.trainer._n_iterations) * 100.0
-        self.pbar.refresh()
+        if hasattr(self, 'pbar'):
+            self.pbar.n = float(self.trainer._epoch_iteration) / float(self.trainer._n_iterations) * 100.0
+            self.pbar.refresh()
 
-        self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
+            self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
 
-        self.pbar.set_postfix_str(self.status_string)
+            self.pbar.set_postfix_str(self.status_string)
