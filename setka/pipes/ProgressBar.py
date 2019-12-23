@@ -52,9 +52,9 @@ class ProgressBar(Pipe):
         self.pbar.close()
         del self.pbar
         
-        print(self.status_string)
-        #if hasattr(self, 'status_string'):
-        #    self.pbar.write(self.status_string)
+        #print(self.status_string)
+        if hasattr(self, 'status_string'):
+            self.pbar.write(self.status_string)
 
     def after_batch(self):
         '''
