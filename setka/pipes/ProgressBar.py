@@ -63,7 +63,7 @@ class ProgressBar(Pipe):
         Updates the progressbar.
         '''
 
-        self.pbar.n = int(float(self.trainer._epoch_iteration) / float(self.trainer._n_iterations) * 100.0)
+        self.pbar.n = float(self.trainer._epoch_iteration) / float(self.trainer._n_iterations) * 100.0
         self.pbar.refresh()
 
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
