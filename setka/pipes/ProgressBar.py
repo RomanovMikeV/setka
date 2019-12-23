@@ -50,12 +50,12 @@ class ProgressBar(Pipe):
         '''
         self.status_string = '  '.join([str(k) + ': ' + self.format(v) for k, v in self.trainer.status.items()])
         
-        
         #print(self.status_string)
         if hasattr(self, 'status_string'):
             self.pbar.write(self.status_string)
         
         self.pbar.clear()
+        self.pbar.close()
         del self.pbar
 
     def after_batch(self):
