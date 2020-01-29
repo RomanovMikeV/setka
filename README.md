@@ -35,6 +35,7 @@ pip install git+http://github.com/RomanovMikeV/setka
 
 1) Define the dataset:
 ```python
+import setka.base
 import torchvision.transforms
 import torchvision.datasets
 
@@ -119,8 +120,6 @@ class SimpleModel(torch.nn.Module):
 
 3) Define your pipeline and train:
 ```python
-import setka
-import setka.base
 import setka.pipes
 
 
