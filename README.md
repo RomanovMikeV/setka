@@ -55,10 +55,10 @@ class CIFAR10(setka.base.DataSet):
         ])
 
         self.train_data = torchvision.datasets.CIFAR10(
-            '~/datasets', train=True, download=True,
+            root, train=True, download=True,
             transform=train_transforms)
         self.test_data = torchvision.datasets.CIFAR10(
-            '~/datasets', train=False, download=True,
+            root, train=False, download=True,
             transform=test_transforms)
 
         self.n_valid = int(0.05 * len(self.train_data))
