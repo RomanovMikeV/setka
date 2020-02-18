@@ -137,7 +137,7 @@ model = SimpleModel(channels=[8, 16, 32, 64])
 
 trainer = setka.base.Trainer(
     pipes=[
-        setka.pipes.DataSetHandler(ds, 32, workers=4, timeit=True,
+        setka.pipes.DataSetHandler(ds, batch_size=32, workers=4, timeit=True,
                                    shuffle={'train': True, 'valid': True, 'test': False},
                                    epoch_schedule=[
                                        {'mode': 'train', 'subset': 'train'},
