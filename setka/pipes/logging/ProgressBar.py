@@ -1,7 +1,8 @@
 import time
 import tqdm
 
-from .Pipe import Pipe
+from setka.pipes.Pipe import Pipe
+
 
 class ProgressBar(Pipe):
     '''
@@ -11,14 +12,13 @@ class ProgressBar(Pipe):
         self.set_priority(-100)
         self.mode = mode
 
-
     @staticmethod
     def format(val):
         res = str(val)
         if isinstance(val, int):
             res = '{0:5d}'.format(val)
         if isinstance(val, float):
-            res = '{0:.2e}'.format(val)
+            res = '{0:.4f}'.format(val)
         if isinstance(val, str):
             res = '{0:5s}'.format(val)
         return res
@@ -52,8 +52,6 @@ class ProgressBar(Pipe):
         self.pbar.close()
         print(self.status_string)
         del self.pbar
-        #if hasattr(self, 'status_string'):
-        #    self.pbar.write(self.status_string)
 
     def after_batch(self):
         '''

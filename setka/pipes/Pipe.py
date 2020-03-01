@@ -1,5 +1,5 @@
 class Pipe:
-    '''
+    """
     pipe basic class.
 
     pipe has the following methods:
@@ -29,10 +29,11 @@ class Pipe:
         ```validate_one_epoch```, ```predict```)
 
     * set_trainer(self, trainer) -- method that links the trainer to the pipe.
-    '''
+    """
 
     def __init__(self):
         self.trainer = None
+        self.priority = None
 
     def on_init(self):
         pass

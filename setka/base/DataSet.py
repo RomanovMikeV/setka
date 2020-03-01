@@ -1,7 +1,8 @@
 import copy
 
-class DataSet():
-    '''
+
+class DataSet:
+    """
     Dataset class, where all the information about the dataset is
     collected. It contains all the information about the dataset.
     The dataset may be split into the subsets (that are usually
@@ -32,9 +33,7 @@ class DataSet():
 
         * __getitem__ -- function that gets the item of the dataset
             by its index. Predefined, you do not need to redefine it.
-
-
-    '''
+    """
 
     def __init__(self):
         pass

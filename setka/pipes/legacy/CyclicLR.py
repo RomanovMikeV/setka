@@ -1,4 +1,5 @@
-from .Pipe import Pipe
+from setka.pipes.Pipe import Pipe
+
 
 class CyclicLR(Pipe):
     '''
@@ -31,7 +32,6 @@ class CyclicLR(Pipe):
     def __init__(self, cycle):
         self.cycle = cycle
 
-
     def before_epoch(self):
         '''
         Memorizes the learning rates that optimizers had before the epoch.
@@ -42,7 +42,6 @@ class CyclicLR(Pipe):
             for index in range(len(optimizer.optimizer.param_groups)):
                 self.lrs[-1].append(
                     optimizer.optimizer.param_groups[index]['lr'])
-
 
     def before_batch(self):
         '''

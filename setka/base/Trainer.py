@@ -3,17 +3,23 @@ import numpy
 import pandas
 import datetime
 
-class Trainer():
-    '''
+from .CollectionOperator import CollectionOperator
+
+
+class Trainer:
+    """
 
     Trainer is a class that takes control over the training procedure. It is the main module of the whole Setka.
 
     :param pipes: list or tuple of pipes for a pipeline.
+    :param collection_op: instance of CollectionOperator class, which supports data collection operations. For furthermore,
+        take a look into default setka.base.CollectionOperator implementation
     :param train_flow: callbacks in the order in which they are called when the trainer.run_training is called
-    '''
+    """
 
     def __init__(self,
                  pipes=[],
+                 collection_op=None,
                  train_flow=['before_train', 'on_train', 'after_train'],
                  epoch_flow=['before_epoch', 'on_epoch', 'after_epoch'],
                  batch_flow=['before_batch', 'on_batch', 'after_batch']):
@@ -25,6 +31,9 @@ class Trainer():
         self._epoch_flow = epoch_flow
 
         self._pipes = pipes
+        self.collection_op = collection_op
+        if self.collection_op is None:
+            self.collection_op = CollectionOperator()
 
         for pipe in self._pipes:
             pipe.trainer = self
@@ -36,10 +45,7 @@ class Trainer():
         self._iteration = 0
         self.status["iteration"] = 0
 
-        # self._best_metrics = None
-
         self._run_pipes('on_init')
-
 
     def _traverse_pipes(self, stage, action='run'):
         priorities = []
@@ -74,19 +80,13 @@ class Trainer():
 
         return res
 
-
     def _run_pipes(self, stage):
         self._traverse_pipes(stage, action='run')
-
 
     def _view_pipes(self, stage):
         self._traverse_pipes(stage, action='view')
 
-
-    def _traverse_train(self,
-                  n_epochs=None,
-                  action='view'):
-
+    def _traverse_train(self, n_epochs=None, action='view'):
         if action == 'view':
             n_epochs = 1
 
@@ -100,13 +100,7 @@ class Trainer():
 
         return res
 
-
-    def _traverse_epoch(self,
-                  mode='valid',
-                  subset='valid',
-                  n_iterations=None,
-                  action='view'):
-
+    def _traverse_epoch(self, mode='valid', subset='valid', n_iterations=None, action='view'):
         if action == 'view':
             n_iterations = 1
 
@@ -129,9 +123,7 @@ class Trainer():
             res.extend(self._traverse_pipes(stage, action=action))
         return res
 
-
     def _traverse_batch(self, action='view'):
-
         if action != 'view':
             if self._mode == 'train':
                 self._iteration += 1
@@ -145,39 +137,29 @@ class Trainer():
 
         return res
 
-
     def run_train(self, n_epochs=None):
         self._traverse_train(n_epochs=n_epochs, action='run')
 
-
-    def run_epoch(self,
-                  mode='valid',
-                  subset='valid',
-                  n_iterations=None):
+    def run_epoch(self, mode='valid', subset='valid', n_iterations=None):
         self._traverse_epoch(mode=mode, subset=subset, n_iterations=n_iterations, action='run')
-
 
     def run_batch(self):
         self._traverse_batch(action='run')
-
 
     def view_train(self):
         res = pandas.DataFrame(self._traverse_train(action='view'))
         res.columns = ['priority', 'action', 'description']
         return res
 
-
     def view_epoch(self):
         res = pandas.DataFrame(self._traverse_epoch(action='view'))
         res.columns = ['priority', 'action', 'description']
         return res
 
-
     def view_batch(self):
         res = pandas.DataFrame(self._traverse_batch(action='view'))
         res.columns = ['priority', 'action', 'description']
         return res
-
 
     def view_pipeline(self):
         res = []
@@ -185,3 +167,13 @@ class Trainer():
             res.append([self._pipes[index].__class__.__name__])
 
         return pandas.DataFrame(res)
+
+    def remove_pipe(self, pipe_type):
+        for index in reversed(range(len(self._pipes))):
+            if isinstance(self._pipes[index], pipe_type):
+                del(self._pipes[index])
+
+    def add_pipe(self, pipe):
+        pipe.trainer = self
+        pipe.on_init()
+        self._pipes.append(pipe)
