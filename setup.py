@@ -24,7 +24,8 @@ setuptools.setup(
         'matplotlib',
         'scikit-image',
         'termcolor',
-        'pandas'
+        'pandas',
+        'efficientnet_pytorch'
     ],
     classifiers=(
         "Programming Language :: Python :: 3",

@@ -35,13 +35,14 @@ def run_python_script(script_path):
 
 tests_list = ['test/base_test.py']
 
-directory = 'test/pipes_tests'
+directories = ['test/blocks_tests', 'test/pipes_tests']
 # sys.path.append(directory)
 # sys.path.append('test')
 
-for fname in os.listdir(directory):
-    if fname[:2] != '__':
-        tests_list.append(os.path.join(directory, fname))
+for directory in directories:
+    for fname in os.listdir(directory):
+        if fname[:2] != '__':
+            tests_list.append(os.path.join(directory, fname))
 
 # devnull = open(os.devnull, 'w')
 
