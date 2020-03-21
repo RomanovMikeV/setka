@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="setka",
-    version="1.0",
+    version="1.1",
     author="Mikhail Romanov",
     author_email="romanov.michael.v@gmail.com",
     description="A set of scripts for fast Neural Network training",
@@ -13,13 +13,12 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/RomanovMikeV/setka",
     packages=setuptools.find_packages(),
-    install_requires = [
+    install_requires=[
         'torch',
         'torchvision',
         'numpy',
         'future',
         'tensorboard>=1.14',
-        # 'tb-nightly',
         'tqdm',
         'matplotlib',
         'scikit-image',

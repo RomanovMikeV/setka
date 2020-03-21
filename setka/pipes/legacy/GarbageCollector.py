@@ -1,6 +1,6 @@
-from .Pipe import Pipe
-
+from setka.pipes.Pipe import Pipe
 import gc
+
 
 class GarbageCollector(Pipe):
     '''

@@ -35,7 +35,6 @@ pip install git+http://github.com/RomanovMikeV/setka
 
 1) Define the dataset:
 ```python
-import setka.base
 import torchvision.transforms
 import torchvision.datasets
 
@@ -56,10 +55,10 @@ class CIFAR10(setka.base.DataSet):
         ])
 
         self.train_data = torchvision.datasets.CIFAR10(
-            root, train=True, download=True,
+            '~/datasets', train=True, download=True,
             transform=train_transforms)
         self.test_data = torchvision.datasets.CIFAR10(
-            root, train=False, download=True,
+            '~/datasets', train=False, download=True,
             transform=test_transforms)
 
         self.n_valid = int(0.05 * len(self.train_data))
@@ -120,6 +119,8 @@ class SimpleModel(torch.nn.Module):
 
 3) Define your pipeline and train:
 ```python
+import setka
+import setka.base
 import setka.pipes
 
 
@@ -137,7 +138,7 @@ model = SimpleModel(channels=[8, 16, 32, 64])
 
 trainer = setka.base.Trainer(
     pipes=[
-        setka.pipes.DataSetHandler(ds, batch_size=32, workers=4, timeit=True,
+        setka.pipes.DataSetHandler(ds, 32, workers=4, timeit=True,
                                    shuffle={'train': True, 'valid': True, 'test': False},
                                    epoch_schedule=[
                                        {'mode': 'train', 'subset': 'train'},
