@@ -24,7 +24,8 @@ setuptools.setup(
         'scikit-image',
         'termcolor',
         'pandas',
-        'efficientnet_pytorch'
+        'efficientnet_pytorch',
+        'imgaug'
     ],
     classifiers=(
         "Programming Language :: Python :: 3",
