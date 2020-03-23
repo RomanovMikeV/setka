@@ -32,8 +32,7 @@ trainer = setka.base.Trainer(pipes=[
                                  ),
                                  setka.pipes.ComputeMetrics([loss, acc]),
                                  setka.pipes.MakeCheckpoints('tensor_acc', max_mode=True, name='acc', keep_best_only=False),
-                                 setka.pipes.MakeCheckpoints('tensor_loss', max_mode=False, name='loss'),
-                                 setka.pipes.GarbageCollector()
+                                 setka.pipes.MakeCheckpoints('tensor_loss', max_mode=False, name='loss')
                              ])
 
 trainer.run_train(5)

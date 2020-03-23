@@ -38,8 +38,7 @@ trainer = setka.base.Trainer(
             weight_decay=5e-4)]),
          setka.pipes.WeightAveraging(
              epoch_start=0,
-             interval=1),
-         setka.pipes.GarbageCollector()
+             interval=1)
     ])
 
 trainer.run_train(3)

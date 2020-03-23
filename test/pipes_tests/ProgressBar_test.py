@@ -31,8 +31,7 @@ trainer = setka.base.Trainer(pipes=[
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.pipes.MultilineProgressBar(),
-                                 setka.pipes.GarbageCollector()
+                                 setka.pipes.MultilineProgressBar()
                              ])
 #print(trainer.view_batch())
 trainer.run_train(1)

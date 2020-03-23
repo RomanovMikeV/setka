@@ -33,8 +33,7 @@ trainer = setka.base.Trainer(pipes=[
                                  ),
                                  setka.pipes.ComputeMetrics([loss, acc, const],
                                                                 divide_first=[True, False, True],
-                                                                steps_to_compute=2),
-                                 setka.pipes.GarbageCollector()
+                                                                steps_to_compute=2)
                              ])
 
 trainer.run_train(2)

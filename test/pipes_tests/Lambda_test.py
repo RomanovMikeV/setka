@@ -33,8 +33,7 @@ trainer = setka.base.Trainer(pipes=[
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.pipes.Lambda(on_batch_begin=print_message),
-                                 setka.pipes.GarbageCollector()
+                                 setka.pipes.Lambda(on_batch_begin=print_message)
                              ])
 
 trainer.run_train(2)

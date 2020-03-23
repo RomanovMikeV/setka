@@ -63,8 +63,7 @@ trainer = setka.base.Trainer(pipes=[
                                     ]
                                  ),
                                  setka.pipes.ComputeMetrics([loss, acc]),
-                                 setka.pipes.Logger(f=view_result),
-                                 setka.pipes.GarbageCollector()
+                                 setka.pipes.Logger(f=view_result)
                              ])
 
 trainer.run_train(n_epochs=2)

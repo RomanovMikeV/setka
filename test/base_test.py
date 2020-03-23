@@ -28,12 +28,11 @@ trainer = setka.base.Trainer(pipes=[
                                             weight_decay=5e-4)
                                     ]
                                  ),
-                                 setka.pipes.Pipe(),
-                                 setka.pipes.GarbageCollector()
+                                 setka.pipes.Pipe()
                              ])
 
-trainer.remove_pipe(setka.pipes.GarbageCollector)
-trainer.add_pipe(setka.pipes.GarbageCollector())
+trainer.remove_pipe(setka.pipes.LossHandler)
+trainer.add_pipe(setka.pipes.LossHandler(loss))
 
 trainer.run_train(n_epochs=2)
 trainer.run_epoch(mode='train', subset='train', n_iterations=100)
