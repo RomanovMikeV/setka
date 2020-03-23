@@ -1,24 +1,24 @@
 from .Pipe import Pipe
-from .LambdaPipe import Lambda
+from .Lambda import Lambda
 
-from setka.pipes.basic.ComputeMetrics import ComputeMetrics
-from setka.pipes.basic.DataSetHandler import DataSetHandler
-from setka.pipes.basic.ModelHandler import ModelHandler
-from setka.pipes.basic.UseCuda import UseCuda
+from .basic.ComputeMetrics import ComputeMetrics
+from .basic.DataSetHandler import DataSetHandler
+from .basic.ModelHandler import ModelHandler
+from .basic.UseCuda import UseCuda
 
-from setka.pipes.legacy.CyclicLR import CyclicLR
-from setka.pipes.legacy.TuneOptimizersOnPlateau import TuneOptimizersOnPlateau
-from setka.pipes.legacy.GarbageCollector import GarbageCollector
+from .legacy.CyclicLR import CyclicLR
+from .legacy.TuneOptimizersOnPlateau import TuneOptimizersOnPlateau
+from .legacy.GarbageCollector import GarbageCollector
 
-from setka.pipes.logging.Logger import Logger
-from setka.pipes.logging.MakeCheckpoints import MakeCheckpoints
-from setka.pipes.logging.ProgressBar import ProgressBar
-from setka.pipes.logging.SaveResult import SaveResult
-from setka.pipes.logging.TensorBoard import TensorBoard
-from setka.pipes.logging.MultilineProgressBar import MultilineProgressBar
-import setka.pipes.logging.progressbar as progressbar
+from .logging.Logger import Logger
+from .logging.MakeCheckpoints import MakeCheckpoints
+from .logging.ProgressBar import ProgressBar
+from .logging.SaveResult import SaveResult
+from .logging.TensorBoard import TensorBoard
+from .logging.MultilineProgressBar import MultilineProgressBar
+from .logging import progressbar
 
-from setka.pipes.optimization.LossHandler import LossHandler
-from setka.pipes.optimization.OneStepOptimizers import OneStepOptimizers
-from setka.pipes.optimization.UnfreezeOnPlateau import UnfreezeOnPlateau
-from setka.pipes.optimization.WeightAveraging import WeightAveraging
+from .optimization.LossHandler import LossHandler
+from .optimization.OneStepOptimizers import OneStepOptimizers
+from .optimization.UnfreezeOnPlateau import UnfreezeOnPlateau
+from .optimization.WeightAveraging import WeightAveraging

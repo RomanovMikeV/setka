@@ -20,7 +20,7 @@ model = tiny_model.ListNet()
 
 def view_result(one_input, one_output):
     img = one_input[0]
-    img = (img - img.min()) / (img.max() - img.min())
+    img = (img - img.min()) / (img.max() - img.min() + 1.0e-4)
     truth = one_input[1]
     label = one_output[0]
 

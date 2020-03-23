@@ -3,6 +3,7 @@ import torch
 import torch.utils
 
 from setka.pipes.Pipe import Pipe
+from setka.base import CollectionOperator
 
 
 class ComputeMetrics(Pipe):
@@ -81,12 +82,9 @@ class ComputeMetrics(Pipe):
         self.steps = 0
         self.trainer._avg_metrics = {}
 
-    def evaluate(self):
-        assert len(self.inputs) == 1, "Batches stacking for steps_to_compute!=1 not implemented yet"
-        # self.inputs = self.preprocess_collection(self.inputs)
-        # self.outputs = self.preprocess_collection(self.outputs)
-        self.inputs = self.inputs[0]
-        self.outputs = self.outputs[0]
+    def evaluate(self):        
+        self.inputs = self.trainer.collection_op.collate_fn(self.inputs)
+        self.outputs = self.trainer.collection_op.collate_fn(self.outputs)
 
         for index in range(len(self.metrics)):
             with torch.no_grad():
@@ -135,9 +133,13 @@ class ComputeMetrics(Pipe):
         """
         if self.trainer._mode in ('train', 'valid'):
             self.steps += 1
-            self.outputs.append(self.trainer.collection_op.detach(self.trainer._output))
-            self.inputs.append(self.trainer.collection_op.detach(self.trainer._input))
-
+            self.outputs.extend(
+                self.trainer.collection_op.split(
+                    self.trainer.collection_op.detach(self.trainer._output)))
+            self.inputs.extend(
+                self.trainer.collection_op.split(
+                    self.trainer.collection_op.detach(self.trainer._input)))
+        
             if self.steps >= self.steps_to_compute:
                 self.evaluate()
 

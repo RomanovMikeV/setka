@@ -40,7 +40,8 @@ class CollectionOperator:
     """
     int_classes = (int,)
     string_classes = (str,)
-    leaf_types = (torch.Tensor, np.ndarray, float, int)
+    leaf_types = (torch.Tensor, np.ndarray)
+    primitives = (int, float)
 
     def __init__(self, soft_collate_fn=False, collate_fn_conversions=True):
         self.soft_collate_fn = soft_collate_fn
@@ -103,7 +104,7 @@ class CollectionOperator:
     def _is_leaf(element):
         if isinstance(element, CollectionOperator.leaf_types):
             return True
-        if isinstance(element, container_abcs.Sequence) and isinstance(element[0], CollectionOperator.leaf_types):
+        if isinstance(element, container_abcs.Sequence) and isinstance(element[0], CollectionOperator.primitives):
             return True
         return False
 
@@ -185,7 +186,7 @@ class CollectionOperator:
                 else:
                     raise ValueError('Couldn`t determine batch size from collection')
             batch_size = len(cur)
-        # print('Determined batch size:', batch_size)
+            
         result = [None] * batch_size
         CollectionOperator._split(elements, result)
         return result

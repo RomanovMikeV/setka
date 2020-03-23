@@ -1,7 +1,7 @@
 from .Pipe import Pipe
 
 
-class LambdaPipe(Pipe):
+class Lambda(Pipe):
     """
     This pipe will help you to rapidly create simple pipes.
 
@@ -12,7 +12,7 @@ class LambdaPipe(Pipe):
     where foo is a python function.
     """
     def __init__(self, **kwargs):
-        super(LambdaPipe, self).__init__()
+        super(Lambda, self).__init__()
 
         for key in kwargs:
             setattr(self, key, kwargs[key])

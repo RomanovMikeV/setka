@@ -21,7 +21,7 @@ model = tiny_model.TensorNet()
 def view_result(one_input, one_output):
     # print("In view result")
     img = one_input[0]
-    img = (img - img.min()) / (img.max() - img.min())
+    img = (img - img.min()) / (img.max() - img.min() + 1.0e-4)
     truth = one_input[1]
     label = one_output
 

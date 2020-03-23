@@ -33,7 +33,7 @@ class Pipe:
 
     def __init__(self):
         self.trainer = None
-        self.priority = None
+        self.priority = 0
 
     def on_init(self):
         pass
