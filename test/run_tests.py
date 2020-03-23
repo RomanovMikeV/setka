@@ -19,15 +19,38 @@ def run_command(command):
     exit_code = process.wait()
     return exit_code, err, output.decode()
 
+def run_python_script(script_path):
+    script_name = script_path.split('/')[-1]
+    script_dir = '/'.join(script_path.split('/')[:-1])
+    script_name = script_name[:-3]
 
-tests_list = ['python test/base_test.py']
+    sys.path.append(script_dir)
+
+    sys.stdout = open(os.devnull, 'w')
+    exit_code = 0
+    message = None
+
+    try:
+        test = __import__(script_name)
+        del test
+    except Exception as e:
+        exit_code = 1
+        message = traceback.format_exc()
+
+    gc.collect()
+    sys.stdout = sys.__stdout__
+    return exit_code, message
+
+
+
+tests_list = ['test/base_test.py']
 
 directories = ['test/pipes_tests']
 
 for directory in directories:
     for fname in os.listdir(directory):
         if fname[:2] != '__':
-            tests_list.append('python ' + os.path.join(directory, fname))
+            tests_list.append(os.path.join(directory, fname))
 
 # devnull = open(os.devnull, 'w')
 
@@ -38,7 +61,7 @@ failed = []
 for test_file in tests_list:
     print("Testing ", test_file, end=' ')
 
-    res = run_command(test_file)
+    res = run_python_script(test_file)
     if res[0]:
         print(colored("FAILED", 'red'))
         print(res[1])
