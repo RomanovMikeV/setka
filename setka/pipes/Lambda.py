@@ -1,4 +1,4 @@
-from .Pipe import Pipe
+from setka.pipes.Pipe import Pipe
 
 
 class Lambda(Pipe):
