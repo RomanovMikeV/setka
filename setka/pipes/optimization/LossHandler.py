@@ -55,5 +55,7 @@ class LossHandler(Pipe):
         Releases loss value in case it is present.
         """
         if self.trainer._mode in ["train", "valid"]:
-            del self.trainer._loss
-            del self.trainer._loss_values
+            if hasattr(self.trainer, '_loss'):
+                del self.trainer._loss
+            if hasattr(self.trainer, '_loss_values'):
+                del self.trainer._loss_values
