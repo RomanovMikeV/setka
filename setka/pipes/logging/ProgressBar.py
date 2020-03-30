@@ -1,11 +1,12 @@
 import datetime
 import time
 import os
+import numpy as np
 
 from setka.pipes.Pipe import Pipe
-from setka.pipes.logging.progressbar import StageProgressBar
+from setka.pipes.logging.progressbar import StageProgressBar, isnotebook
 from setka.pipes.logging.progressbar import progress_str, recursive_substituion
-from setka.pipes.logging.progressbar.theme import main_theme
+from setka.pipes.logging.progressbar.theme import main_theme, adopt2ipython
 
 
 class TimeEstimator:
@@ -39,24 +40,27 @@ class ProgressBar(Pipe):
     This pipe shows progress of the training.
     """
 
-    def __init__(self, theme=None):
+    def __init__(self, theme=None, default_width=100):
         super(ProgressBar, self).__init__()
         self.set_priority(-100)
 
         self.config = theme if theme is not None else main_theme()
+        if (theme is None) and isnotebook():
+            self.config = adopt2ipython(self.config)
         self.last_epoch = 0
         self.pbar = None
         self.time_est = TimeEstimator()
+        self.display_counter = 0
+        self.default_width = 100
 
     def on_init(self):
         self.last_epoch = self.safe_getattr(self.trainer, '_epoch', 0)
 
-    @staticmethod
-    def get_width():
+    def get_width(self):
         try:
             return os.get_terminal_size()[0]
         except :
-            return 100
+            return self.default_width
 
     @staticmethod
     def safe_getattr(obj, attr, default=None):
@@ -100,13 +104,15 @@ class ProgressBar(Pipe):
         }
 
     def before_epoch(self):
+        self.display_counter += 1
         if self.last_epoch != self.safe_getattr(self.trainer, '_epoch', 0):
             # Epoch number changed, display epoch delimiter
             print('-' * self.get_width())
             print(recursive_substituion('epoch_global', self.collect_info(), self.config))
             self.last_epoch = self.safe_getattr(self.trainer, '_epoch', 0)
 
-        self.pbar = StageProgressBar(width_function=self.get_width, config=self.config)
+        self.pbar = StageProgressBar(width_function=self.get_width, config=self.config,
+                                     display_id='ep{}'.format(self.display_counter))
         self.time_est.reset()
 
     def after_epoch(self):

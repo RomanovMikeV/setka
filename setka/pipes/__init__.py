@@ -11,7 +11,7 @@ from setka.pipes.logging.MakeCheckpoints import MakeCheckpoints
 from setka.pipes.logging.SaveResult import SaveResult
 from setka.pipes.logging.TensorBoard import TensorBoard
 from setka.pipes.logging.ProgressBar import ProgressBar
-from setka.pipes.logging import progressbar
+import setka.pipes.logging.progressbar
 
 from setka.pipes.optimization.LossHandler import LossHandler
 from setka.pipes.optimization.OneStepOptimizers import OneStepOptimizers

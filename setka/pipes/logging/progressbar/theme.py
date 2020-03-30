@@ -1,4 +1,5 @@
-from .theme_parser import FormatableList, fullstr_formatter, value_format
+from .theme_parser import FormatableList, fullstr_formatter, value_format, nline_format
+from copy import deepcopy
 
 
 def main_theme():
@@ -39,3 +40,11 @@ def main_theme():
     config['loss_str'] = FormatableList('{loss_name}: {loss_value}', 'loss', config, prefix=config['stage_prefix'])
     config['metrics_str'] = FormatableList('{metric_name}: {metric_value}', 'metrics', config, prefix=config['stage_prefix'])
     return config
+
+
+def adopt2ipython(config):
+    new_config = deepcopy(config)
+    for fmt_key in config['formatters']:
+        if config['formatters'][fmt_key] == fullstr_formatter:
+            new_config['formatters'][fmt_key] = nline_format
+    return new_config

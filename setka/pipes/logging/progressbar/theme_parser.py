@@ -97,6 +97,10 @@ def fullstr_formatter(val, common):
     return val + '\n'
 
 
+def nline_format(val, common):
+    return val + '\n'
+
+
 def nlines(text):
     return text.count('\n') + 1
 
