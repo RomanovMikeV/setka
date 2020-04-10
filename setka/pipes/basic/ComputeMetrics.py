@@ -99,7 +99,10 @@ class ComputeMetrics(Pipe):
                 denom = torch.as_tensor(res[1]).detach().cpu().numpy()
             else:
                 enum = torch.as_tensor(res).detach().cpu().numpy()
-                denom = torch.ones(enum.shape)
+                denom = torch.ones(enum.shape).numpy()
+                
+            enum *= batch_size
+            denom *= batch_size
 
             if self.enumerators[index] is None:
                 self.enumerators[index] = enum
@@ -115,7 +118,6 @@ class ComputeMetrics(Pipe):
                 self.avg_values[self.names[index]] = float((self.enumerators[index] / (self.denominators[index] + self.eps)).mean())
             else:
                 self.avg_values[self.names[index]] = float(self.enumerators[index].sum() / (self.denominators[index].sum() + self.eps))
-
         del self.inputs
         del self.outputs
 
