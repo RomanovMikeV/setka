@@ -38,7 +38,7 @@ class ComputeMetrics(Pipe):
             division should be performed before the reduce.
         steps_to_compute (int): indicates how often the metrics values should be updated
     """
-    def __init__(self, metrics, divide_first=None, steps_to_compute=1):
+    def __init__(self, metrics, divide_first=None, reduce=None, steps_to_compute=1):
         super(ComputeMetrics, self).__init__()
         self.steps_to_compute = steps_to_compute
         self.metrics = metrics
@@ -51,8 +51,19 @@ class ComputeMetrics(Pipe):
         if divide_first is None:
             self.divide_first = [True] * len(self.metrics)
         else:
-            self.divide_first = divide_first
+            if isinstance(divide_first, bool):
+                self.divide_first = [divide_first] * len(self.metrics)
+            else:
+                self.divide_first = divide_first
 
+        if reduce is None:
+            self.reduce = [True] * len(self.metrics)
+        else:
+            if isinstance(reduce, bool):
+                self.reduce = [reduce] * len(self.metrics)
+            else:
+                self.reduce = reduce
+            
         self.steps = 0
         self.avg_values = {}
         self.enumerators = None
@@ -116,10 +127,15 @@ class ComputeMetrics(Pipe):
         self.avg_values.clear()
 
         for index in range(len(self.enumerators)):
-            if self.divide_first[index]:
-                self.avg_values[self.names[index]] = float((self.enumerators[index] / (self.denominators[index] + self.eps)).mean())
+            if self.reduce[index]:
+                if self.divide_first[index]:
+                    self.avg_values[self.names[index]] = float((self.enumerators[index] / (self.denominators[index] + self.eps)).mean())
+                else:
+                    self.avg_values[self.names[index]] = float(self.enumerators[index].sum() / (self.denominators[index].sum() + self.eps))
             else:
-                self.avg_values[self.names[index]] = float(self.enumerators[index].sum() / (self.denominators[index].sum() + self.eps))
+                self.avg_values[self.names[index]] = []
+                for inner_index in range(len(self.enumerators[index])):
+                    self.avg_values[self.names[index]].append(self.enumerators[index][inner_index] / (self.denominators[index][inner_index] + self.eps))
         del self.inputs
         del self.outputs
 
