@@ -81,7 +81,7 @@ class ProgressBar(Pipe):
             losses = []
 
         if hasattr(self.trainer, '_avg_metrics'):
-            metrics = [{'metric_name': name, 'metric_value': float(val)}
+            metrics = [{'metric_name': name, 'metric_value': val}
                        for name, val in self.trainer._avg_metrics.items()]
         else:
             metrics = []
