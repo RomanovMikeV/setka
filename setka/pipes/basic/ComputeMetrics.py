@@ -82,9 +82,11 @@ class ComputeMetrics(Pipe):
         self.steps = 0
         self.trainer._avg_metrics = {}
 
-    def evaluate(self):        
+    def evaluate(self):
         self.inputs = self.trainer.collection_op.collate_fn(self.inputs)
         self.outputs = self.trainer.collection_op.collate_fn(self.outputs)
+        
+        batch_size = len(self.outputs)
 
         for index in range(len(self.metrics)):
             with torch.no_grad():
@@ -101,8 +103,8 @@ class ComputeMetrics(Pipe):
                 enum = torch.as_tensor(res).detach().cpu().numpy()
                 denom = torch.ones(enum.shape).numpy()
                 
-            enum *= batch_size
-            denom *= batch_size
+                enum *= batch_size
+                denom *= batch_size
 
             if self.enumerators[index] is None:
                 self.enumerators[index] = enum
