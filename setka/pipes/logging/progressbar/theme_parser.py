@@ -110,7 +110,7 @@ def value_format(val, common):
     if isinstance(val, (list, tuple)):
         res = []
         for index in range(len(val)):
-            res.append(value_format(val[index]))
+            res.append(value_format(val[index], common))
         return res
     
     if (val > 10 ** pow_max) or (val < 10 ** (-pow_max)):
