@@ -107,6 +107,12 @@ def nlines(text):
 
 def value_format(val, common):
     pow_max = common['MAX_ABS_POWER']
+    if isinstance(val, (list, tuple)):
+        res = []
+        for index in range(len(val)):
+            res.append(value_format(val[index]))
+        return res
+    
     if (val > 10 ** pow_max) or (val < 10 ** (-pow_max)):
         return '{:.3e}'.format(val)
     else:
