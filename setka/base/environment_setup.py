@@ -4,7 +4,7 @@ import torch
 import os
 
 
-def environment_setup(seed=0, max_threads=4, deterministic_cuda=False, benchmark_cuda=True):
+def environment_setup(seed=0, max_threads=4, deterministic_cuda=True, benchmark_cuda=True):
     """
     Fixes seeds for all possible random value generators and limits the amount of OMP threads. You may also select
     to use deterministic cuda (significantly slower) and turn off benchmark cuda.
