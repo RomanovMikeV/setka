@@ -15,7 +15,7 @@ class ModelHandler(Pipe):
         data_parallel (bool): If true, DataParallel wrapper is used for model
         device_ids (list): Device ids to use for model training
     """
-    def __init__(self, model, data_parallel=True, device_ids=None):
+    def __init__(self, model, data_parallel=False, device_ids=None):
         super(ModelHandler, self).__init__()
         self.model = model
         self.data_parallel = data_parallel
