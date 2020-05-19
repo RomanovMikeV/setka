@@ -1,6 +1,7 @@
 import copy
 import torch
 import torch.utils
+import numpy
 
 from setka.pipes.Pipe import Pipe
 from setka.base import CollectionOperator
@@ -136,6 +137,7 @@ class ComputeMetrics(Pipe):
                 self.avg_values[self.names[index]] = []
                 for inner_index in range(len(self.enumerators[index])):
                     self.avg_values[self.names[index]].append(self.enumerators[index][inner_index] / (self.denominators[index][inner_index] + self.eps))
+
         del self.inputs
         del self.outputs
 

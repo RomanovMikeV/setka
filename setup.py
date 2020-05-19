@@ -25,7 +25,9 @@ setuptools.setup(
         'termcolor',
         'pandas',
         'efficientnet_pytorch',
-        'imgaug'
+        'imgaug',
+        'pytest',
+        'pytest-cov'
     ],
     classifiers=(
         "Programming Language :: Python :: 3",

@@ -5,7 +5,7 @@ from setka.pipes.Pipe import Pipe
 from setka.base import collect_random_states
 
 
-class MakeCheckpoints(Pipe):
+class Checkpointer(Pipe):
     """
     This pipe makes checkpoints during an experiment. Two checkpoints
     are stored: the best one (with "_best" postfix) (created only in case the
@@ -31,9 +31,9 @@ class MakeCheckpoints(Pipe):
         train_only (bool): Make trainer dumps only after train stage. Otherwise, trainer will be saved after each stage
                            (including validation and testing). Useful for training resume and experiments reproduction
     """
-    def __init__(self, metric, subset='valid', max_mode=False, name='checkpoint', log_dir='./', keep_best_only=True,
+    def __init__(self, metric, subset='valid', max_mode=False, name='experiment', log_dir='runs', keep_best_only=True,
                  checkpoint_freq=1, dump_trainer=True, train_only=False):
-        super(MakeCheckpoints, self).__init__()
+        super(Checkpointer, self).__init__()
         self.best_metric = None
         self.metric = metric
         self.max_mode = max_mode
@@ -47,7 +47,7 @@ class MakeCheckpoints(Pipe):
         self.checkpoint_freq = checkpoint_freq
 
     def on_init(self):
-        self.log_dir = os.path.join(self.log_dir, self.name, str(self.trainer.creation_time))
+        self.log_dir = os.path.join(self.log_dir, self.name, str(self.trainer.creation_time).replace(' ', '_').replace(':', '-'))
 
         if not os.path.exists(os.path.join(self.log_dir, 'checkpoints')):
             os.makedirs(os.path.join(self.log_dir, 'checkpoints'))

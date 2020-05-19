@@ -188,7 +188,7 @@ class DataSetHandler(Pipe):
 
             if hasattr(self.trainer, '_stop_epoch_signal'):
                 if self.trainer._stop_epoch_signal:
-                    del self.trainer._stop_epoch_signal
+                    # del self.trainer._stop_epoch_signal
                     break
 
     def after_epoch(self):

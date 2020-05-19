@@ -7,7 +7,7 @@ from setka.pipes.basic.ModelHandler import ModelHandler
 from setka.pipes.basic.UseCuda import UseCuda
 
 from setka.pipes.logging.Logger import Logger
-from setka.pipes.logging.MakeCheckpoints import MakeCheckpoints
+from setka.pipes.logging.Checkpointer import Checkpointer
 from setka.pipes.logging.SaveResult import SaveResult
 from setka.pipes.logging.TensorBoard import TensorBoard
 from setka.pipes.logging.ProgressBar import ProgressBar

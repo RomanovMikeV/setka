@@ -9,9 +9,8 @@ install:
   - pip install .
 
 script:
-  - coverage run test/run_tests.py
-  #python test/unit_test.py
-  #codecov
+  - coverage run -m pytest
+  - coverage report
 
 after_success:
   - codecov

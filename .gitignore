@@ -20,3 +20,4 @@ build/*
 cifar10_data/*
 .idea
 .idea/*
+.pytest_cache/*

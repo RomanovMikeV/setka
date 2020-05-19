@@ -8,7 +8,7 @@ def const(output, input):
 
 def tensor_acc(output, input):
     n_correct = (output.argmax(dim=1) == input[1]).float().sum()
-    return n_correct, input[1].numel()
+    return [n_correct, n_correct], [input[1].numel(), input[1].numel()]
 
 def list_loss(output, input):
     return tensor_loss(output[0], input)

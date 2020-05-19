@@ -1,1 +1,0 @@
-from .CIFAR import CIFAR

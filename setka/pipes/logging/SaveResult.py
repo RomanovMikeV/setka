@@ -17,15 +17,18 @@ class SaveResult(Pipe):
         f (callable): function to process the predictions.
         dir (string): location where the predictions will be saved
     """
-    def __init__(self, f=None, dir='./'):
+    def __init__(self, f=None, dir='runs', name='experiment'):
         super(SaveResult, self).__init__()
         self.f = f
         self.index = 0
-        self.dir = dir
-        self.root_dir = os.path.join(self.dir, './predictions')
+        self.dir = os.path.join(dir, name)
 
+
+    def on_init(self):
+        self.root_dir = os.path.join(self.dir, str(self.trainer.creation_time).replace(' ', '_').replace(':', '-'), 'predictions')
         if not os.path.exists(self.root_dir):
             os.makedirs(self.root_dir)
+
 
     def after_batch(self):
         if self.trainer._mode == 'test':
