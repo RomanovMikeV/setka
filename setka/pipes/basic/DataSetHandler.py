@@ -81,7 +81,12 @@ class DataSetHandler(Pipe):
         super(DataSetHandler, self).__init__()
         self.dataset = dataset
         self.set_priority({'before_epoch': 10, 'before_batch': 10, 'after_batch': -10, "after_epoch": -10})
+        
+        if isinstance(batch_size, int):
+            batch_size = {'train': batch_size, 'valid': batch_size, 'test': batch_size}
+            
         self.batch_size = batch_size
+        
         self.workers = workers
         self.timeit = timeit
         self.limits = limits
@@ -111,7 +116,7 @@ class DataSetHandler(Pipe):
 
         self.loader = torch.utils.data.DataLoader(
             ds_wrapper,
-            batch_size=self.batch_size,
+            batch_size=self.batch_size[self._mode],
             shuffle=False,
             num_workers=self.workers,
             drop_last=drop_last,
