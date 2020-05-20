@@ -116,7 +116,7 @@ class DataSetHandler(Pipe):
 
         self.loader = torch.utils.data.DataLoader(
             ds_wrapper,
-            batch_size=self.batch_size[self._mode],
+            batch_size=self.batch_size[self.trainer._mode],
             shuffle=False,
             num_workers=self.workers,
             drop_last=drop_last,
