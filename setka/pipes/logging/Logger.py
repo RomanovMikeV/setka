@@ -109,7 +109,8 @@ class Logger(Pipe):
                      '*.coredump',
                      '*data*',
                      'logs/*',
-                     'runs/*'],
+                     'runs/*',
+                     'core.*'],
                  full_snapshot_path=False, collect_environment=True):
 
         super(Logger, self).__init__()
