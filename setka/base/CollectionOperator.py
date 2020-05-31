@@ -41,7 +41,7 @@ class CollectionOperator:
     int_classes = (int,)
     string_classes = (str,)
     leaf_types = (torch.Tensor, np.ndarray)
-    primitives = (int, float)
+    primitives = (int, float, str)
 
     def __init__(self, soft_collate_fn=False, collate_fn_conversions=True):
         self.soft_collate_fn = soft_collate_fn

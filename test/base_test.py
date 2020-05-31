@@ -1,7 +1,7 @@
 import torch
 import setka
 import tiny_model
-import test_dataset
+import test_dataset3 as test_dataset
 from test_metrics import tensor_loss as loss
 
 def test_base():
@@ -10,7 +10,7 @@ def test_base():
     ds = test_dataset.CIFAR10()
     model = tiny_model.TensorNet()
 
-    input, target = ds['train', 0]
+    # input, target, text, random_ones = ds['train', 0]
 
     trainer = setka.base.Trainer(pipes=[
                                      setka.pipes.DataSetHandler(ds, batch_size=32, limits=2, shuffle=True),
@@ -27,7 +27,8 @@ def test_base():
                                         ]
                                      ),
                                      setka.pipes.Pipe()
-                                 ])
+                                 ],
+                                 collection_op=setka.base.CollectionOperator(soft_collate_fn=True))
 
     trainer.remove_pipe(setka.pipes.LossHandler)
     trainer.add_pipe(setka.pipes.LossHandler(loss))

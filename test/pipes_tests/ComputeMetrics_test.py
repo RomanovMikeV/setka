@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),  '..'))
 import tiny_model
-import test_dataset
+import test_dataset2 as test_dataset
 
 from test_metrics import tensor_loss as loss
 from test_metrics import tensor_acc as acc
