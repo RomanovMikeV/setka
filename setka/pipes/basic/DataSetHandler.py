@@ -25,6 +25,7 @@ def fractal_order(size):
         order[power_2 - 1::2*power_2] = to_assign
         index = to_assign[-1] + 1
         power_2 //= 2
+    order = order.argsort()
     return order
 
 
