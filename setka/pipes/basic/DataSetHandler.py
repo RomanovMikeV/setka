@@ -12,13 +12,28 @@ DEFAULT_SCHEDULE = [
      {'mode': 'valid', 'subset': 'valid'}
 ]
 
+def fractal_order(size):
+    power_2 = 1
+    while power_2 * 2 < size:
+        power_2 *= 2
+
+    order = numpy.zeros(size).astype('long')
+
+    index = 0
+    while power_2 > 0:
+        to_assign = numpy.arange(len(order[power_2 - 1::2*power_2])) + index
+        order[power_2 - 1::2*power_2] = to_assign
+        index = to_assign[-1] + 1
+        power_2 //= 2
+    return order
+
 
 class DataSetWrapper:
     def __init__(self, dataset, name):
         self.dataset = dataset
         self.name = name
 
-        self.order = numpy.arange(len(self.dataset))
+        self.order = fractal_order(len(self.dataset))
 
     def __len__(self):
         return len(self.dataset)
