@@ -146,9 +146,10 @@ class ComputeMetrics(Pipe):
         self.outputs = []
         self.steps = 0
 
+        if not 'Metrics' in self.trainer.status:
+            self.trainer.status['Metrics'] = collections.OrderedDict()
+
         for x in self.avg_values:
-            if not hasattr(self.trainer.status, 'Metrics'):
-                self.trainer.status['Metrics'] = collections.OrderedDict()
             self.trainer.status['Metrics'][x] = self.avg_values[x]
             self.trainer._avg_metrics[x] = self.avg_values[x]
 
