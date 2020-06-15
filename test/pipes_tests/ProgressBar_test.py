@@ -30,5 +30,4 @@ def test_ProgressBar():
                                      ),
                                      setka.pipes.ProgressBar()
                                  ])
-    #print(trainer.view_batch())
     trainer.run_train(1)

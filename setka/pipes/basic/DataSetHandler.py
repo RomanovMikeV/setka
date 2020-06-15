@@ -2,8 +2,8 @@ import time
 
 import numpy
 import torch
+import collections
 
-import setka.base
 from setka.pipes.Pipe import Pipe
 
 DEFAULT_SCHEDULE = [
@@ -25,6 +25,8 @@ def fractal_order(size):
         order[power_2 - 1::2*power_2] = to_assign
         index = to_assign[-1] + 1
         power_2 //= 2
+
+    order = order.argsort()
     return order
 
 
@@ -172,9 +174,30 @@ class DataSetHandler(Pipe):
 
         self.batch_time = time.time() - self.start_time
 
+        if not hasattr(self, 'avg_data_time'):
+            self.avg_data_time = 0
+        if not hasattr(self, 'avg_batch_time'):
+            self.avg_batch_time = 0
+        if not hasattr(self, 'n_iter'):
+            self.n_iter = 0
+
+        self.avg_data_time = (self.avg_data_time * self.n_iter + self.data_time)
+        self.avg_batch_time = (self.avg_batch_time * self.n_iter + self.batch_time)
+        self.n_iter += 1
+        self.avg_data_time /= self.n_iter
+        self.avg_batch_time /= self.n_iter
+
+
         if self.timeit:
-            self.trainer.status['D'] = self.data_time
-            self.trainer.status['B'] = self.batch_time
+            if 'Info' not in self.trainer.status:
+                self.trainer.status['Time'] = collections.OrderedDict()
+
+            self.trainer.status['Time']['D'] = self.data_time
+            self.trainer.status['Time']['B'] = self.batch_time
+            self.trainer.status['Time']['AvgD'] = self.avg_data_time
+            self.trainer.status['Time']['AvgB'] = self.avg_batch_time
+            # self.trainer.status['Time']['Elapsed'] = self.elapsed_time
+            # self.trainer.status['Time']['Remaining'] = self.remaining_time
 
     def on_train(self):
         """

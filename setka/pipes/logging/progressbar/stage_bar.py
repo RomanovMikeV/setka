@@ -1,5 +1,5 @@
 import os
-from setka.pipes.logging.progressbar.theme_parser import recursive_substituion, max_str_len, nlines
+from setka.pipes.logging.progressbar.theme_parser import recursive_substituion, max_str_len, nlines, view_status, format_status
 from setka.pipes.logging.progressbar.theme import main_theme
 
 try:
@@ -31,11 +31,7 @@ class StageProgressBar:
         if self.config is None:
             self.config = main_theme()
             
-        self.common = {
-            'CONSOLE_WIDTH': self.width_function(),
-            'MAX_LEN': 0,
-            'MAX_ABS_POWER': max_float_verbose_power
-        }
+
         self.last_vals = None
         self.finalized = False
         self.started = False
@@ -44,7 +40,9 @@ class StageProgressBar:
         self.display_id = display_id
 
     def __str__(self):
-        return recursive_substituion('stage_info', self.last_vals, self.config)
+        status = format_status(self.last_vals)
+        to_view = view_status(status, display_len=self.width)
+        return to_view
 
     def display(self, content):
         if not self.is_ipython:
@@ -60,15 +58,12 @@ class StageProgressBar:
         if self.finalized:
             return
         
-        self.common['CONSOLE_WIDTH'] = self.width_function()
-        vals['COMMON'] = self.common
+        self.width = self.width_function()
         self.last_vals = vals
         cur_info = str(self)
-        self.common['MAX_LEN'] = max(self.common['MAX_LEN'], max_str_len(cur_info))
-        
+
         if not self.started:
             self.started = True
-            print(recursive_substituion('stage_header', self.last_vals, self.config))
             if self.is_ipython:
                 display({'text/plain': ''}, display_id=self.display_id, raw=True)
 

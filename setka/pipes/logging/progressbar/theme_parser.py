@@ -121,3 +121,170 @@ def value_format(val, common):
 
 def max_str_len(text):
     return max([len(s) for s in escape_ansi(text).split('\n')])
+
+### NEW ENGINE
+
+import numpy
+import copy
+import re
+
+status = {
+    'Info': '5/10 [######9     ] 59%',
+    'Time': {'D': 0.9999999999999999999999,
+             'B': 0.1238476123864126345187245,
+             'AvgD': 0.812341348176234987162349817643,
+             'AvgB': 0.8561283745187634581726345},
+    'Loss': {'L1': 112398746192834619827364,
+             'L2': 19234618623.0,
+             'L2.5': 1,
+             'L3': 0.8126347152,
+             'L4': 10,
+             'L5': numpy.inf},
+    'Metrics': {'One': 0.888888,
+                'Two': 123987.0,
+                'Three': 1.0}
+}
+
+
+def textcolor(style=None, color=None):
+    if color is None:
+        color = 0
+    else:
+        color_code = 30 + color
+
+    if style is None:
+        style_code = 0
+    else:
+        style_code = style
+    return '\033[' + str(style_code) + ';' + str(color_code) + 'm', '\033[' + str(0) + ';' + str(0) + 'm'
+
+
+def format_status(inp):
+    if isinstance(inp, (dict)):
+        for key in inp:
+            inp[key] = format_status(inp[key])
+
+    if isinstance(inp, (list, tuple)):
+        for index in range(len(inp)):
+            inp[index] = format_status(inp[index])
+
+    if isinstance(inp, int):
+        if abs(inp) > 10 ** 6:
+            return '{:.3e}'.format(inp)
+        else:
+            return '{:d}'.format(inp)
+
+    if isinstance(inp, float):
+        if abs(inp) > 10 ** 6:
+            return '{:.3e}'.format(inp)
+        elif abs(inp) < 10 ** -6:
+            return '{:.3e}'.format(inp)
+        else:
+            return '{:.6f}'.format(inp)
+
+    return inp
+
+
+def colorize_string(string, colors, padding=0):
+    indice = []
+    for color in colors:
+        indice.append(colors[0])
+
+    substrings = []
+    last_index = 0
+    for color in colors:
+        index = color[0] + padding
+        substrings.append(string[last_index:index])
+        substrings.append(color[1])
+        last_index = index
+    substrings.append(string[last_index:])
+    return ''.join(substrings)
+
+
+def view_status(inp, display_len=80):
+    separator = ' | '
+    strings = ['']
+    colors = [[]]
+    color_index = 0
+
+    maxlen = 0
+    for key in inp:
+        maxlen = max(len(str(key)), maxlen)
+
+    for key in inp:
+
+        start, end = textcolor(style=1, color=color_index + 1)
+        colors[-1].append((len(strings[-1]), start))
+        strings[-1] += ('{:>' + str(maxlen) + 's} ').format(key)
+        colors[-1].append((len(strings[-1]), end))
+
+        if isinstance(inp[key], (list, tuple)):
+            strings[-1] += separator.join(inp[key])
+
+        elif isinstance(inp[key], dict):
+            pos = len(strings[-1])
+            subres = []
+
+            for subkey in inp[key]:
+                start, end = textcolor(style=3, color=color_index + 1)
+                colors[-1].append((pos, start))
+                colors[-1].append((pos + len(subkey), end))
+                subres.append(subkey + ': ' + str(inp[key][subkey]))
+                pos = pos + len(subkey) + len(': ') + len(str(inp[key][subkey])) + len(separator)
+            strings[-1] += separator.join(subres)
+
+        else:
+            strings[-1] += str(inp[key])
+
+        strings.append('')
+        colors.append([])
+
+        color_index += 1
+        color_index %= 6
+
+    new_strings = []
+    new_colors = []
+    for index in range(len(strings)):
+        string = strings[index]
+        str_colors = colors[index]
+        position = 0
+        color_index = 0
+        padding = 0
+        while len(string) > 0:
+            splitter_location = -1
+
+            if len(string) > display_len:
+                splitter_location = string[:display_len].rfind(' | ')
+
+            split_colors = []
+
+            if splitter_location > 0:
+                string_end = splitter_location
+            else:
+                string_end = min(display_len, len(string))
+            while color_index < len(colors[index]) and colors[index][color_index][0] - position < string_end - padding:
+                split_colors.append(list(colors[index][color_index]))
+                split_colors[-1][0] -= position
+                color_index += 1
+
+            if len(string) < display_len:
+                new_strings.append(colorize_string(string, split_colors, padding=padding))
+                break
+
+            elif splitter_location > 0:
+                new_strings.append(colorize_string(string[:splitter_location], split_colors, padding=padding))
+                split_colors = []
+                string = ' ' * (maxlen + 1) + string[splitter_location + 3:]
+                position += splitter_location + 3 - padding
+                padding = maxlen + 1
+
+            else:
+                new_strings.append(colorize_string(string[:string_end], split_colors, padding=padding))
+                split_colors = []
+                string = ' ' * (maxlen + 1) + string[string_end:]
+                position += string_end - padding
+                padding = maxlen + 1
+
+    new_strings.append('=' * display_len)
+    return '\n'.join(new_strings)
+

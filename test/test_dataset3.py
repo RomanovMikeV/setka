@@ -1,4 +1,8 @@
 import setka
+import random
+import torch
+import numpy
+random.seed(0)
 
 import torchvision.datasets
 import torchvision.transforms
@@ -39,7 +43,7 @@ class CIFAR10(setka.base.DataSet):
 
     def getitem(self, subset, index):
         data, label = self.subsets[subset][index]
-        return data, label, 'text'
+        return data, label, 'text', torch.ones(random.randint(1, 10)), numpy.array([0, 1])
 
     def getlen(self, subset):
         return len(self.subsets[subset])

@@ -1,11 +1,12 @@
 import datetime
 import time
 import os
+import collections
 import numpy as np
 
 from setka.pipes.Pipe import Pipe
 from setka.pipes.logging.progressbar import StageProgressBar, isnotebook
-from setka.pipes.logging.progressbar import progress_str, recursive_substituion
+from setka.pipes.logging.progressbar import progress_str
 from setka.pipes.logging.progressbar.theme import main_theme, adopt2ipython
 
 
@@ -40,7 +41,7 @@ class ProgressBar(Pipe):
     This pipe shows progress of the training.
     """
 
-    def __init__(self, theme=None, default_width=100):
+    def __init__(self, theme=None, default_width=80):
         super(ProgressBar, self).__init__()
         self.set_priority(-100)
 
@@ -51,14 +52,14 @@ class ProgressBar(Pipe):
         self.pbar = None
         self.time_est = TimeEstimator()
         self.display_counter = 0
-        self.default_width = 100
+        self.default_width = default_width
 
     def on_init(self):
         self.last_epoch = self.safe_getattr(self.trainer, '_epoch', 0)
 
     def get_width(self):
         try:
-            return os.get_terminal_size()[0]
+            return os.get_terminal_size()[0] - 1
         except :
             return self.default_width
 
@@ -68,47 +69,11 @@ class ProgressBar(Pipe):
             return obj[attr] if attr in obj else default
         return getattr(obj, attr) if hasattr(obj, attr) else default
 
-    def collect_info(self):
-        cur_iter = self.safe_getattr(self.trainer, '_epoch_iteration', 0)
-        max_iter = self.safe_getattr(self.trainer, '_n_iterations', 1)
-        percentage = cur_iter / max_iter
-
-        self.time_est.update(percentage)
-        if hasattr(self.trainer, '_loss_values'):
-            losses = [{'loss_name': 'Loss', 'loss_value': float(self.trainer._loss)}]
-            losses += [{'loss_name': name, 'loss_value': float(val)} for name, val in self.trainer._loss_values.items()]
-        else:
-            losses = []
-
-        if hasattr(self.trainer, '_avg_metrics'):
-            metrics = [{'metric_name': name, 'metric_value': val}
-                       for name, val in self.trainer._avg_metrics.items()]
-        else:
-            metrics = []
-
-        return {
-            'COMMON': {},
-            'cur_epoch': self.safe_getattr(self.trainer, '_epoch', 0),
-            'n_epochs': self.safe_getattr(self.trainer, '_n_epochs', 0),
-            'cur_stage': self.safe_getattr(self.trainer, '_mode', 'unknown'),
-            'cur_subset': self.safe_getattr(self.trainer, '_subset', 'unknown'),
-            'cur_iter': cur_iter,
-            'max_iter': max_iter,
-            'time_str': str(self.time_est),
-            'percentage_completed': percentage * 100.0,
-            'progress_bar': progress_str(30, percentage),
-            'batch_time': self.safe_getattr(self.trainer.status, 'B', 0),
-            'data_time': self.safe_getattr(self.trainer.status, 'D', 0),
-            'loss': losses,
-            'metrics': metrics
-        }
 
     def before_epoch(self):
         self.display_counter += 1
         if self.last_epoch != self.safe_getattr(self.trainer, '_epoch', 0):
-            # Epoch number changed, display epoch delimiter
             print('-' * self.get_width())
-            print(recursive_substituion('epoch_global', self.collect_info(), self.config))
             self.last_epoch = self.safe_getattr(self.trainer, '_epoch', 0)
 
         self.pbar = StageProgressBar(width_function=self.get_width, config=self.config,
@@ -125,4 +90,14 @@ class ProgressBar(Pipe):
         """
         Updates the progressbar.
         """
-        self.pbar.update(self.collect_info())
+        progress = collections.OrderedDict()
+        progress['Ep'] = str(self.trainer._epoch)
+        if hasattr(self.trainer, '_n_epochs'):
+            progress['Ep'] += '/' + str(self.trainer._n_epochs)
+
+        percentage = self.trainer._epoch_iteration / self.trainer._n_iterations
+        progress['Iter'] = str(self.trainer._epoch_iteration) + '/' + str(self.trainer._n_iterations)
+        progress['Iter'] += progress_str(20, percentage)
+        self.trainer.status['Progress'] = progress
+
+        self.pbar.update(self.trainer.status)

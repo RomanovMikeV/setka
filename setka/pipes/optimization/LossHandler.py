@@ -48,7 +48,7 @@ class LossHandler(Pipe):
             if self.trainer._mode == "train":
                 self.trainer._loss.backward(retain_graph=self.retain_graph)
 
-            self.trainer.status['loss'] = self.trainer._loss.detach().cpu().item()
+            self.trainer.status['Loss'] = self.trainer._loss.detach().cpu().item()
 
     def after_epoch(self):
         """

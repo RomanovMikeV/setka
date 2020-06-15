@@ -66,6 +66,6 @@ class WeightAveraging(Pipe):
             avg_pars = self.averaged_model.parameters()
             trn_pars = self.trainer._model.parameters()
 
-            if self.trainer.status['iteration'] % self.interval ==0:
+            if self.trainer._iteration % self.interval ==0:
                 for avg_par, trn_par in zip(avg_pars, trn_pars):
                     avg_par = avg_par * (1.0 - self.gamma) + trn_par * self.gamma

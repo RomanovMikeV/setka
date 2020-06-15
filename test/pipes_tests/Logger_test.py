@@ -58,7 +58,7 @@ def test_Logger_dict():
     assert(os.path.exists(os.path.join('runs', 'my_experiment')))
     assert(len(os.listdir(os.path.join('runs', 'my_experiment'))) > 0)
     last_run = sorted(os.listdir(os.path.join('runs', 'my_experiment')))[-1]
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_figures', 'test_0', 'img.png')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_figures', 'test_2047', 'img.png')))
 
     assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, 'bash_command.txt')))
     assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, 'loss.txt')))
@@ -121,12 +121,12 @@ def test_Logger_list():
     assert(os.path.exists(os.path.join('runs', 'my_experiment')))
     assert(len(os.listdir(os.path.join('runs', 'my_experiment'))) > 0)
     last_run = sorted(os.listdir(os.path.join('runs', 'my_experiment')))[-1]
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_figures', 'test_0', 'img.png')))
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_audios', 'test_0', 'img.wav')))
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_texts', 'test_0', 'img.txt')))
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_images', 'test_0', 'img.png')))
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_files', 'test_0', 'img.sht')))
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_files', 'test_0', 'img.bin')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_figures', 'test_2047', 'img.png')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_audios', 'test_2047', 'img.wav')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_texts', 'test_2047', 'img.txt')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_images', 'test_2047', 'img.png')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_files', 'test_2047', 'img.sht')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_files', 'test_2047', 'img.bin')))
 
     assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, 'bash_command.txt')))
     assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, 'loss.txt')))
@@ -177,7 +177,7 @@ def test_Logger_tensor():
     assert(os.path.exists(os.path.join('runs', 'my_experiment')))
     assert(len(os.listdir(os.path.join('runs', 'my_experiment'))) > 0)
     last_run = sorted(os.listdir(os.path.join('runs', 'my_experiment')))[-1]
-    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_figures', 'test_0', 'img.jpg')))
+    assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, '2_figures', 'test_2047', 'img.jpg')))
 
     assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, 'bash_command.txt')))
     assert(os.path.exists(os.path.join('runs', 'my_experiment', last_run, 'loss.txt')))

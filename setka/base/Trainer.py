@@ -38,12 +38,10 @@ class Trainer:
         for pipe in self._pipes:
             pipe.trainer = self
 
-        self.status = collections.OrderedDict()
+        self.status = collections.OrderedDict({'Progress': ''})
 
         self._epoch = 0
-        self.status["epoch"] = 0
         self._iteration = 0
-        self.status["iteration"] = 0
 
         self._run_pipes('on_init')
 
@@ -92,7 +90,6 @@ class Trainer:
 
         if n_epochs is not None:
             self._n_epochs = n_epochs
-            self.status["n_epochs"] = n_epochs
 
         res = []
         for stage in self._train_flow:
@@ -106,15 +103,11 @@ class Trainer:
 
         if mode == 'train':
             self._epoch += 1
-            self.status['epoch'] += 1
 
         self._epoch_iteration = 0
 
         self._mode = mode
         self._subset = subset
-
-        self.status["mode"] = mode
-        self.status["subset"] = subset
 
         self._n_iterations = n_iterations
 
@@ -127,7 +120,6 @@ class Trainer:
         if action != 'view':
             if self._mode == 'train':
                 self._iteration += 1
-                self.status['iteration'] += 1
 
             self._epoch_iteration += 1
 
