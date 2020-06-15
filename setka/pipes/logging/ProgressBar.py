@@ -98,6 +98,7 @@ class ProgressBar(Pipe):
         percentage = self.trainer._epoch_iteration / self.trainer._n_iterations
         progress['Iter'] = str(self.trainer._epoch_iteration) + '/' + str(self.trainer._n_iterations)
         progress['Iter'] += progress_str(20, percentage)
+        self.time_est.update(percentage)
         progress['Time'] = str(self.time_est)
         self.trainer.status['Progress'] = progress
 
