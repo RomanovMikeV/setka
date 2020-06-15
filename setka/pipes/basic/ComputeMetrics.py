@@ -1,6 +1,7 @@
 import copy
 import torch
 import torch.utils
+import collections
 import numpy
 
 from setka.pipes.Pipe import Pipe
@@ -146,7 +147,9 @@ class ComputeMetrics(Pipe):
         self.steps = 0
 
         for x in self.avg_values:
-            self.trainer.status[x] = self.avg_values[x]
+            if not hasattr(self.trainer.status, 'Metrics'):
+                self.trainer.status['Metrics'] = collections.OrderedDict()
+            self.trainer.status['Metrics'][x] = self.avg_values[x]
             self.trainer._avg_metrics[x] = self.avg_values[x]
 
     def after_batch(self):
