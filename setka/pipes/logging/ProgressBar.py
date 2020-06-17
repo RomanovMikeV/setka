@@ -95,9 +95,13 @@ class ProgressBar(Pipe):
         if hasattr(self.trainer, '_n_epochs'):
             progress['Ep'] += '/' + str(self.trainer._n_epochs)
 
-        percentage = self.trainer._epoch_iteration / self.trainer._n_iterations
+        percentage = float(self.trainer._epoch_iteration) / float(self.trainer._n_iterations)
+        progress['Mode'] = self.trainer._mode
+        progress['Subset'] = self.trainer._subset
         progress['Iter'] = str(self.trainer._epoch_iteration) + '/' + str(self.trainer._n_iterations)
-        progress['Iter'] += progress_str(20, percentage)
+        progress['Iter'] += ' ' + progress_str(20, percentage)
+        progress['Iter'] += ' ' + str(int(percentage * 1000.0) / 10.0) + '%'
+
         self.time_est.update(percentage)
         progress['Time'] = str(self.time_est)
         self.trainer.status['Progress'] = progress
