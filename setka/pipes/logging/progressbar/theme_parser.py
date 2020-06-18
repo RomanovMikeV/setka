@@ -268,18 +268,24 @@ def view_status(inp, display_len=80):
                 color_index += 1
 
             if len(string) < display_len:
-                new_strings.append(colorize_string(string, split_colors, padding=padding))
+                to_print = string
+                to_print = to_print + ' ' * (display_len - len(to_print))
+                new_strings.append(colorize_string(to_print, split_colors, padding=padding))
                 break
 
             elif splitter_location > 0:
-                new_strings.append(colorize_string(string[:splitter_location], split_colors, padding=padding))
+                to_print = string[:splitter_location]
+                to_print = to_print + ' ' * (display_len - len(to_print))
+                new_strings.append(colorize_string(to_print, split_colors, padding=padding))
                 split_colors = []
                 string = ' ' * (maxlen + 1) + string[splitter_location + 3:]
                 position += splitter_location + 3 - padding
                 padding = maxlen + 1
 
             else:
-                new_strings.append(colorize_string(string[:string_end], split_colors, padding=padding))
+                to_print = string[:string_end]
+                to_print = to_print + ' ' * (display_len - len(to_print))
+                new_strings.append(colorize_string(to_print, split_colors, padding=padding))
                 split_colors = []
                 string = ' ' * (maxlen + 1) + string[string_end:]
                 position += string_end - padding
