@@ -54,7 +54,7 @@ class DataSetWrapper:
 
 def progress_str(width, state):
     progress = width * state
-    filled = int(round(progress))
+    filled = int(math.floor(progress))
 
     if filled < width:
         remnant = str(int(math.floor((progress - filled) * 10.0)))
@@ -214,7 +214,7 @@ class DataSetHandler(Pipe):
         progress['Mode'] = self.trainer._mode
         progress['Subset'] = self.trainer._subset
         progress['Iter'] = str(self.trainer._epoch_iteration) + '/' + str(self.trainer._n_iterations)
-        progress['Iter'] = ' ' + progress_str(20, percentage)
+        progress['Iter'] += ' ' + progress_str(20, percentage)
         progress['Iter'] += ' ' + str(int(percentage * 1000.0) / 10.0) + '%'
         progress['Time'] = str(self.time_est)
 
