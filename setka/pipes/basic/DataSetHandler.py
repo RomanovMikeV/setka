@@ -3,6 +3,8 @@ import time
 import numpy
 import torch
 import collections
+import math
+import datetime
 
 from setka.pipes.Pipe import Pipe
 
@@ -48,6 +50,43 @@ class DataSetWrapper:
     def shuffle(self):
         self.order = numpy.random.permutation(len(self.dataset))
         # print('Shuffled order:', self.order[:16])
+
+
+def progress_str(width, state):
+    progress = width * state
+    filled = int(round(progress))
+
+    if filled < width:
+        remnant = str(int(math.floor((progress - filled) * 10.0)))
+        return '[' + '='* filled + remnant + ' ' * (width - filled - 1) + ']'
+    else:
+        return '[' + '=' * width + ']'
+
+
+class TimeEstimator:
+    def __init__(self, eta_threshold=0.001):
+        self.eta_threshold = eta_threshold
+        self.reset()
+
+    def reset(self):
+        self.start_time = time.time()
+        self.cur_state = 0
+        self.est_finish_time = None
+        return self
+
+    def update(self, cur_state):
+        self.cur_state = cur_state
+        if self.cur_state >= self.eta_threshold:
+            self.est_finish_time = self.start_time + (time.time() - self.start_time) / self.cur_state
+
+    def __str__(self):
+        elapsed = str(datetime.timedelta(seconds=int(time.time() - self.start_time)))
+        if self.est_finish_time is not None:
+            eta = str(datetime.timedelta(seconds=int(self.est_finish_time - time.time())))
+        else:
+            eta = '?'
+
+        return f'[{elapsed}>{eta}]'
 
 
 class DataSetHandler(Pipe):
@@ -109,6 +148,7 @@ class DataSetHandler(Pipe):
         self.shuffle = shuffle
         self.collate_fn = None
         self.epoch_schedule = epoch_schedule
+        self.time_est = TimeEstimator()
 
     def before_epoch(self):
         """
@@ -152,6 +192,7 @@ class DataSetHandler(Pipe):
                 self.trainer._n_iterations = min(self.trainer._n_iterations, self.limits[self.trainer._mode])
         else:
             self.trainer._n_iterations = min(self.trainer._n_iterations, self.limits)
+        self.time_est.reset()
 
     def before_batch(self):
         """
@@ -162,6 +203,22 @@ class DataSetHandler(Pipe):
         self.start_time = time.time()
         self.trainer._input, self.trainer._ids = next(self.iterator)
         self.data_time = time.time() - self.start_time
+
+        progress = collections.OrderedDict()
+        progress['Ep'] = str(self.trainer._epoch)
+        if hasattr(self.trainer, '_n_epochs'):
+            progress['Ep'] += '/' + str(self.trainer._n_epochs)
+
+        percentage = float(self.trainer._epoch_iteration) / float(self.trainer._n_iterations)
+        self.time_est.update(percentage)
+        progress['Mode'] = self.trainer._mode
+        progress['Subset'] = self.trainer._subset
+        progress['Iter'] = str(self.trainer._epoch_iteration) + '/' + str(self.trainer._n_iterations)
+        progress['Iter'] = ' ' + progress_str(20, percentage)
+        progress['Iter'] += ' ' + str(int(percentage * 1000.0) / 10.0) + '%'
+        progress['Time'] = str(self.time_est)
+
+        self.trainer.status['Progress'] = progress
 
     def after_batch(self):
         """

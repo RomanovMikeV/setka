@@ -93,9 +93,9 @@ class TensorBoard(Pipe):
 
         if self.trainer._mode == 'train':
             self.tb_writer.add_scalar('loss/summary', self.trainer._loss.detach().cpu(), self.trainer._iteration)
-            if hasattr(self.trainer, '_loss_values') and len(self.trainer._loss_values) > 1:
-                for key in self.trainer._loss_values:
-                    self.tb_writer.add_scalar(f'loss/{key}', self.trainer._loss_values[key], self.trainer._iteration)
+            # if hasattr(self.trainer, '_loss_values') and len(self.trainer._loss_values) > 1:
+            #     for key in self.trainer._loss_values:
+            #         self.tb_writer.add_scalar(f'loss/{key}', self.trainer._loss_values[key], self.trainer._iteration)
 
     def after_epoch(self):
         """

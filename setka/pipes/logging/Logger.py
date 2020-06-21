@@ -7,6 +7,7 @@ import zipfile
 
 import skimage.io
 import scipy.io.wavfile
+import jsonlines
 
 import torch
 from setka.pipes.Pipe import Pipe
@@ -160,14 +161,14 @@ class Logger(Pipe):
         if not os.path.exists(predictions_dir):
             os.makedirs(predictions_dir)
 
-    def before_epoch(self):
-        """
-        Dumps metrics to the log file.
-        """
-        if self.trainer._mode == 'train':
-            with open(os.path.join(self.root_path, 'metrics.txt'), 'a+') as fout:
-                if hasattr(self.trainer, '_metrics'):
-                    fout.write(str(self.trainer._epoch - 1) + '\t' + str(self.trainer._metrics) + '\n')
+    # def before_epoch(self):
+    #     """
+    #     Dumps metrics to the log file.
+    #     """
+    #     if self.trainer._mode == 'train':
+    #         with open(os.path.join(self.root_path, 'metrics.txt'), 'a+') as fout:
+    #             if hasattr(self.trainer, '_metrics'):
+    #                 fout.write(str(self.trainer._epoch - 1) + '\t' + str(self.trainer._metrics) + '\n')
 
     @staticmethod
     def make_dirs(fname):
@@ -244,9 +245,11 @@ class Logger(Pipe):
         Also performs visualisation in case of test mode.
         """
         if self.trainer._mode == 'train':
-            with open(os.path.join(self.root_path, 'loss.txt'), 'a+') as fout:
-                fout.write(str(self.trainer._epoch) + '\t' +
-                           str(self.trainer._loss.detach().cpu().item()) + '\n')
+            with jsonlines.open(os.path.join(self.root_path, 'batch_log.json'), 'a') as fout:
+                fout.write(self.trainer.status)
+                # fout.write(status)
+                # fout.write(str(self.trainer._epoch) + '\t' +
+                #            str(self.trainer._loss.detach().cpu().item()) + '\n')
 
         if self.trainer._mode == 'test' and (self.f is not None):
             for index in range(len(self.trainer._ids)):
@@ -256,16 +259,12 @@ class Logger(Pipe):
                 id = self.trainer._ids[index]
                 self.show(res, id)
 
-    # @staticmethod
-    # def format(v):
-    #     if isinstance(v, torch.Tensor):
-    #         return str(v.item())
-    #     return str(v)
-
     def after_epoch(self):
         """
         Writes the trainer status to the log file.
         """
-        line = '  '.join([str(k) + ': ' + str(v) for k, v in self.trainer.status.items()])
-        with open(os.path.join(self.root_path, 'log.txt'), 'a+') as fout:
-            fout.write(line + '\n')
+        # line = '  '.join([str(k) + ': ' + str(v) for k, v in self.trainer.status.items()])
+        with jsonlines.open(os.path.join(self.root_path, 'epoch_log.json'), 'a') as fout:
+            print(self.trainer.status)
+            fout.write(self.trainer.status)
+            # fout.write(line + '\n')

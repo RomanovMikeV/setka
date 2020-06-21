@@ -1,6 +1,6 @@
 import os
-from setka.pipes.logging.progressbar.theme_parser import recursive_substituion, max_str_len, nlines, view_status, format_status
-from setka.pipes.logging.progressbar.theme import main_theme
+from setka.pipes.logging.progressbar.theme_parser import view_status, format_status
+# from setka.pipes.logging.progressbar.theme import main_theme
 
 try:
     from IPython.display import display, update_display
@@ -23,13 +23,13 @@ def isnotebook():
     except NameError:
         return False
 
+def nlines(text):
+    return text.count('\n') + 1
+
 
 class StageProgressBar:
-    def __init__(self, width_function=None, config=None, display_id=0, max_float_verbose_power=2.0, is_ipython=None):
+    def __init__(self, width_function=None, display_id=0, is_ipython=None):
         self.width_function = width_function
-        self.config = config
-        if self.config is None:
-            self.config = main_theme()
             
 
         self.last_vals = None

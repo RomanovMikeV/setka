@@ -30,4 +30,7 @@ def test_ProgressBar():
                                      ),
                                      setka.pipes.ProgressBar()
                                  ])
+
+    trainer.status['Test'] = ['This is just a very-very long string that helps in testing the package. This string has no delimiters so it will be split in the middle of the string']
+    trainer.status['Test2'] = [1.0e-12, 1.0e12, 1, 100000000000000000, 1000]
     trainer.run_train(1)

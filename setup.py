@@ -27,7 +27,8 @@ setuptools.setup(
         'efficientnet_pytorch',
         'imgaug',
         'pytest',
-        'pytest-cov'
+        'pytest-cov',
+        'jsonlines'
     ],
     classifiers=(
         "Programming Language :: Python :: 3",
