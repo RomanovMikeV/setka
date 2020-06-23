@@ -265,6 +265,6 @@ class Logger(Pipe):
         """
         # line = '  '.join([str(k) + ': ' + str(v) for k, v in self.trainer.status.items()])
         with jsonlines.open(os.path.join(self.root_path, 'epoch_log.json'), 'a') as fout:
-            print(self.trainer.status)
+#             print(self.trainer.status)
             fout.write(self.trainer.status)
             # fout.write(line + '\n')
