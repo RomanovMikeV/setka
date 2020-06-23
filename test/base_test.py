@@ -47,3 +47,5 @@ def test_base():
 
     print("===== Trianer =====")
     print(trainer.view_pipeline())
+
+

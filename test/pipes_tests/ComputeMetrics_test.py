@@ -76,3 +76,39 @@ def test_ComputeMetrics2():
                                  ])
 
     trainer.run_train(2)
+
+def test_ComputeMetrics3():
+    setka.base.environment_setup()
+
+    ds = test_dataset.CIFAR10()
+    model = tiny_model.TensorNet()
+
+    cyclic_lr = lambda x: torch.optim.lr_scheduler.CyclicLR(x, base_lr=0.0, max_lr=0.0)
+    reduce_lr = lambda x: torch.optim.lr_scheduler.ReduceLROnPlateau(x)
+
+    trainer = setka.base.Trainer(pipes=[
+        setka.pipes.DataSetHandler(
+            ds, batch_size=32, limits=9, shuffle=False),
+        setka.pipes.ModelHandler(model),
+        setka.pipes.LossHandler(loss),
+        setka.pipes.ComputeMetrics([loss, acc, const],
+                                   divide_first=True,
+                                   steps_to_compute=2,
+                                   reduce=[True, False, True]),
+        setka.pipes.OneStepOptimizers(
+            [
+                setka.base.OptimizerSwitch(
+                    model,
+                    torch.optim.SGD,
+                    lr=0.1,
+                    momentum=0.9,
+                    weight_decay=5e-4,
+                    schedulers={
+                        'batch': [cyclic_lr],
+                        'epoch': [(reduce_lr, 'valid', 'tensor_acc', 0)]})
+            ]
+        ),
+    ])
+
+    trainer.run_train(20)
+

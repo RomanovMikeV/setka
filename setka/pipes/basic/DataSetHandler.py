@@ -252,8 +252,6 @@ class DataSetHandler(Pipe):
             self.trainer.status['Time']['B'] = self.batch_time
             self.trainer.status['Time']['AvgD'] = self.avg_data_time
             self.trainer.status['Time']['AvgB'] = self.avg_batch_time
-            # self.trainer.status['Time']['Elapsed'] = self.elapsed_time
-            # self.trainer.status['Time']['Remaining'] = self.remaining_time
 
     def on_train(self):
         """
