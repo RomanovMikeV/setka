@@ -63,6 +63,13 @@ class CollectionOperator:
         #
         # Change: if container with tensors stacking is impossible, collate_fn doesn`t raise
         # error. Instead, return list of tensors
+        
+        new_batch = []
+        for item in batch:
+            if item is not None:
+                new_batch.append(item)
+        batch=new_batch
+        
         elem = batch[0]
         elem_type = type(elem)
 
