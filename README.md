@@ -138,7 +138,7 @@ model = SimpleModel(channels=[8, 16, 32, 64])
 
 trainer = setka.base.Trainer(
     pipes=[
-        setka.pipes.DataSetHandler(ds, 32, workers=4, timeit=True,
+        setka.pipes.DatasetHandler(ds, 32, workers=4, timeit=True,
                                    shuffle={'train': True, 'valid': True, 'test': False},
                                    epoch_schedule=[
                                        {'mode': 'train', 'subset': 'train'},
@@ -149,7 +149,7 @@ trainer = setka.base.Trainer(
         setka.pipes.LossHandler(loss),
         setka.pipes.ComputeMetrics([loss, acc]),
         setka.pipes.ProgressBar(),
-        setka.pipes.OneStepOptimizers([setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=3.0e-2)]),
+        setka.pipes.OneStepOptimizers([setka.base.Optimizer(model, torch.optim.Adam, lr=3.0e-2)]),
         setka.pipes.TuneOptimizersOnPlateau('acc', max_mode=True, subset='valid', lr_factor=0.3, reset_optimizer=True),
         setka.pipes.MakeCheckpoints('acc', max_mode=True)
     ]

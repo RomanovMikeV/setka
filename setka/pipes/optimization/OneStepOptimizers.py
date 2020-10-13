@@ -1,5 +1,5 @@
 from setka.pipes.Pipe import Pipe
-from setka.base.OptimizerSwitch import OptimizerSwitch
+from setka.base.Optimizer import Optimizer
 
 
 class OneStepOptimizers(Pipe):
@@ -10,7 +10,7 @@ class OneStepOptimizers(Pipe):
         self.trainer._optimizers: list of optimizers for a model.
 
     Args:
-        optimizers (list of setka.base.OptimizerSwitch): list of optimizers.
+        optimizers (list of setka.base.Optimizer): list of optimizers.
     """
     def __init__(self, optimizers):
         super(OneStepOptimizers, self).__init__()
@@ -19,7 +19,7 @@ class OneStepOptimizers(Pipe):
     def on_init(self):
         # self.trainer._optimizers = self.optimizers
         for opt in self.optimizers:
-            if isinstance(opt, OptimizerSwitch):
+            if isinstance(opt, Optimizer):
                 opt.trainer = self.trainer
 
     def before_batch(self):
@@ -33,7 +33,7 @@ class OneStepOptimizers(Pipe):
                     optimizer.module.train()
                     optimizer.module.requires_grad = True
 
-    def after_batch(self):
+    def before_batch(self):
         """
         Active optimizers make step.
         """
@@ -45,23 +45,12 @@ class OneStepOptimizers(Pipe):
         self.trainer._model.eval()
         self.trainer._model.requires_grad = False
 
-        if self.trainer._mode == 'train':
+        if self.trainer._mode == 'train' and self.trainer._iteration > 0:
             for optimizer in self.optimizers:
-                if 'batch' in optimizer.schedulers:
-                    for scheduler in optimizer.schedulers['batch']:
-                        scheduler.step()
+                optimizer.step_iter_schedulers()
 
 
-    def after_epoch(self):
-        if self.trainer._mode == 'valid':
+    def before_epoch(self):
+        if self.trainer._mode == 'train' and self.trainer._epoch > 1:
             for optimizer in self.optimizers:
-                if 'epoch' in optimizer.schedulers:
-                    for scheduler in optimizer.schedulers['epoch']:
-                        if (self.trainer._mode == 'valid' and
-                            self.trainer._subset == scheduler[1] and
-                            scheduler[1] in self.trainer._metrics and
-                            scheduler[2] in self.trainer._metrics[scheduler[1]]):
-                            if len(scheduler) == 3:
-                                scheduler[0].step(self.trainer._metrics[scheduler[1]][scheduler[2]])
-                            if len(scheduler) == 4:
-                                scheduler[0].step(self.trainer._metrics[scheduler[1]][scheduler[2]][scheduler[3]])
+                optimizer.step_epoch_schedulers()

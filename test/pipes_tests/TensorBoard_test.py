@@ -31,12 +31,12 @@ def test_TensorBoard():
         return {'figures': {'img': fig}}
 
     trainer = setka.base.Trainer(pipes=[
-                                     setka.pipes.DataSetHandler(ds, batch_size=4, limits=2),
+                                     setka.pipes.DatasetHandler(ds, batch_size=4, limits=2),
                                      setka.pipes.ModelHandler(model),
                                      setka.pipes.LossHandler(dict_loss),
                                      setka.pipes.OneStepOptimizers(
                                         [
-                                            setka.base.OptimizerSwitch(
+                                            setka.base.Optimizer(
                                                 model,
                                                 torch.optim.SGD,
                                                 lr=0.1,

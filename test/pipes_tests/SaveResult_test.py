@@ -15,12 +15,12 @@ def test_SaveResult_dict():
     model = tiny_model.DictNet()
 
     trainer = setka.base.Trainer(pipes=[
-                                     setka.pipes.DataSetHandler(ds, batch_size=32, limits=2),
+                                     setka.pipes.DatasetHandler(ds, batch_size=32, limits=2),
                                      setka.pipes.ModelHandler(model),
                                      setka.pipes.LossHandler(dict_loss),
                                      setka.pipes.OneStepOptimizers(
                                         [
-                                            setka.base.OptimizerSwitch(
+                                            setka.base.Optimizer(
                                                 model,
                                                 torch.optim.SGD,
                                                 lr=0.1,
@@ -38,12 +38,12 @@ def test_SaveResult_list():
     model = tiny_model.ListNet()
 
     trainer = setka.base.Trainer(pipes=[
-        setka.pipes.DataSetHandler(ds, batch_size=32, limits=2),
+        setka.pipes.DatasetHandler(ds, batch_size=32, limits=2),
         setka.pipes.ModelHandler(model),
         setka.pipes.LossHandler(list_loss),
         setka.pipes.OneStepOptimizers(
             [
-                setka.base.OptimizerSwitch(
+                setka.base.Optimizer(
                     model,
                     torch.optim.SGD,
                     lr=0.1,
@@ -65,12 +65,12 @@ def test_SaveResult_tensor():
         return input, output
 
     trainer = setka.base.Trainer(pipes=[
-        setka.pipes.DataSetHandler(ds, batch_size=32, limits=2),
+        setka.pipes.DatasetHandler(ds, batch_size=32, limits=2),
         setka.pipes.ModelHandler(model),
         setka.pipes.LossHandler(tensor_loss),
         setka.pipes.OneStepOptimizers(
             [
-                setka.base.OptimizerSwitch(
+                setka.base.Optimizer(
                     model,
                     torch.optim.SGD,
                     lr=0.1,

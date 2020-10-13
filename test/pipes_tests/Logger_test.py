@@ -34,13 +34,13 @@ def test_Logger_dict():
 
 
     trainer = setka.base.Trainer(pipes=[
-                                     setka.pipes.DataSetHandler(ds, batch_size=4,
+                                     setka.pipes.DatasetHandler(ds, batch_size=4,
                                                                 limits={'train': 3, 'valid':3, 'test': 1}),
                                      setka.pipes.ModelHandler(model),
                                      setka.pipes.LossHandler(loss),
                                      setka.pipes.OneStepOptimizers(
                                         [
-                                            setka.base.OptimizerSwitch(
+                                            setka.base.Optimizer(
                                                 model,
                                                 torch.optim.SGD,
                                                 lr=0.01,
@@ -96,14 +96,14 @@ def test_Logger_list():
 
 
     trainer = setka.base.Trainer(pipes=[
-                                     setka.pipes.DataSetHandler(ds,
-                                                                    batch_size=4,
-                                                                    limits={'train': 3, 'valid':3, 'test': 1}),
+                                     setka.pipes.DatasetHandler(ds,
+                                                                batch_size=4,
+                                                                limits={'train': 3, 'valid':3, 'test': 1}),
                                      setka.pipes.ModelHandler(model),
                                      setka.pipes.LossHandler(loss),
                                      setka.pipes.OneStepOptimizers(
                                         [
-                                            setka.base.OptimizerSwitch(
+                                            setka.base.Optimizer(
                                                 model,
                                                 torch.optim.SGD,
                                                 lr=0.01,
@@ -152,14 +152,14 @@ def test_Logger_tensor():
         return {'figures': {'img.jpg': fig}}
 
     trainer = setka.base.Trainer(pipes=[
-        setka.pipes.DataSetHandler(ds,
+        setka.pipes.DatasetHandler(ds,
                                    batch_size=4,
                                    limits={'train': 3, 'valid': 3, 'test': 1}),
         setka.pipes.ModelHandler(model),
         setka.pipes.LossHandler(loss),
         setka.pipes.OneStepOptimizers(
             [
-                setka.base.OptimizerSwitch(
+                setka.base.Optimizer(
                     model,
                     torch.optim.SGD,
                     lr=0.01,

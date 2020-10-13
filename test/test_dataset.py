@@ -3,7 +3,7 @@ import setka
 import torchvision.datasets
 import torchvision.transforms
 
-class CIFAR10(setka.base.DataSet):
+class CIFAR10(setka.base.Dataset):
     def __init__(self):
         super().__init__()
 

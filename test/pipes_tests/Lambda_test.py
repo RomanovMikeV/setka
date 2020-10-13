@@ -17,12 +17,12 @@ def test_Lambda():
         print("Message")
 
     trainer = setka.base.Trainer(pipes=[
-                                     setka.pipes.DataSetHandler(ds, batch_size=32, limits=2),
+                                     setka.pipes.DatasetHandler(ds, batch_size=32, limits=2),
                                      setka.pipes.ModelHandler(model),
                                      setka.pipes.LossHandler(loss),
                                      setka.pipes.OneStepOptimizers(
                                         [
-                                            setka.base.OptimizerSwitch(
+                                            setka.base.Optimizer(
                                                 model,
                                                 torch.optim.SGD,
                                                 lr=0.1,

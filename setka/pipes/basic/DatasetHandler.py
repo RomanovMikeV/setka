@@ -31,7 +31,7 @@ def fractal_order(size):
     return order
 
 
-class DataSetWrapper:
+class DatasetWrapper:
     def __init__(self, dataset, name):
         self.dataset = dataset
         self.name = name
@@ -89,7 +89,7 @@ class TimeEstimator:
         return f'[{elapsed}>{eta}]'
 
 
-class DataSetHandler(Pipe):
+class DatasetHandler(Pipe):
     """
     This class is a main pipe in the learning procedure. It holds the dataset and produces batches from the dataset
     for training. Besides, it also controls the epochs launches via ```run_epoch```within training loop and batches
@@ -133,7 +133,7 @@ class DataSetHandler(Pipe):
     def __init__(self, dataset, batch_size, workers=0, timeit=True, limits={}, shuffle={'train': True},
                  epoch_schedule=DEFAULT_SCHEDULE):
 
-        super(DataSetHandler, self).__init__()
+        super(DatasetHandler, self).__init__()
         self.dataset = dataset
         self.set_priority({'before_epoch': 10, 'before_batch': 10, 'after_batch': -10, "after_epoch": -10})
         
@@ -154,7 +154,7 @@ class DataSetHandler(Pipe):
         """
         Initializes new epoch: shuffles dataset, prepares dataloader, counts number of iterations in dataloader.
         """
-        ds_wrapper = DataSetWrapper(self.dataset[self.trainer._subset], self.trainer._subset)
+        ds_wrapper = DatasetWrapper(self.dataset[self.trainer._subset], self.trainer._subset)
         drop_last = True if self.trainer._mode == 'train' else False
 
         shuffle = False

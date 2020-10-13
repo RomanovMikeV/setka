@@ -77,7 +77,7 @@ opt = setka.base.OptimizerSwitch(model, torch.optim.Adam, lr=1.0e-3, schedulers=
 
 trainer = setka.base.Trainer(
     pipes=[
-        setka.pipes.DataSetHandler(ds, batch_size=256, workers=4, shuffle={'train': True, 'valid': True, 'test': False},
+        setka.pipes.DatasetHandler(ds, batch_size=256, workers=4, shuffle={'train': True, 'valid': True, 'test': False},
                                    epoch_schedule=SCHEDULE),
         setka.pipes.ModelHandler(model, data_parallel=False),
         setka.pipes.UseCuda(),

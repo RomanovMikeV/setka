@@ -1,7 +1,7 @@
 import copy
 
 
-class DataSet:
+class Dataset:
     """
     Dataset class, where all the information about the dataset is
     collected. It contains all the information about the dataset.

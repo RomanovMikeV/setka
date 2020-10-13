@@ -2,7 +2,7 @@ from setka.pipes.Pipe import Pipe
 from setka.pipes.Lambda import Lambda
 
 from setka.pipes.basic.ComputeMetrics import ComputeMetrics
-from setka.pipes.basic.DataSetHandler import DataSetHandler
+from setka.pipes.basic.DatasetHandler import DatasetHandler
 from setka.pipes.basic.ModelHandler import ModelHandler
 from setka.pipes.basic.UseCuda import UseCuda
 
