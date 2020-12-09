@@ -38,6 +38,8 @@ class StageProgressBar:
 
         self.is_ipython = isnotebook() if is_ipython is None else is_ipython
         self.display_id = display_id
+        
+        self.width = self.width_function()
 
     def __str__(self):
         status = format_status(self.last_vals)
