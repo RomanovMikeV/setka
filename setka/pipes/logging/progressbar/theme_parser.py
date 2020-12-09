@@ -198,6 +198,10 @@ def view_status(inp, display_len=80):
     color_index = 0
 
     maxlen = 0
+    
+    if inp is None:
+        inp = {}
+        
     for key in inp:
         maxlen = max(len(str(key)), maxlen)
 
